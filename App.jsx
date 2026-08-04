@@ -11,78 +11,190 @@ function App() {
 
     console.log("Email:", email);
     console.log("Password:", password);
+
+    // Backend authentication will be added later
   };
 
   return (
-    <div className="login-page">
-      <div className="login-box">
+    <div className="app">
 
-        <div className="logo">☀️</div>
+      {/* ================= HEADER ================= */}
+      <header className="navbar">
 
-        <h1>
-          Dynamic Weather Adaptive
-          <br />
-          Itinerary Planner
-        </h1>
+        <div className="brand">
+          <span className="brand-icon">☀️</span>
+          <span className="brand-name">Weather Planner</span>
+        </div>
 
-        <p className="welcome">Welcome Back!</p>
+        <nav className="nav-links">
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </nav>
 
-        <form onSubmit={handleLogin}>
+      </header>
 
-          <label>Email</label>
 
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+      {/* ================= MAIN CONTENT ================= */}
+      <main className="main-container">
 
-          <label>Password</label>
+        {/* ================= LEFT SECTION ================= */}
+        <section className="hero-section">
 
-          <div className="password-box">
+          <div className="hero-content">
 
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="weather-icon">
+              🌤️
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? "🙈" : "👁️"}
-            </button>
+            <h1>
+              Plan smarter.
+              <br />
+              Travel better.
+            </h1>
+
+            <p className="hero-description">
+              Your intelligent travel companion that adapts your
+              itinerary based on real-time weather conditions.
+            </p>
+
+            <div className="weather-icons">
+              <span>☀️</span>
+              <span>🌤️</span>
+              <span>🌧️</span>
+              <span>⛈️</span>
+            </div>
 
           </div>
 
-          <button type="submit" className="login-button">
-            Login
-          </button>
+        </section>
 
-        </form>
 
-        <button className="forgot">
-          Forgot Password?
-        </button>
+        {/* ================= RIGHT LOGIN SECTION ================= */}
+        <section className="login-section">
 
-        <div className="or">
-          <span></span>
-          <p>OR</p>
-          <span></span>
-        </div>
+          <div className="login-container">
 
-        <p className="signup">
-          Don't have an account?
+            <div className="login-header">
+              <h2>Welcome Back!</h2>
 
-          <button>
-            Sign Up
-          </button>
-        </p>
+              <p>
+                Login to continue planning your perfect trip.
+              </p>
+            </div>
 
-      </div>
+
+            {/* ================= LOGIN FORM ================= */}
+            <form onSubmit={handleLogin}>
+
+              {/* Email */}
+              <div className="form-group">
+
+                <label htmlFor="email">
+                  Email
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+
+              </div>
+
+
+              {/* Password */}
+              <div className="form-group">
+
+                <label htmlFor="password">
+                  Password
+                </label>
+
+                <div className="password-wrapper">
+
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() =>
+                      setShowPassword(!showPassword)
+                    }
+                    aria-label="Show or hide password"
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+
+                </div>
+
+              </div>
+
+
+              {/* Forgot Password */}
+              <div className="forgot-container">
+
+                <button
+                  type="button"
+                  className="forgot-button"
+                >
+                  Forgot Password?
+                </button>
+
+              </div>
+
+
+              {/* Login Button */}
+              <button
+                type="submit"
+                className="login-button"
+              >
+                Login
+              </button>
+
+            </form>
+
+
+            {/* ================= DIVIDER ================= */}
+            <div className="divider">
+
+              <span></span>
+
+              <p>OR</p>
+
+              <span></span>
+
+            </div>
+
+
+            {/* ================= SIGNUP ================= */}
+            <p className="signup-text">
+
+              Don't have an account?
+
+              <button
+                type="button"
+                className="signup-button"
+              >
+                Sign Up
+              </button>
+
+            </p>
+
+          </div>
+
+        </section>
+
+      </main>
+
     </div>
   );
 }
