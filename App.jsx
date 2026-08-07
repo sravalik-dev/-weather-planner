@@ -6,164 +6,188 @@ function App() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
 
-    alert("Login button clicked!");
-
-    console.log("Login button clicked!");
     console.log("Email:", email);
     console.log("Password:", password);
 
-    try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      });
-
-      const message = await response.text();
-
-      alert(message);
-
-      console.log("Response:", message);
-
-      if (message === "Login successful!") {
-        alert("Welcome!");
-      }
-    } catch (error) {
-      console.error("Fetch Error:", error);
-      alert("Cannot connect to backend");
-    }
+    // Backend authentication will be added later
   };
 
   return (
     <div className="app">
+
       {/* ================= HEADER ================= */}
       <header className="navbar">
+
         <div className="brand">
-          <span className="brand-icon">☀️</span>
-          <span className="brand-name">Weather Planner</span>
+          <span className="brand-icon">🌤️</span>
+          <span className="brand-name">Itinerary Planner</span>
         </div>
 
         <nav className="nav-links">
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </nav>
+
       </header>
 
-      {/* ================= MAIN ================= */}
-      <main className="main-container">
-        {/* LEFT */}
-        <section className="hero-section">
-          <div className="hero-content">
-            <div className="weather-icon">🌤️</div>
 
-            <h1>
-              Plan smarter.
-              <br />
-              Travel better.
-            </h1>
+      {/* ================= MAIN PAGE ================= */}
+      <main className="main-content">
 
-            <p className="hero-description">
-              Your intelligent travel companion that adapts your itinerary
-              based on real-time weather conditions.
+        {/* Weather Illustration */}
+        <div className="weather-icon">
+          🌤️
+        </div>
+
+
+        {/* Main Heading */}
+        <h1>
+          Plan smarter.
+          <br />
+          Travel better.
+        </h1>
+
+
+        {/* Description */}
+        <p className="description">
+          Your intelligent travel companion that adapts your
+          itinerary based on real-time weather conditions.
+        </p>
+
+
+        {/* Weather Icons */}
+        <div className="weather-icons">
+          <span>☀️</span>
+          <span>🌤️</span>
+          <span>🌧️</span>
+          <span>⛈️</span>
+        </div>
+
+
+        {/* ================= LOGIN ================= */}
+        <section className="login-container">
+
+          <div className="login-header">
+            <h2>Welcome Back!</h2>
+
+            <p>
+              Login to continue planning your perfect trip.
             </p>
-
-            <div className="weather-icons">
-              <span>☀️</span>
-              <span>🌤️</span>
-              <span>🌧️</span>
-              <span>⛈️</span>
-            </div>
           </div>
-        </section>
 
-        {/* RIGHT */}
-        <section className="login-section">
-          <div className="login-container">
-            <div className="login-header">
-              <h2>Welcome Back!</h2>
 
-              <p>Login to continue planning your perfect trip.</p>
+          <form onSubmit={handleLogin}>
+
+            {/* Email */}
+            <div className="form-group">
+
+              <label htmlFor="email">
+                Email
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+
             </div>
 
-            <form onSubmit={handleLogin}>
-              {/* Email */}
-              <div className="form-group">
-                <label>Email</label>
+
+            {/* Password */}
+            <div className="form-group">
+
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <div className="password-wrapper">
 
                 <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-              </div>
 
-              {/* Password */}
-              <div className="form-group">
-                <label>Password</label>
-
-                <div className="password-wrapper">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? "🙈" : "👁️"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="forgot-container">
-                <button type="button" className="forgot-button">
-                  Forgot Password?
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
+                  aria-label="Show or hide password"
+                >
+                  {showPassword ? "🙈" : "👁️"}
                 </button>
+
               </div>
 
-              <button
-                type="submit"
-                className="login-button"
-              >
-                Login
-              </button>
-            </form>
-
-            <div className="divider">
-              <span></span>
-              <p>OR</p>
-              <span></span>
             </div>
 
-            <p className="signup-text">
-              Don't have an account?
+
+            {/* Forgot Password */}
+            <div className="forgot-container">
 
               <button
                 type="button"
-                className="signup-button"
-                onClick={() => alert("Registration page not added yet")}
+                className="forgot-button"
               >
-                Sign Up
+                Forgot Password?
               </button>
-            </p>
+
+            </div>
+
+
+            {/* Login Button */}
+            <button
+              type="submit"
+              className="login-button"
+            >
+              Login
+            </button>
+
+          </form>
+
+
+          {/* OR */}
+          <div className="divider">
+
+            <span></span>
+
+            <p>OR</p>
+
+            <span></span>
+
           </div>
+
+
+          {/* Signup */}
+          <p className="signup-text">
+
+            Don't have an account?
+
+            <button
+              type="button"
+              className="signup-button"
+            >
+              Sign Up
+            </button>
+
+          </p>
+
         </section>
+
       </main>
+
     </div>
   );
 }
