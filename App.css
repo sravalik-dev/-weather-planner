@@ -1,5 +1,5 @@
 /* =========================================
-   GLOBAL STYLES
+   GLOBAL
 ========================================= */
 
 * {
@@ -15,8 +15,6 @@ html {
 body {
   font-family: Arial, Helvetica, sans-serif;
   min-width: 320px;
-  background: #f5faff;
-  color: #1e3a5f;
 }
 
 
@@ -27,27 +25,40 @@ body {
 .app {
   min-height: 100vh;
   width: 100%;
+
+  background: linear-gradient(
+    135deg,
+    #eaf7ff 0%,
+    #f8fcff 50%,
+    #eef8ff 100%
+  );
+
+  color: #1e3a5f;
+
   display: flex;
   flex-direction: column;
 }
 
 
 /* =========================================
-   NAVIGATION BAR
+   NAVBAR
 ========================================= */
 
 .navbar {
   width: 100%;
-  min-height: 70px;
+  height: 75px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
 
-  padding: 0 6%;
+  padding: 0 7%;
 
-  background: #ffffff;
-  border-bottom: 1px solid #e5eef5;
+  background: rgba(255, 255, 255, 0.8);
+
+  border-bottom: 1px solid rgba(200, 220, 235, 0.5);
+
+  backdrop-filter: blur(10px);
 }
 
 
@@ -64,27 +75,28 @@ body {
 }
 
 .brand-name {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   color: #1e3a5f;
 }
 
 
-/* Navigation links */
+/* Navigation */
 
 .nav-links {
   display: flex;
-  align-items: center;
-  gap: 30px;
+  gap: 35px;
 }
 
 .nav-links a {
   text-decoration: none;
-  color: #4f6475;
+
+  color: #526b7d;
+
   font-size: 15px;
   font-weight: 500;
 
-  transition: color 0.3s ease;
+  transition: 0.3s;
 }
 
 .nav-links a:hover {
@@ -93,66 +105,39 @@ body {
 
 
 /* =========================================
-   MAIN CONTAINER
+   MAIN CONTENT
 ========================================= */
 
-.main-container {
+.main-content {
   flex: 1;
 
   width: 100%;
 
   display: flex;
+  flex-direction: column;
 
-  align-items: stretch;
+  align-items: center;
 
-  padding: 50px 6%;
-  gap: 50px;
+  text-align: center;
+
+  padding: 45px 20px 60px;
 }
 
 
 /* =========================================
-   LEFT HERO SECTION
+   WEATHER ICON
 ========================================= */
 
-.hero-section {
-  flex: 1;
-
-  min-height: 600px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 60px;
-
-  border-radius: 25px;
-
-  background: linear-gradient(
-    135deg,
-    #dff3ff,
-    #eef9ff
-  );
-}
-
-
-.hero-content {
-  max-width: 550px;
-  text-align: center;
-}
-
-
-/* Main weather icon */
-
 .weather-icon {
-  font-size: 100px;
+  font-size: 85px;
 
-  margin-bottom: 25px;
+  margin-bottom: 15px;
 
   animation: float 3s ease-in-out infinite;
 }
 
 
-/* Floating animation */
+/* Animation */
 
 @keyframes float {
 
@@ -171,79 +156,90 @@ body {
 }
 
 
-/* Hero heading */
+/* =========================================
+   MAIN HEADING
+========================================= */
 
-.hero-content h1 {
-  font-size: clamp(36px, 4vw, 60px);
+.main-content h1 {
+  font-size: clamp(40px, 5vw, 65px);
 
-  line-height: 1.15;
+  line-height: 1.12;
 
   color: #1e3a5f;
 
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+
+  font-weight: 700;
 }
 
 
-/* Hero paragraph */
+/* =========================================
+   DESCRIPTION
+========================================= */
 
-.hero-description {
-  max-width: 500px;
+.description {
+  max-width: 650px;
 
-  margin: 0 auto;
+  color: #60798b;
 
   font-size: 18px;
 
   line-height: 1.7;
 
-  color: #526b7d;
+  margin-bottom: 25px;
 }
 
 
-/* Weather icons */
+/* =========================================
+   WEATHER ICONS
+========================================= */
 
 .weather-icons {
   display: flex;
 
   justify-content: center;
 
+  align-items: center;
+
   gap: 25px;
 
-  margin-top: 40px;
+  font-size: 30px;
 
-  font-size: 35px;
+  margin-bottom: 35px;
+}
+
+.weather-icons span {
+  transition: transform 0.3s ease;
+}
+
+.weather-icons span:hover {
+  transform: translateY(-5px) scale(1.1);
 }
 
 
 /* =========================================
-   LOGIN SECTION
+   LOGIN CONTAINER
 ========================================= */
-
-.login-section {
-  flex: 0 1 500px;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  background: #ffffff;
-
-  border-radius: 25px;
-
-  box-shadow:
-    0 10px 40px rgba(30, 58, 95, 0.08);
-
-  padding: 50px;
-}
-
-
-/* Login container */
 
 .login-container {
   width: 100%;
 
-  max-width: 400px;
+  max-width: 430px;
+
+  padding: 35px 40px;
+
+  background: rgba(255, 255, 255, 0.75);
+
+  border: 1px solid rgba(210, 225, 235, 0.7);
+
+  border-radius: 18px;
+
+  box-shadow:
+    0 12px 40px rgba(30, 58, 95, 0.08);
+
+  backdrop-filter: blur(8px);
+
+  text-align: left;
 }
 
 
@@ -252,23 +248,25 @@ body {
 ========================================= */
 
 .login-header {
-  margin-bottom: 35px;
+  text-align: center;
+
+  margin-bottom: 25px;
 }
 
 .login-header h2 {
-  font-size: 32px;
+  font-size: 28px;
 
   color: #1e3a5f;
 
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .login-header p {
-  font-size: 15px;
-
-  line-height: 1.6;
+  font-size: 14px;
 
   color: #71808c;
+
+  line-height: 1.5;
 }
 
 
@@ -277,13 +275,13 @@ body {
 ========================================= */
 
 .form-group {
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
 
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 
   font-size: 14px;
 
@@ -294,38 +292,34 @@ body {
 
 
 /* =========================================
-   INPUTS
+   INPUT
 ========================================= */
 
 .form-group input {
   width: 100%;
 
-  height: 50px;
+  height: 48px;
 
-  padding: 0 15px;
+  padding: 0 14px;
 
-  border: 1px solid #d6e2eb;
+  border: 1px solid #d3e0e8;
 
   border-radius: 8px;
 
-  outline: none;
-
-  background: #ffffff;
+  background: white;
 
   color: #1e3a5f;
 
   font-size: 15px;
 
-  transition:
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
-}
+  outline: none;
 
+  transition: 0.3s;
+}
 
 .form-group input::placeholder {
   color: #a3afb8;
 }
-
 
 .form-group input:focus {
   border-color: #2196f3;
@@ -345,23 +339,20 @@ body {
   width: 100%;
 }
 
-
 .password-wrapper input {
   padding-right: 50px;
 }
 
-
 .password-toggle {
   position: absolute;
 
-  right: 10px;
+  right: 8px;
 
   top: 50%;
 
   transform: translateY(-50%);
 
   width: 35px;
-
   height: 35px;
 
   border: none;
@@ -370,7 +361,7 @@ body {
 
   cursor: pointer;
 
-  font-size: 18px;
+  font-size: 17px;
 }
 
 
@@ -383,11 +374,10 @@ body {
 
   justify-content: flex-end;
 
-  margin-top: -5px;
+  margin-top: -3px;
 
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-
 
 .forgot-button {
   border: none;
@@ -396,11 +386,10 @@ body {
 
   color: #2196f3;
 
-  font-size: 14px;
+  font-size: 13px;
 
   cursor: pointer;
 }
-
 
 .forgot-button:hover {
   text-decoration: underline;
@@ -414,7 +403,7 @@ body {
 .login-button {
   width: 100%;
 
-  height: 50px;
+  height: 48px;
 
   border: none;
 
@@ -422,7 +411,7 @@ body {
 
   background: #2196f3;
 
-  color: #ffffff;
+  color: white;
 
   font-size: 16px;
 
@@ -430,11 +419,8 @@ body {
 
   cursor: pointer;
 
-  transition:
-    background 0.3s ease,
-    transform 0.2s ease;
+  transition: 0.3s;
 }
-
 
 .login-button:hover {
   background: #1976d2;
@@ -442,14 +428,13 @@ body {
   transform: translateY(-1px);
 }
 
-
 .login-button:active {
   transform: translateY(0);
 }
 
 
 /* =========================================
-   OR DIVIDER
+   DIVIDER
 ========================================= */
 
 .divider {
@@ -457,25 +442,23 @@ body {
 
   align-items: center;
 
-  gap: 15px;
+  gap: 12px;
 
-  margin: 30px 0;
+  margin: 23px 0;
 }
-
 
 .divider span {
   flex: 1;
 
   height: 1px;
 
-  background: #e1e8ed;
+  background: #dce6ec;
 }
 
-
 .divider p {
-  font-size: 13px;
-
   color: #9aa6af;
+
+  font-size: 12px;
 
   font-weight: 500;
 }
@@ -490,9 +473,8 @@ body {
 
   color: #71808c;
 
-  font-size: 14px;
+  font-size: 13px;
 }
-
 
 .signup-button {
   border: none;
@@ -501,7 +483,7 @@ body {
 
   color: #2196f3;
 
-  font-size: 14px;
+  font-size: 13px;
 
   font-weight: 600;
 
@@ -510,55 +492,21 @@ body {
   margin-left: 5px;
 }
 
-
 .signup-button:hover {
   text-decoration: underline;
 }
 
 
 /* =========================================
-   TABLET RESPONSIVE
-========================================= */
-
-@media (max-width: 1000px) {
-
-  .main-container {
-    padding: 35px 4%;
-
-    gap: 30px;
-  }
-
-  .hero-section {
-    padding: 40px;
-  }
-
-  .login-section {
-    padding: 40px 30px;
-  }
-
-  .hero-content h1 {
-    font-size: 42px;
-  }
-
-  .hero-description {
-    font-size: 16px;
-  }
-
-}
-
-
-/* =========================================
-   MOBILE RESPONSIVE
+   TABLET
 ========================================= */
 
 @media (max-width: 768px) {
 
-  /* Navbar */
-
   .navbar {
-    min-height: 65px;
+    height: 68px;
 
-    padding: 0 20px;
+    padding: 0 25px;
   }
 
   .brand-name {
@@ -566,83 +514,56 @@ body {
   }
 
   .nav-links {
-    gap: 15px;
-  }
-
-  .nav-links a {
-    font-size: 14px;
-  }
-
-
-  /* Main */
-
-  .main-container {
-    flex-direction: column;
-
-    padding: 20px;
-
     gap: 20px;
   }
 
-
-  /* Hero */
-
-  .hero-section {
-    min-height: auto;
-
-    padding: 45px 25px;
-
-    border-radius: 20px;
+  .main-content {
+    padding: 35px 20px 50px;
   }
 
   .weather-icon {
     font-size: 70px;
   }
 
-  .hero-content h1 {
-    font-size: 36px;
+  .main-content h1 {
+    font-size: 42px;
   }
 
-  .hero-description {
+  .description {
     font-size: 16px;
+
+    max-width: 550px;
   }
 
   .weather-icons {
-    margin-top: 25px;
+    font-size: 27px;
 
-    font-size: 28px;
-
-    gap: 15px;
+    margin-bottom: 30px;
   }
 
+  .login-container {
+    max-width: 420px;
 
-  /* Login */
-
-  .login-section {
-    width: 100%;
-
-    flex: none;
-
-    padding: 40px 25px;
-
-    border-radius: 20px;
+    padding: 32px;
   }
 
 }
 
 
 /* =========================================
-   SMALL MOBILE
+   MOBILE
 ========================================= */
 
 @media (max-width: 480px) {
 
   .navbar {
-    padding: 0 15px;
+    height: 62px;
+
+    padding: 0 16px;
   }
 
   .brand-icon {
-    font-size: 24px;
+    font-size: 23px;
   }
 
   .brand-name {
@@ -650,53 +571,71 @@ body {
   }
 
   .nav-links {
-    gap: 10px;
+    gap: 12px;
   }
 
   .nav-links a {
-    font-size: 13px;
+    font-size: 12px;
   }
 
 
-  .main-container {
-    padding: 15px;
+  .main-content {
+    padding: 30px 15px 40px;
   }
 
-
-  .hero-section {
-    padding: 35px 20px;
-  }
 
   .weather-icon {
     font-size: 60px;
-  }
 
-  .hero-content h1 {
-    font-size: 30px;
-  }
-
-  .hero-description {
-    font-size: 15px;
+    margin-bottom: 10px;
   }
 
 
-  .login-section {
-    padding: 30px 20px;
+  .main-content h1 {
+    font-size: 32px;
+
+    margin-bottom: 15px;
   }
+
+
+  .description {
+    font-size: 14px;
+
+    line-height: 1.6;
+
+    max-width: 350px;
+  }
+
+
+  .weather-icons {
+    font-size: 23px;
+
+    gap: 16px;
+
+    margin-bottom: 25px;
+  }
+
+
+  .login-container {
+    width: 100%;
+
+    max-width: 390px;
+
+    padding: 28px 20px;
+
+    border-radius: 15px;
+  }
+
 
   .login-header h2 {
-    font-size: 27px;
-  }
-
-  .login-header p {
-    font-size: 14px;
+    font-size: 25px;
   }
 
 }
 
 
 /* =========================================
-   VERY SMALL DEVICES
+   VERY SMALL PHONES
 ========================================= */
 
 @media (max-width: 360px) {
@@ -705,12 +644,26 @@ body {
     display: none;
   }
 
-  .hero-content h1 {
-    font-size: 27px;
+  .brand-name {
+    font-size: 17px;
   }
 
-  .login-section {
-    padding: 25px 15px;
+  .main-content h1 {
+    font-size: 28px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .weather-icons {
+    font-size: 20px;
+
+    gap: 12px;
+  }
+
+  .login-container {
+    padding: 25px 16px;
   }
 
 }
