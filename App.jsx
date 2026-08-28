@@ -67,22 +67,18 @@ const getWeatherIcon = (type, isDay) => {
   return icons[type] || "🌤️";
 };
 
-
 /* =========================================
    APP
 ========================================= */
 
 function App() {
-
   /* =========================================
      LOGIN STATE
   ========================================= */
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
-
 
   /* =========================================
      SIGNUP STATE
@@ -99,12 +95,8 @@ function App() {
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
-  const [accountCreated, setAccountCreated] =
-    useState(false);
-
-  const [signupError, setSignupError] =
-    useState("");
-
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [signupError, setSignupError] = useState("");
 
   /* =========================================
      MODAL STATE
@@ -114,7 +106,6 @@ function App() {
   const [showContact, setShowContact] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
 
-
   /* =========================================
      WEATHER STATE
   ========================================= */
@@ -122,17 +113,7 @@ function App() {
   const [weather, setWeather] = useState({
     type: "clear",
     temperature: null,
-
-    /*
-      isDay is received from Open-Meteo.
-      It is calculated using the detected
-      latitude/longitude and timezone.
-
-      true  = daytime
-      false = nighttime
-    */
     isDay: true,
-
     location: "Detecting location...",
     humidity: null,
     wind: null,
@@ -140,41 +121,28 @@ function App() {
     error: "",
   });
 
-
   /* =========================================
      GET WEATHER
   ========================================= */
 
   useEffect(() => {
-
     const getWeather = async (latitude, longitude) => {
-
       try {
-
         /* =========================================
            WEATHER API
         ========================================= */
 
-        const weatherUrl =
-          `https://api.open-meteo.com/v1/forecast` +
-          `?latitude=${latitude}` +
-          `&longitude=${longitude}` +
-          `&current=temperature_2m,weather_code,is_day,wind_speed_10m,relative_humidity_2m` +
-          `&timezone=auto`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day,wind_speed_10m,relative_humidity_2m&timezone=auto`;
 
-        const weatherResponse =
-          await fetch(weatherUrl);
+        const weatherResponse = await fetch(weatherUrl);
 
         if (!weatherResponse.ok) {
           throw new Error("Unable to fetch weather");
         }
 
-        const weatherData =
-          await weatherResponse.json();
+        const weatherData = await weatherResponse.json();
 
-        const current =
-          weatherData.current;
-
+        const current = weatherData.current;
 
         /* =========================================
            GET CITY NAME
@@ -183,164 +151,91 @@ function App() {
         let locationName = "Your location";
 
         try {
+          const locationUrl = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=en&format=json`;
 
-          const locationUrl =
-            `https://geocoding-api.open-meteo.com/v1/reverse` +
-            `?latitude=${latitude}` +
-            `&longitude=${longitude}` +
-            `&language=en` +
-            `&format=json`;
-
-          const locationResponse =
-            await fetch(locationUrl);
+          const locationResponse = await fetch(locationUrl);
 
           if (locationResponse.ok) {
+            const locationData = await locationResponse.json();
 
-            const locationData =
-              await locationResponse.json();
-
-            if (
-              locationData &&
-              locationData.name
-            ) {
-
-              locationName =
-                locationData.name;
+            if (locationData && locationData.name) {
+              locationName = locationData.name;
 
               if (locationData.country) {
-
-                locationName +=
-                  `, ${locationData.country}`;
-
+                locationName += `, ${locationData.country}`;
               }
-
             }
-
           }
-
         } catch (locationError) {
-
-          console.log(
-            "Location name unavailable"
-          );
-
+          console.log("Location name unavailable");
         }
-
 
         /* =========================================
            UPDATE WEATHER
         ========================================= */
 
         setWeather({
+          type: getWeatherType(current.weather_code),
 
-          type: getWeatherType(
-            current.weather_code
-          ),
+          temperature: Math.round(current.temperature_2m),
 
-          temperature:
-            Math.round(
-              current.temperature_2m
-            ),
+          isDay: current.is_day === 1,
 
-          /*
-            IMPORTANT:
+          location: locationName,
 
-            Open-Meteo gives:
+          humidity: current.relative_humidity_2m,
 
-            is_day = 1  -> Day
-            is_day = 0  -> Night
-
-            This is based on the user's
-            latitude/longitude and timezone.
-          */
-          isDay:
-            current.is_day === 1,
-
-          location:
-            locationName,
-
-          humidity:
-            current.relative_humidity_2m,
-
-          wind:
-            current.wind_speed_10m,
+          wind: current.wind_speed_10m,
 
           loading: false,
 
           error: "",
         });
-
       } catch (error) {
-
-        console.error(
-          "Weather error:",
-          error
-        );
+        console.error("Weather error:", error);
 
         setWeather((previous) => ({
           ...previous,
-
           loading: false,
-
-          error:
-            "Unable to load live weather.",
+          error: "Unable to load live weather.",
         }));
-
       }
-
     };
-
 
     /* =========================================
        CHECK GEOLOCATION
     ========================================= */
 
     if (!navigator.geolocation) {
-
       setWeather((previous) => ({
         ...previous,
-
         loading: false,
-
-        error:
-          "Location is not supported by your browser.",
+        error: "Location is not supported by your browser.",
       }));
 
       return;
     }
-
 
     /* =========================================
        GET USER LOCATION
     ========================================= */
 
     navigator.geolocation.getCurrentPosition(
-
       (position) => {
-
         getWeather(
           position.coords.latitude,
           position.coords.longitude
         );
-
       },
 
       (error) => {
-
-        console.error(
-          "Location permission error:",
-          error
-        );
+        console.error("Location permission error:", error);
 
         setWeather((previous) => ({
           ...previous,
-
           loading: false,
-
-          error:
-            "Please allow location access for live weather.",
+          error: "Please allow location access for live weather.",
         }));
-
       },
 
       {
@@ -348,152 +243,154 @@ function App() {
         timeout: 10000,
         maximumAge: 300000,
       }
-
     );
-
   }, []);
-
 
   /* =========================================
      LOGIN
   ========================================= */
 
-  const handleLogin = (e) => {
-
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    console.log(
-      "Username:",
-      username
-    );
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/auth/login",
+        {
+          method: "POST",
 
-    console.log(
-      "Password:",
-      password
-    );
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-    // Backend authentication will be added later.
+          body: JSON.stringify({
+            email: email,
+            password: password,
+          }),
+        }
+      );
+
+      const result = await response.text();
+
+      if (response.ok) {
+        alert(result);
+
+        console.log("Login successful:", result);
+      } else {
+        alert("Login failed: " + result);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+
+      alert(
+        "Cannot connect to backend. Check if Spring Boot is running."
+      );
+    }
   };
-
 
   /* =========================================
      OPEN SIGNUP
   ========================================= */
 
   const openSignup = () => {
-
     setShowSignup(true);
-
     setAccountCreated(false);
-
     setSignupError("");
-
   };
-
 
   /* =========================================
      CLOSE SIGNUP
   ========================================= */
 
   const closeSignup = () => {
-
     setShowSignup(false);
-
     setSignupError("");
-
   };
-
 
   /* =========================================
      CREATE ACCOUNT
   ========================================= */
 
-  const handleCreateAccount = (e) => {
-
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
 
     setSignupError("");
-
 
     /* =========================================
        PASSWORD CHECK
     ========================================= */
 
-    if (
-      registerPassword !==
-      confirmPassword
-    ) {
-
-      setSignupError(
-        "Passwords do not match."
-      );
-
+    if (registerPassword !== confirmPassword) {
+      setSignupError("Passwords do not match.");
       setAccountCreated(false);
-
       return;
     }
-
 
     /* =========================================
        PASSWORD LENGTH
     ========================================= */
 
-    if (
-      registerPassword.length < 6
-    ) {
-
+    if (registerPassword.length < 6) {
       setSignupError(
         "Password must contain at least 6 characters."
       );
 
       setAccountCreated(false);
-
       return;
     }
 
-
     /* =========================================
-       ACCOUNT CREATED
+       REGISTER ACCOUNT
     ========================================= */
 
-    console.log(
-      "Username:",
-      registerUsername
-    );
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/auth/register",
+        {
+          method: "POST",
 
-    console.log(
-      "Email:",
-      registerEmail
-    );
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-    console.log(
-      "Password:",
-      registerPassword
-    );
+          body: JSON.stringify({
+            fullName: registerUsername,
+            email: registerEmail,
+            password: registerPassword,
+          }),
+        }
+      );
 
+      const result = await response.text();
 
-    setAccountCreated(true);
+      if (response.ok) {
+        setAccountCreated(true);
+        setSignupError("");
+      } else {
+        setAccountCreated(false);
+        setSignupError(result || "Registration failed.");
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
 
-    setSignupError("");
+      setAccountCreated(false);
 
+      setSignupError(
+        "Cannot connect to backend. Check if Spring Boot is running."
+      );
+    }
   };
-
 
   /* =========================================
      WEATHER UI VALUES
   ========================================= */
 
-  const weatherIcon =
-    getWeatherIcon(
-      weather.type,
-      weather.isDay
-    );
+  const weatherIcon = getWeatherIcon(
+    weather.type,
+    weather.isDay
+  );
 
-  const weatherLabel =
-    getWeatherLabel(
-      weather.type
-    );
-
+  const weatherLabel = getWeatherLabel(weather.type);
 
   /* =========================================
      CLOSE MODALS
@@ -507,13 +404,11 @@ function App() {
     setShowContact(false);
   };
 
-
   /* =========================================
      RETURN
   ========================================= */
 
   return (
-
     <div
       className={`
         app
@@ -521,7 +416,6 @@ function App() {
         ${weather.isDay ? "day" : "night"}
       `}
     >
-
       {/* =========================================
           WEATHER BACKGROUND
       ========================================= */}
@@ -530,106 +424,67 @@ function App() {
         className="weather-background"
         aria-hidden="true"
       >
-
         {/* DAY SUN */}
+
         <div className="sun-glow"></div>
 
-
         {/* NIGHT MOON */}
-        <div className="moon-glow">
-          🌙
-        </div>
 
+        <div className="moon-glow">🌙</div>
 
         {/* CLOUDS */}
-        <div className="cloud cloud-one">
-          ☁️
-        </div>
 
-        <div className="cloud cloud-two">
-          ☁️
-        </div>
+        <div className="cloud cloud-one">☁️</div>
 
-        <div className="cloud cloud-three">
-          ☁️
-        </div>
+        <div className="cloud cloud-two">☁️</div>
 
+        <div className="cloud cloud-three">☁️</div>
 
         {/* =========================================
             RAIN
         ========================================= */}
 
         <div className="rain-layer">
-
-          {Array.from({
-            length: 45,
-          }).map((_, index) => (
-
+          {Array.from({ length: 45 }).map((_, index) => (
             <span
               key={index}
               className="rain-drop"
             ></span>
-
           ))}
-
         </div>
-
 
         {/* =========================================
             SNOW
         ========================================= */}
 
         <div className="snow-layer">
-
-          {Array.from({
-            length: 35,
-          }).map((_, index) => (
-
+          {Array.from({ length: 35 }).map((_, index) => (
             <span
               key={index}
               className="snowflake"
             >
               ❄
             </span>
-
           ))}
-
         </div>
-
 
         {/* =========================================
             STARS
-
-            These are hidden during daytime
-            and become visible automatically
-            when weather.isDay === false.
         ========================================= */}
 
         <div className="stars">
-
-          {Array.from({
-            length: 35,
-          }).map((_, index) => (
-
-            <span key={index}>
-              ✦
-            </span>
-
+          {Array.from({ length: 35 }).map((_, index) => (
+            <span key={index}>✦</span>
           ))}
-
         </div>
-
       </div>
-
 
       {/* =========================================
           HEADER
       ========================================= */}
 
       <header className="navbar">
-
         <div className="brand">
-
           <span className="brand-icon">
             {weatherIcon}
           </span>
@@ -637,65 +492,43 @@ function App() {
           <span className="brand-name">
             Itinerary Planner
           </span>
-
         </div>
 
-
         <nav className="nav-links">
-
           <button
             type="button"
-            onClick={() =>
-              setShowAbout(true)
-            }
+            onClick={() => setShowAbout(true)}
           >
             About
           </button>
 
-
           <button
             type="button"
-            onClick={() =>
-              setShowContact(true)
-            }
+            onClick={() => setShowContact(true)}
           >
             Contact
           </button>
-
         </nav>
-
       </header>
-
 
       {/* =========================================
           MAIN
       ========================================= */}
 
       <main className="main-content">
-
-
         {/* LIVE WEATHER */}
 
         <div className="live-weather">
-
           <span className="live-dot"></span>
 
           <span>
-
             {weather.loading
-
               ? "Detecting live weather..."
-
               : weather.error
-
               ? weather.error
-
               : `Live weather • ${weatherLabel}`}
-
           </span>
-
         </div>
-
 
         {/* WEATHER ICON */}
 
@@ -703,14 +536,11 @@ function App() {
           {weatherIcon}
         </div>
 
-
         {/* WEATHER INFORMATION */}
 
         {!weather.loading &&
           weather.temperature !== null && (
-
             <div className="weather-info">
-
               <div className="temperature">
                 {weather.temperature}°C
               </div>
@@ -720,9 +550,7 @@ function App() {
               </div>
 
               {weather.humidity !== null && (
-
                 <div className="weather-details">
-
                   <span>
                     💧 {weather.humidity}%
                   </span>
@@ -730,110 +558,80 @@ function App() {
                   <span>
                     💨 {Math.round(weather.wind)} km/h
                   </span>
-
                 </div>
-
               )}
-
             </div>
-
           )}
-
 
         {/* =========================================
             MAIN HEADING
         ========================================= */}
 
         <h1>
-
           Plan smarter.
-
           <br />
-
           Travel better.
-
         </h1>
-
 
         {/* DESCRIPTION */}
 
         <p className="description">
-
           Your intelligent travel companion
           that adapts your itinerary based
           on real-time weather conditions.
-
         </p>
-
 
         {/* WEATHER ICONS */}
 
         <div className="weather-icons">
-
           <span>☀️</span>
           <span>🌤️</span>
           <span>🌧️</span>
           <span>⛈️</span>
-
         </div>
-
 
         {/* =========================================
             LOGIN
         ========================================= */}
 
         <section className="login-container">
-
           <div className="login-header">
-
-            <h2>
-              Welcome Back!
-            </h2>
+            <h2>Welcome Back!</h2>
 
             <p>
               Login to continue planning
               your perfect trip.
             </p>
-
           </div>
 
-
           <form onSubmit={handleLogin}>
-
-            {/* USERNAME */}
+            {/* EMAIL */}
 
             <div className="form-group">
-
-              <label htmlFor="username">
-                Username
+              <label htmlFor="email">
+                Email
               </label>
 
               <input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
                 onChange={(e) =>
-                  setUsername(
-                    e.target.value
-                  )
+                  setEmail(e.target.value)
                 }
                 required
               />
-
             </div>
-
 
             {/* PASSWORD */}
 
             <div className="form-group">
-
               <label htmlFor="password">
                 Password
               </label>
 
               <div className="password-wrapper">
-
                 <input
                   id="password"
                   type={
@@ -844,9 +642,7 @@ function App() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) =>
-                    setPassword(
-                      e.target.value
-                    )
+                    setPassword(e.target.value)
                   }
                   required
                 />
@@ -861,22 +657,16 @@ function App() {
                   }
                   aria-label="Show or hide password"
                 >
-
                   {showPassword
                     ? "🙈"
                     : "👁️"}
-
                 </button>
-
               </div>
-
             </div>
-
 
             {/* FORGOT PASSWORD */}
 
             <div className="forgot-container">
-
               <button
                 type="button"
                 className="forgot-button"
@@ -888,9 +678,7 @@ function App() {
               >
                 Forgot Password?
               </button>
-
             </div>
-
 
             {/* LOGIN BUTTON */}
 
@@ -900,27 +688,21 @@ function App() {
             >
               Login
             </button>
-
           </form>
-
 
           {/* OR */}
 
           <div className="divider">
-
             <span></span>
 
             <p>OR</p>
 
             <span></span>
-
           </div>
-
 
           {/* SIGNUP */}
 
           <p className="signup-text">
-
             Don't have an account?
 
             <button
@@ -930,32 +712,25 @@ function App() {
             >
               Sign Up
             </button>
-
           </p>
-
         </section>
-
       </main>
-
 
       {/* =========================================
           ABOUT MODAL
       ========================================= */}
 
       {showAbout && (
-
         <div
           className="info-overlay"
           onClick={closeAbout}
         >
-
           <div
             className="info-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
             <button
               className="modal-close"
               onClick={closeAbout}
@@ -964,16 +739,13 @@ function App() {
               ×
             </button>
 
-
             <div className="modal-icon">
               🌤️
             </div>
 
-
             <h2>
               About Itinerary Planner
             </h2>
-
 
             <p>
               Itinerary Planner is a smart
@@ -982,14 +754,12 @@ function App() {
               and more enjoyable.
             </p>
 
-
             <p>
               The platform uses real-time weather
               information to help travelers plan
               their activities according to current
               and changing weather conditions.
             </p>
-
 
             <p>
               Instead of following a fixed itinerary,
@@ -998,11 +768,8 @@ function App() {
               sunshine, rain, storms, and snow.
             </p>
 
-
             <div className="about-features">
-
               <div>
-
                 <span>🌦️</span>
 
                 <strong>
@@ -1012,12 +779,9 @@ function App() {
                 <small>
                   Real-time weather information
                 </small>
-
               </div>
 
-
               <div>
-
                 <span>🗺️</span>
 
                 <strong>
@@ -1027,12 +791,9 @@ function App() {
                 <small>
                   Plan activities more efficiently
                 </small>
-
               </div>
 
-
               <div>
-
                 <span>🤖</span>
 
                 <strong>
@@ -1042,36 +803,27 @@ function App() {
                 <small>
                   Adapt plans to weather conditions
                 </small>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
 
       {/* =========================================
           CONTACT MODAL
       ========================================= */}
 
       {showContact && (
-
         <div
           className="info-overlay"
           onClick={closeContact}
         >
-
           <div
             className="info-modal contact-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
             <button
               className="modal-close"
               onClick={closeContact}
@@ -1080,16 +832,13 @@ function App() {
               ×
             </button>
 
-
             <div className="modal-icon">
               📞
             </div>
 
-
             <h2>
               Contact Us
             </h2>
-
 
             <p>
               Have a question, suggestion,
@@ -1097,86 +846,54 @@ function App() {
               We'd love to hear from you.
             </p>
 
-
             <div className="contact-details">
-
-
               {/* EMAIL */}
 
               <div className="contact-item">
-
-                <span>
-                  📧
-                </span>
+                <span>📧</span>
 
                 <div>
+                  <small>Email</small>
 
-                  <small>
-                    Email
-                  </small>
-
-                  <a
-                    href="mailto:weathervsks@gmail.com"
-                  >
+                  <a href="mailto:weathervsks@gmail.com">
                     weathervsks@gmail.com
                   </a>
-
                 </div>
-
               </div>
-
 
               {/* PHONE */}
 
               <div className="contact-item">
-
-                <span>
-                  📱
-                </span>
+                <span>📱</span>
 
                 <div>
+                  <small>Phone</small>
 
-                  <small>
-                    Phone
-                  </small>
-
-                  <a
-                    href="tel:9095050274"
-                  >
+                  <a href="tel:9095050274">
                     9095050274
                   </a>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
 
       {/* =========================================
           SIGNUP / CREATE ACCOUNT MODAL
       ========================================= */}
 
       {showSignup && (
-
         <div
           className="info-overlay signup-overlay"
           onClick={closeSignup}
         >
-
           <div
             className="info-modal signup-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
             {/* CLOSE */}
 
             <button
@@ -1187,13 +904,11 @@ function App() {
               ×
             </button>
 
-
             {/* ICON */}
 
             <div className="signup-modal-icon">
               ✈️
             </div>
-
 
             {/* TITLE */}
 
@@ -1201,12 +916,10 @@ function App() {
               Create Your Account
             </h2>
 
-
             <p className="signup-description">
               Join us and start creating
               unforgettable travel memories.
             </p>
-
 
             {/* =========================================
                 SIGNUP FORM
@@ -1215,12 +928,9 @@ function App() {
             <form
               onSubmit={handleCreateAccount}
             >
-
-
               {/* USERNAME */}
 
               <div className="form-group">
-
                 <label htmlFor="register-username">
                   Username
                 </label>
@@ -1238,14 +948,11 @@ function App() {
                   disabled={accountCreated}
                   required
                 />
-
               </div>
-
 
               {/* EMAIL */}
 
               <div className="form-group">
-
                 <label htmlFor="register-email">
                   Email
                 </label>
@@ -1263,20 +970,16 @@ function App() {
                   disabled={accountCreated}
                   required
                 />
-
               </div>
-
 
               {/* PASSWORD */}
 
               <div className="form-group">
-
                 <label htmlFor="register-password">
                   Password
                 </label>
 
                 <div className="password-wrapper">
-
                   <input
                     id="register-password"
                     type={
@@ -1303,29 +1006,23 @@ function App() {
                         !showRegisterPassword
                       )
                     }
+                    aria-label="Show or hide password"
                   >
-
                     {showRegisterPassword
                       ? "🙈"
                       : "👁️"}
-
                   </button>
-
                 </div>
-
               </div>
-
 
               {/* CONFIRM PASSWORD */}
 
               <div className="form-group">
-
                 <label htmlFor="confirm-password">
                   Confirm Password
                 </label>
 
                 <div className="password-wrapper">
-
                   <input
                     id="confirm-password"
                     type={
@@ -1352,29 +1049,22 @@ function App() {
                         !showConfirmPassword
                       )
                     }
+                    aria-label="Show or hide confirm password"
                   >
-
                     {showConfirmPassword
                       ? "🙈"
                       : "👁️"}
-
                   </button>
-
                 </div>
-
               </div>
-
 
               {/* ERROR */}
 
               {signupError && (
-
                 <div className="signup-error">
                   ⚠️ {signupError}
                 </div>
-
               )}
-
 
               {/* CREATE ACCOUNT */}
 
@@ -1387,20 +1077,15 @@ function App() {
                 }`}
                 disabled={accountCreated}
               >
-
                 {accountCreated
                   ? "✓ Account Created"
                   : "Create Account"}
-
               </button>
-
 
               {/* SUCCESS MESSAGE */}
 
               {accountCreated && (
-
                 <div className="account-success">
-
                   <div className="success-check">
                     ✓
                   </div>
@@ -1413,16 +1098,12 @@ function App() {
                     Your account has been created.
                     You can now login.
                   </div>
-
                 </div>
-
               )}
-
 
               {/* LOGIN LINK */}
 
               <p className="already-account">
-
                 Already have an account?
 
                 <button
@@ -1432,17 +1113,11 @@ function App() {
                 >
                   Login
                 </button>
-
               </p>
-
             </form>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }
