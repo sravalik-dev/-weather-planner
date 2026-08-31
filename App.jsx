@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import Profile from "./components/Profile";
 
 /* =========================================
    WEATHER HELPERS
@@ -105,7 +106,8 @@ function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
-
+  const [showProfile, setShowProfile] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   /* =========================================
      WEATHER STATE
   ========================================= */
@@ -273,10 +275,12 @@ function App() {
       const result = await response.text();
 
       if (response.ok) {
-        alert(result);
+  alert(result);
 
-        console.log("Login successful:", result);
-      } else {
+  console.log("Login successful:", result);
+
+  setIsLoggedIn(true);
+} else {
         alert("Login failed: " + result);
       }
     } catch (error) {
@@ -508,6 +512,14 @@ function App() {
           >
             Contact
           </button>
+          {isLoggedIn && (
+  <button
+    type="button"
+    onClick={() => setShowProfile(true)}
+  >
+    Profile
+  </button>
+)}
         </nav>
       </header>
 
@@ -1117,6 +1129,15 @@ function App() {
             </form>
           </div>
         </div>
+      )}
+        {/* =========================================
+          PROFILE
+      ========================================= */}
+
+      {showProfile && (
+        <Profile
+          onBack={() => setShowProfile(false)}
+        />
       )}
     </div>
   );

@@ -2715,5 +2715,878 @@ body {
     padding:
       15px 10px;
   }
+  /* =========================================
+   GLASSMORPHISM DESIGN
+========================================= */
 
+.navbar,
+.login-container,
+.info-modal,
+.profile-card {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.28);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Navbar */
+
+.navbar {
+  border-radius: 0 0 22px 22px;
+}
+
+/* Login Card */
+
+.login-container {
+  border-radius: 28px;
+}
+
+/* Modal */
+
+.info-modal {
+  border-radius: 26px;
+}
+
+/* Profile */
+
+.profile-card {
+  border-radius: 28px;
+}
+
+/* Inputs */
+
+.form-group input,
+.form-group select {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Input focus */
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+
+  border-color: rgba(255, 255, 255, 0.55);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Buttons */
+
+.login-button,
+.create-account-button,
+.profile-actions button,
+.profile-form-actions button {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Glass hover */
+
+.login-button:hover,
+.create-account-button:hover,
+.profile-actions button:hover,
+.profile-form-actions button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.22);
+}
+/* =========================================
+   GLASSMORPHISM + MICRO-INTERACTIONS
+========================================= */
+
+/* ---------- GLASS EFFECT ---------- */
+
+.navbar,
+.login-container,
+.info-modal,
+.profile-card {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.28);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* ---------- GLASS CARD HOVER ---------- */
+
+.login-container:hover,
+.info-modal:hover,
+.profile-card:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- NAVBAR ---------- */
+
+.navbar {
+  border-radius: 0 0 22px 22px;
+}
+
+/* ---------- LOGIN CARD ---------- */
+
+.login-container {
+  border-radius: 28px;
+}
+
+/* ---------- MODAL ---------- */
+
+.info-modal {
+  border-radius: 26px;
+}
+
+/* ---------- PROFILE ---------- */
+
+.profile-card {
+  border-radius: 28px;
+}
+
+
+/* =========================================
+   GLASS INPUTS
+========================================= */
+
+.form-group input,
+.form-group select {
+  background: rgba(255, 255, 255, 0.12);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+
+/* Input hover */
+
+.form-group input:hover,
+.form-group select:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Input focus */
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+
+  transform: translateY(-1px);
+
+  border-color: rgba(255, 255, 255, 0.55);
+
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+
+/* =========================================
+   NAVIGATION MICRO-INTERACTIONS
+========================================= */
+
+.nav-links button {
+  position: relative;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.nav-links button:hover {
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+/* Animated underline */
+
+.nav-links button::after {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  bottom: -6px;
+
+  width: 0;
+  height: 2px;
+
+  border-radius: 999px;
+
+  background: currentColor;
+
+  transform: translateX(-50%);
+
+  transition: width 0.25s ease;
+}
+
+.nav-links button:hover::after {
+  width: 70%;
+}
+
+
+/* =========================================
+   LOGIN BUTTON
+========================================= */
+
+.login-button,
+.create-account-button,
+.profile-actions button,
+.profile-form-actions button {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.login-button:hover,
+.create-account-button:hover,
+.profile-actions button:hover,
+.profile-form-actions button:hover {
+  transform: translateY(-2px);
+
+  filter: brightness(1.05);
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.22);
+}
+
+.login-button:active,
+.create-account-button:active,
+.profile-actions button:active,
+.profile-form-actions button:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================
+   SIGNUP BUTTON
+========================================= */
+
+.signup-button {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.signup-button:hover {
+  transform: translateY(-1px);
+
+  opacity: 0.8;
+}
+
+.signup-button:active {
+  transform: translateY(0);
+}
+
+
+/* =========================================
+   PASSWORD TOGGLE
+========================================= */
+
+.password-toggle {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.password-toggle:hover {
+  transform: scale(1.08);
+
+  opacity: 0.85;
+}
+
+.password-toggle:active {
+  transform: scale(0.95);
+}
+/* =========================================
+   RETRO CRT EFFECT
+========================================= */
+
+.app::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+
+  z-index: 9999;
+  opacity: 0.35;
+}
+
+
+/* =========================================
+   LIVE WEATHER PULSE
+========================================= */
+
+.live-dot {
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.75);
+  }
+}
+/* =========================================================
+   ✦ RETRO GLASS LOGIN EXPERIENCE ✦
+   ========================================================= */
+
+/* ---------- LOGIN AREA ---------- */
+
+.login-container {
+  position: relative;
+  width: min(440px, 90%);
+  padding: 42px 40px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.06)
+    ) !important;
+
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 28px !important;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    0 0 35px rgba(70, 170, 255, 0.10);
+
+  overflow: hidden;
+
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+
+/* ---------- GLASS LIGHT REFLECTION ---------- */
+
+.login-container::before {
+  content: "";
+  position: absolute;
+
+  top: -120px;
+  left: -80px;
+
+  width: 280px;
+  height: 280px;
+
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.20),
+    transparent 70%
+  );
+
+  pointer-events: none;
+}
+
+
+/* ---------- SUBTLE NEON EDGE ---------- */
+
+.login-container::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  border-radius: inherit;
+
+  padding: 1px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.45),
+    transparent 35%,
+    transparent 65%,
+    rgba(100,190,255,0.35)
+  );
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  pointer-events: none;
+}
+
+
+/* ---------- LOGIN HEADER ---------- */
+
+.login-header h2 {
+  color: #ffffff !important;
+
+  font-size: 32px !important;
+  font-weight: 800;
+
+  letter-spacing: -0.8px;
+
+  text-shadow:
+    0 2px 15px rgba(0, 0, 0, 0.35),
+    0 0 18px rgba(130, 210, 255, 0.18);
+}
+
+
+.login-header p {
+  color: rgba(255, 255, 255, 0.72) !important;
+
+  font-size: 15px;
+
+  letter-spacing: 0.2px;
+}
+
+
+/* ---------- FORM LABELS ---------- */
+
+.login-container label {
+  color: rgba(255, 255, 255, 0.90) !important;
+
+  font-weight: 700;
+
+  letter-spacing: 0.4px;
+}
+
+
+/* ---------- GLASS INPUTS ---------- */
+
+.login-container input {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.10) !important;
+
+  color: #ffffff !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+
+  border-radius: 14px !important;
+
+  padding: 15px 17px !important;
+
+  outline: none;
+
+  backdrop-filter: blur(10px);
+
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.08),
+    0 5px 20px rgba(0,0,0,0.08);
+
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+
+/* INPUT PLACEHOLDER */
+
+.login-container input::placeholder {
+  color: rgba(255, 255, 255, 0.52) !important;
+}
+
+
+/* INPUT FOCUS */
+
+.login-container input:focus {
+  background: rgba(255, 255, 255, 0.16) !important;
+
+  border-color: rgba(130, 215, 255, 0.75) !important;
+
+  box-shadow:
+    0 0 0 3px rgba(80, 180, 255, 0.10),
+    0 0 22px rgba(80, 180, 255, 0.18);
+
+  transform: translateY(-1px);
+}
+
+
+/* ---------- PASSWORD TOGGLE ---------- */
+
+.password-toggle {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+
+  opacity: 0.75;
+}
+
+.password-toggle:hover {
+  transform: scale(1.15);
+
+  opacity: 1;
+}
+
+
+/* ---------- FORGOT PASSWORD ---------- */
+
+.forgot-button {
+  color: #7fd5ff !important;
+
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+
+.forgot-button:hover {
+  color: #ffffff !important;
+
+  text-shadow:
+    0 0 12px rgba(100, 210, 255, 0.7);
+}
+
+
+/* ---------- LOGIN BUTTON ---------- */
+
+.login-button {
+  position: relative;
+
+  width: 100%;
+
+  border: 1px solid rgba(255,255,255,0.30) !important;
+
+  border-radius: 14px !important;
+
+  padding: 15px 20px !important;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(70, 180, 255, 0.95),
+      rgba(70, 110, 255, 0.95)
+    ) !important;
+
+  color: #ffffff !important;
+
+  font-weight: 800;
+
+  letter-spacing: 0.5px;
+
+  box-shadow:
+    0 10px 25px rgba(40, 130, 255, 0.25),
+    inset 0 1px rgba(255,255,255,0.35);
+
+  cursor: pointer;
+
+  overflow: hidden;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+
+/* BUTTON SHINE */
+
+.login-button::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: -120%;
+
+  width: 70%;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.35),
+    transparent
+  );
+
+  transform: skewX(-20deg);
+
+  transition: left 0.55s ease;
+}
+
+
+.login-button:hover {
+  transform: translateY(-3px);
+
+  filter: brightness(1.08);
+
+  box-shadow:
+    0 15px 35px rgba(40, 130, 255, 0.38),
+    0 0 25px rgba(80, 190, 255, 0.20);
+}
+
+
+.login-button:hover::before {
+  left: 140%;
+}
+
+
+.login-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+
+/* ---------- DIVIDER ---------- */
+
+.divider span {
+  background: rgba(255,255,255,0.18) !important;
+}
+
+
+.divider p {
+  color: rgba(255,255,255,0.55) !important;
+
+  font-size: 12px;
+
+  letter-spacing: 2px;
+}
+
+
+/* ---------- SIGNUP TEXT ---------- */
+
+.signup-text {
+  color: rgba(255,255,255,0.65) !important;
+}
+
+
+.signup-button {
+  color: #7fd5ff !important;
+
+  font-weight: 800;
+
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+.signup-button:hover {
+  color: #ffffff !important;
+
+  text-shadow:
+    0 0 15px rgba(100, 210, 255, 0.75);
+
+  transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   RETRO CRT SCANLINES
+   ========================================================= */
+
+.app::after {
+  content: "";
+
+  position: fixed;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  z-index: 9999;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+
+  opacity: 0.32;
+}
+
+
+/* =========================================================
+   LIVE WEATHER INDICATOR
+   ========================================================= */
+
+.live-dot {
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+
+@keyframes livePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(0.72);
+    opacity: 0.45;
+  }
+}
+
+
+/* =========================================================
+   WEATHER ICON FLOAT
+   ========================================================= */
+
+.weather-icon {
+  animation: weatherFloat 4s ease-in-out infinite;
+}
+
+
+@keyframes weatherFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+
+/* =========================================================
+   MAIN HEADING GLOW
+   ========================================================= */
+
+.main-content h1 {
+  text-shadow:
+    0 3px 25px rgba(0,0,0,0.35),
+    0 0 30px rgba(120,200,255,0.10);
+}
+
+
+/* =========================================================
+   WEATHER ICON ROW
+   ========================================================= */
+
+.weather-icons span {
+  display: inline-block;
+
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease;
+}
+
+
+.weather-icons span:hover {
+  transform:
+    translateY(-6px)
+    scale(1.18);
+
+  filter:
+    drop-shadow(0 0 10px rgba(255,255,255,0.55));
+}
+
+
+/* =========================================================
+   RETRO HOVER ON NAVIGATION
+   ========================================================= */
+
+.nav-links button {
+  position: relative;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+
+.nav-links button::after {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  bottom: -6px;
+
+  width: 0;
+  height: 2px;
+
+  transform: translateX(-50%);
+
+  background: currentColor;
+
+  box-shadow:
+    0 0 10px currentColor;
+
+  transition: width 0.25s ease;
+}
+
+
+.nav-links button:hover {
+  transform: translateY(-2px);
+}
+
+
+.nav-links button:hover::after {
+  width: 70%;
+}
 }
