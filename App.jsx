@@ -275,12 +275,13 @@ function App() {
       const result = await response.text();
 
       if (response.ok) {
-  alert(result);
+        alert(result);
 
-  console.log("Login successful:", result);
+        console.log("Login successful:", result);
 
-  setIsLoggedIn(true);
-} else {
+        setIsLoggedIn(true);
+        setShowProfile(true);
+      } else {
         alert("Login failed: " + result);
       }
     } catch (error) {
@@ -513,220 +514,236 @@ function App() {
             Contact
           </button>
           {isLoggedIn && (
-  <button
-    type="button"
-    onClick={() => setShowProfile(true)}
-  >
-    Profile
-  </button>
-)}
+            <button
+              type="button"
+              onClick={() => setShowProfile(true)}
+            >
+              Profile
+            </button>
+          )}
         </nav>
       </header>
 
       {/* =========================================
-          MAIN
+          MAIN — LOGIN / DASHBOARD VIEW
+          Only rendered when the Profile page is
+          not active, so the two views never
+          stack on top of each other.
       ========================================= */}
 
-      <main className="main-content">
-        {/* LIVE WEATHER */}
+      {!showProfile && (
+        <main className="main-content">
+          {/* LIVE WEATHER */}
 
-        <div className="live-weather">
-          <span className="live-dot"></span>
+          <div className="live-weather">
+            <span className="live-dot"></span>
 
-          <span>
-            {weather.loading
-              ? "Detecting live weather..."
-              : weather.error
-              ? weather.error
-              : `Live weather • ${weatherLabel}`}
-          </span>
-        </div>
-
-        {/* WEATHER ICON */}
-
-        <div className="weather-icon">
-          {weatherIcon}
-        </div>
-
-        {/* WEATHER INFORMATION */}
-
-        {!weather.loading &&
-          weather.temperature !== null && (
-            <div className="weather-info">
-              <div className="temperature">
-                {weather.temperature}°C
-              </div>
-
-              <div className="location">
-                📍 {weather.location}
-              </div>
-
-              {weather.humidity !== null && (
-                <div className="weather-details">
-                  <span>
-                    💧 {weather.humidity}%
-                  </span>
-
-                  <span>
-                    💨 {Math.round(weather.wind)} km/h
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-        {/* =========================================
-            MAIN HEADING
-        ========================================= */}
-
-        <h1>
-          Plan smarter.
-          <br />
-          Travel better.
-        </h1>
-
-        {/* DESCRIPTION */}
-
-        <p className="description">
-          Your intelligent travel companion
-          that adapts your itinerary based
-          on real-time weather conditions.
-        </p>
-
-        {/* WEATHER ICONS */}
-
-        <div className="weather-icons">
-          <span>☀️</span>
-          <span>🌤️</span>
-          <span>🌧️</span>
-          <span>⛈️</span>
-        </div>
-
-        {/* =========================================
-            LOGIN
-        ========================================= */}
-
-        <section className="login-container">
-          <div className="login-header">
-            <h2>Welcome Back!</h2>
-
-            <p>
-              Login to continue planning
-              your perfect trip.
-            </p>
+            <span>
+              {weather.loading
+                ? "Detecting live weather..."
+                : weather.error
+                ? weather.error
+                : `Live weather • ${weatherLabel}`}
+            </span>
           </div>
 
-          <form onSubmit={handleLogin}>
-            {/* EMAIL */}
+          {/* WEATHER ICON */}
 
-            <div className="form-group">
-              <label htmlFor="email">
-                Email
-              </label>
+          <div className="weather-icon">
+            {weatherIcon}
+          </div>
 
-              <input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                required
-              />
+          {/* WEATHER INFORMATION */}
+
+          {!weather.loading &&
+            weather.temperature !== null && (
+              <div className="weather-info">
+                <div className="temperature">
+                  {weather.temperature}°C
+                </div>
+
+                <div className="location">
+                  📍 {weather.location}
+                </div>
+
+                {weather.humidity !== null && (
+                  <div className="weather-details">
+                    <span>
+                      💧 {weather.humidity}%
+                    </span>
+
+                    <span>
+                      💨 {Math.round(weather.wind)} km/h
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+          {/* =========================================
+              MAIN HEADING
+          ========================================= */}
+
+          <h1>
+            Plan smarter.
+            <br />
+            Travel better.
+          </h1>
+
+          {/* DESCRIPTION */}
+
+          <p className="description">
+            Your intelligent travel companion
+            that adapts your itinerary based
+            on real-time weather conditions.
+          </p>
+
+          {/* WEATHER ICONS */}
+
+          <div className="weather-icons">
+            <span>☀️</span>
+            <span>🌤️</span>
+            <span>🌧️</span>
+            <span>⛈️</span>
+          </div>
+
+          {/* =========================================
+              LOGIN
+          ========================================= */}
+
+          <section className="login-container">
+            <div className="login-header">
+              <h2>Welcome Back!</h2>
+
+              <p>
+                Login to continue planning
+                your perfect trip.
+              </p>
             </div>
 
-            {/* PASSWORD */}
+            <form onSubmit={handleLogin}>
+              {/* EMAIL */}
 
-            <div className="form-group">
-              <label htmlFor="password">
-                Password
-              </label>
+              <div className="form-group">
+                <label htmlFor="email">
+                  Email
+                </label>
 
-              <div className="password-wrapper">
                 <input
-                  id="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  placeholder="Enter your password"
-                  value={password}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
                   onChange={(e) =>
-                    setPassword(e.target.value)
+                    setEmail(e.target.value)
                   }
                   required
                 />
+              </div>
 
+              {/* PASSWORD */}
+
+              <div className="form-group">
+                <label htmlFor="password">
+                  Password
+                </label>
+
+                <div className="password-wrapper">
+                  <input
+                    id="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
+                    aria-label="Show or hide password"
+                  >
+                    {showPassword
+                      ? "🙈"
+                      : "👁️"}
+                  </button>
+                </div>
+              </div>
+
+              {/* FORGOT PASSWORD */}
+
+              <div className="forgot-container">
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="forgot-button"
                   onClick={() =>
-                    setShowPassword(
-                      !showPassword
+                    alert(
+                      "Password reset will send an OTP to your registered email after the backend is connected."
                     )
                   }
-                  aria-label="Show or hide password"
                 >
-                  {showPassword
-                    ? "🙈"
-                    : "👁️"}
+                  Forgot Password?
                 </button>
               </div>
+
+              {/* LOGIN BUTTON */}
+
+              <button
+                type="submit"
+                className="login-button"
+              >
+                Login
+              </button>
+            </form>
+
+            {/* OR */}
+
+            <div className="divider">
+              <span></span>
+
+              <p>OR</p>
+
+              <span></span>
             </div>
 
-            {/* FORGOT PASSWORD */}
+            {/* SIGNUP */}
 
-            <div className="forgot-container">
+            <p className="signup-text">
+              Don't have an account?
+
               <button
                 type="button"
-                className="forgot-button"
-                onClick={() =>
-                  alert(
-                    "Password reset will send an OTP to your registered email after the backend is connected."
-                  )
-                }
+                className="signup-button"
+                onClick={openSignup}
               >
-                Forgot Password?
+                Sign Up
               </button>
-            </div>
+            </p>
+          </section>
+        </main>
+      )}
 
-            {/* LOGIN BUTTON */}
+      {/* =========================================
+          PROFILE — replaces the main dashboard
+          view when active
+      ========================================= */}
 
-            <button
-              type="submit"
-              className="login-button"
-            >
-              Login
-            </button>
-          </form>
-
-          {/* OR */}
-
-          <div className="divider">
-            <span></span>
-
-            <p>OR</p>
-
-            <span></span>
-          </div>
-
-          {/* SIGNUP */}
-
-          <p className="signup-text">
-            Don't have an account?
-
-            <button
-              type="button"
-              className="signup-button"
-              onClick={openSignup}
-            >
-              Sign Up
-            </button>
-          </p>
-        </section>
-      </main>
+      {showProfile && (
+        <Profile
+          onBack={() => setShowProfile(false)}
+        />
+      )}
 
       {/* =========================================
           ABOUT MODAL
@@ -1129,15 +1146,6 @@ function App() {
             </form>
           </div>
         </div>
-      )}
-        {/* =========================================
-          PROFILE
-      ========================================= */}
-
-      {showProfile && (
-        <Profile
-          onBack={() => setShowProfile(false)}
-        />
       )}
     </div>
   );

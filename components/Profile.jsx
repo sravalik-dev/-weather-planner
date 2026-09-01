@@ -116,7 +116,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
           onClick={onBack}
         >
           ← Back to Dashboard
-        const handlePasswordSubmit</button>
+        </button>
 
         <div className="profile-card">
 
