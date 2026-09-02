@@ -29,6 +29,7 @@ public class User {
     private String password;
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     @Column(name = "mobile_number")
     private String mobileNumber;
 
@@ -41,6 +42,8 @@ public class User {
     @Column(name = "profile_picture")
     private String profilePicture;
 =======
+=======
+>>>>>>> Stashed changes
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
@@ -58,6 +61,9 @@ public class User {
 
     @Column(name = "reset_otp_verified", nullable = false)
     private boolean resetOtpVerified = false;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     @Column(name = "created_at", insertable = false, updatable = false)
@@ -99,6 +105,7 @@ public class User {
     }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     public String getMobileNumber() {
         return mobileNumber;
     }
@@ -130,6 +137,8 @@ public class User {
     public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
 =======
+=======
+>>>>>>> Stashed changes
     public boolean isEmailVerified() {
         return emailVerified;
     }
@@ -176,6 +185,9 @@ public class User {
 
     public void setResetOtpVerified(boolean resetOtpVerified) {
         this.resetOtpVerified = resetOtpVerified;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     }
 
