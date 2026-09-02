@@ -275,7 +275,7 @@ function App() {
       const result = await response.text();
 
       if (response.ok) {
-        alert(result);
+       
 
         console.log("Login successful:", result);
 
