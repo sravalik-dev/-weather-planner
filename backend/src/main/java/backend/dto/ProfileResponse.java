@@ -1,49 +1,25 @@
-package backend.entity;
+package backend.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+public class ProfileResponse {
 
-@Entity
-@Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
     private Integer userId;
-
-    @Column(name = "full_name", nullable = false)
     private String fullName;
-
-    @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
-    private String password;
-
-    @Column(name = "mobile_number")
     private String mobileNumber;
-
-    @Column(name = "gender")
     private String gender;
-
-    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
-
-    @Column(name = "profile_picture")
     private String profilePicture;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private String budget;
+    private String transport;
+    private String accommodation;
+    private String foodPreferences;
+    private String interests;
+    private String travelPace;
 
-    public User() {
+    public ProfileResponse() {
     }
 
     public Integer getUserId() {
@@ -68,14 +44,6 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getMobileNumber() {
@@ -110,11 +78,51 @@ public class User {
         this.profilePicture = profilePicture;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public String getBudget() {
+        return budget;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setBudget(String budget) {
+        this.budget = budget;
+    }
+
+    public String getTransport() {
+        return transport;
+    }
+
+    public void setTransport(String transport) {
+        this.transport = transport;
+    }
+
+    public String getAccommodation() {
+        return accommodation;
+    }
+
+    public void setAccommodation(String accommodation) {
+        this.accommodation = accommodation;
+    }
+
+    public String getFoodPreferences() {
+        return foodPreferences;
+    }
+
+    public void setFoodPreferences(String foodPreferences) {
+        this.foodPreferences = foodPreferences;
+    }
+
+    public String getInterests() {
+        return interests;
+    }
+
+    public void setInterests(String interests) {
+        this.interests = interests;
+    }
+
+    public String getTravelPace() {
+        return travelPace;
+    }
+
+    public void setTravelPace(String travelPace) {
+        this.travelPace = travelPace;
     }
 }
