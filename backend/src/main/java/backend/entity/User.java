@@ -28,6 +28,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+<<<<<<< Updated upstream
     @Column(name = "mobile_number")
     private String mobileNumber;
 
@@ -39,6 +40,25 @@ public class User {
 
     @Column(name = "profile_picture")
     private String profilePicture;
+=======
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "otp_code")
+    private String otpCode;
+
+    @Column(name = "otp_expiry")
+    private LocalDateTime otpExpiry;
+
+    @Column(name = "reset_otp")
+    private String resetOtp;
+
+    @Column(name = "reset_otp_expiry")
+    private LocalDateTime resetOtpExpiry;
+
+    @Column(name = "reset_otp_verified", nullable = false)
+    private boolean resetOtpVerified = false;
+>>>>>>> Stashed changes
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -78,6 +98,7 @@ public class User {
         this.password = password;
     }
 
+<<<<<<< Updated upstream
     public String getMobileNumber() {
         return mobileNumber;
     }
@@ -108,6 +129,54 @@ public class User {
 
     public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
+=======
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getOtpCode() {
+        return otpCode;
+    }
+
+    public void setOtpCode(String otpCode) {
+        this.otpCode = otpCode;
+    }
+
+    public LocalDateTime getOtpExpiry() {
+        return otpExpiry;
+    }
+
+    public void setOtpExpiry(LocalDateTime otpExpiry) {
+        this.otpExpiry = otpExpiry;
+    }
+
+    public String getResetOtp() {
+        return resetOtp;
+    }
+
+    public void setResetOtp(String resetOtp) {
+        this.resetOtp = resetOtp;
+    }
+
+    public LocalDateTime getResetOtpExpiry() {
+        return resetOtpExpiry;
+    }
+
+    public void setResetOtpExpiry(LocalDateTime resetOtpExpiry) {
+        this.resetOtpExpiry = resetOtpExpiry;
+    }
+
+    public boolean isResetOtpVerified() {
+        return resetOtpVerified;
+    }
+
+    public void setResetOtpVerified(boolean resetOtpVerified) {
+        this.resetOtpVerified = resetOtpVerified;
+>>>>>>> Stashed changes
     }
 
     public LocalDateTime getCreatedAt() {
