@@ -1,544 +1,982 @@
-/* =========================================
-   GLOBAL
-========================================= */
+/* =========================================================
+   ITINERARY PLANNER
+   COMPLETE APP.CSS
+   Works with App.jsx + Profile.jsx
+========================================================= */
+
+
+/* =========================================================
+   1. GLOBAL RESET
+========================================================= */
 
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+
+  font-family:
+    Inter,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+
+  background: #071426;
 }
 
 
-/* =========================================
-   MAIN APP
-========================================= */
+/* =========================================================
+   2. MAIN APP
+========================================================= */
 
 .app {
-  min-height: 100vh;
-  width: 100%;
   position: relative;
-  overflow: hidden;
 
-  color: #1e3a5f;
+  width: 100%;
+  min-height: 100vh;
 
-  display: flex;
-  flex-direction: column;
+  overflow-x: hidden;
 
-  transition:
-    background 1.5s ease,
-    color 1.5s ease;
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      #071426 0%,
+      #0d2945 45%,
+      #174c70 100%
+    );
+
+  transition: background 1s ease;
 }
 
 
-/* =========================================
-   WEATHER BACKGROUND
-========================================= */
+/* =========================================================
+   3. WEATHER BACKGROUNDS
+========================================================= */
 
-.weather-background {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-
-/* =========================================
-   CLEAR DAY
-========================================= */
+/* CLEAR DAY */
 
 .app.weather-clear.day {
   background:
+    radial-gradient(
+      circle at 75% 15%,
+      rgba(255, 225, 120, 0.28),
+      transparent 24%
+    ),
     linear-gradient(
       135deg,
-      #87ceeb 0%,
-      #dff5ff 45%,
-      #fff8dc 100%
+      #1267a3 0%,
+      #39a9db 48%,
+      #8bd9ed 100%
     );
 }
 
 
-/* =========================================
-   CLEAR NIGHT
-========================================= */
+/* CLEAR NIGHT */
 
 .app.weather-clear.night {
   background:
-    linear-gradient(
-      135deg,
-      #020817 0%,
-      #07152f 40%,
-      #102b55 70%,
-      #172f52 100%
-    );
-
-  color: #ffffff;
-}
-
-
-/* =========================================
-   PARTLY CLOUDY
-========================================= */
-
-.app.weather-partly-cloudy {
-  background:
-    linear-gradient(
-      135deg,
-      #9ddcff 0%,
-      #e9f7ff 50%,
-      #d7e8f5 100%
-    );
-}
-
-
-/* =========================================
-   CLOUDY
-========================================= */
-
-.app.weather-cloudy {
-  background:
-    linear-gradient(
-      135deg,
-      #9caeba 0%,
-      #d5e0e5 50%,
-      #eef3f5 100%
-    );
-}
-
-
-/* =========================================
-   DRIZZLE
-========================================= */
-
-.app.weather-drizzle {
-  background:
-    linear-gradient(
-      135deg,
-      #718a9b 0%,
-      #b9cbd5 50%,
-      #dce8ed 100%
-    );
-}
-
-
-/* =========================================
-   RAIN
-========================================= */
-
-.app.weather-rain {
-  background:
-    linear-gradient(
-      135deg,
-      #304b63 0%,
-      #587287 45%,
-      #9bb1bf 100%
-    );
-}
-
-
-/* =========================================
-   STORM
-========================================= */
-
-.app.weather-storm {
-  background:
-    linear-gradient(
-      135deg,
-      #151b2c 0%,
-      #29344d 45%,
-      #4e6078 100%
-    );
-
-  color: white;
-}
-
-
-/* =========================================
-   SNOW
-========================================= */
-
-.app.weather-snow {
-  background:
-    linear-gradient(
-      135deg,
-      #b9d8eb 0%,
-      #e9f5fb 50%,
-      #ffffff 100%
-    );
-}
-
-
-/* =========================================
-   NIGHT BACKGROUND
-   BASED ON USER LOCATION
-========================================= */
-
-/*
-   App.jsx adds the "night" class when
-   Open-Meteo reports is_day === 0.
-
-   These rules intentionally come AFTER
-   the normal weather backgrounds so that
-   nighttime always gets a dark sky.
-*/
-
-.app.night {
-  background:
     radial-gradient(
-      circle at 70% 15%,
-      rgba(42, 75, 125, 0.32),
-      transparent 28%
+      circle at 75% 18%,
+      rgba(150, 180, 255, 0.18),
+      transparent 22%
     ),
     linear-gradient(
       135deg,
-      #01030a 0%,
-      #030914 35%,
-      #07152b 65%,
-      #0b1d38 100%
+      #030817 0%,
+      #0a1634 50%,
+      #152b50 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - partly cloudy */
+/* PARTLY CLOUDY */
+
+.app.weather-partly-cloudy.day {
+  background:
+    linear-gradient(
+      135deg,
+      #287da9 0%,
+      #6dbbd4 55%,
+      #a8dce7 100%
+    );
+}
 
 .app.weather-partly-cloudy.night {
   background:
-    radial-gradient(
-      circle at 75% 15%,
-      rgba(72, 105, 155, 0.25),
-      transparent 28%
-    ),
     linear-gradient(
       135deg,
-      #01030a 0%,
-      #06101f 40%,
-      #0b1d35 70%,
-      #122945 100%
+      #071329 0%,
+      #153253 55%,
+      #274d68 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - cloudy */
+/* CLOUDY */
+
+.app.weather-cloudy.day {
+  background:
+    linear-gradient(
+      135deg,
+      #4b6677 0%,
+      #708998 50%,
+      #9eb2bb 100%
+    );
+}
 
 .app.weather-cloudy.night {
   background:
-    radial-gradient(
-      circle at 70% 15%,
-      rgba(80, 95, 120, 0.18),
-      transparent 30%
-    ),
     linear-gradient(
       135deg,
-      #02040a 0%,
-      #080d16 40%,
-      #101b2b 70%,
-      #16273b 100%
+      #0b1724 0%,
+      #1d303e 50%,
+      #344a56 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - drizzle */
+/* DRIZZLE */
+
+.app.weather-drizzle.day {
+  background:
+    linear-gradient(
+      135deg,
+      #356a83 0%,
+      #57899b 50%,
+      #789da8 100%
+    );
+}
 
 .app.weather-drizzle.night {
   background:
     linear-gradient(
       135deg,
-      #010309 0%,
-      #07111f 40%,
-      #102137 70%,
-      #162c43 100%
+      #081723 0%,
+      #17333f 50%,
+      #254a55 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - rain */
+/* RAIN */
+
+.app.weather-rain.day {
+  background:
+    linear-gradient(
+      135deg,
+      #234e67 0%,
+      #3f7184 50%,
+      #607f89 100%
+    );
+}
 
 .app.weather-rain.night {
   background:
     linear-gradient(
       135deg,
-      #010207 0%,
-      #06101c 35%,
-      #0b1b2c 65%,
-      #12283d 100%
+      #050e18 0%,
+      #102633 50%,
+      #1c3c49 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - storm */
+/* STORM */
+
+.app.weather-storm.day {
+  background:
+    linear-gradient(
+      135deg,
+      #182c40 0%,
+      #354c60 50%,
+      #4f6270 100%
+    );
+}
 
 .app.weather-storm.night {
   background:
-    radial-gradient(
-      circle at 50% 20%,
-      rgba(75, 82, 120, 0.15),
-      transparent 30%
-    ),
     linear-gradient(
       135deg,
-      #000105 0%,
-      #030611 40%,
-      #080d1d 70%,
-      #11182b 100%
+      #02050c 0%,
+      #0a1220 50%,
+      #182839 100%
     );
-
-  color: #ffffff;
 }
 
 
-/* Night - snow */
+/* SNOW */
+
+.app.weather-snow.day {
+  background:
+    linear-gradient(
+      135deg,
+      #7397aa 0%,
+      #aac6d0 50%,
+      #d5e5e8 100%
+    );
+}
 
 .app.weather-snow.night {
   background:
-    radial-gradient(
-      circle at 75% 15%,
-      rgba(150, 180, 220, 0.18),
-      transparent 30%
-    ),
     linear-gradient(
       135deg,
-      #02050b 0%,
-      #07111e 40%,
-      #102136 70%,
-      #172d45 100%
+      #081421 0%,
+      #1a3447 50%,
+      #35556a 100%
+    );
+}
+
+
+/* =========================================================
+   4. WEATHER BACKGROUND LAYER
+========================================================= */
+
+.weather-background {
+  position: fixed;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  pointer-events: none;
+
+  overflow: hidden;
+
+  z-index: 0;
+}
+
+
+/* =========================================================
+   5. SUN
+========================================================= */
+
+.sun-glow {
+  position: absolute;
+
+  width: 260px;
+  height: 260px;
+
+  right: 8%;
+  top: 7%;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 235, 150, 0.8) 0%,
+      rgba(255, 220, 100, 0.25) 35%,
+      transparent 70%
     );
 
-  color: #ffffff;
+  filter: blur(4px);
+
+  opacity: 0;
+
+  transition: opacity 1s ease;
+}
+
+.app.day .sun-glow {
+  opacity: 1;
 }
 
 
-/* =========================================
-   NIGHT CONTENT COLORS
-========================================= */
+/* =========================================================
+   6. MOON
+========================================================= */
 
-.app.night .brand-name {
-  color: #f5f9ff;
+.moon-glow {
+  position: absolute;
+
+  right: 10%;
+  top: 8%;
+
+  font-size: 95px;
+
+  opacity: 0;
+
+  filter:
+    drop-shadow(
+      0 0 30px rgba(200, 220, 255, 0.55)
+    );
+
+  animation: moonFloat 5s ease-in-out infinite;
 }
 
-.app.night .nav-links button {
-  color: #d7e5f3;
+.app.night .moon-glow {
+  opacity: 1;
 }
 
-.app.night .nav-links button:hover {
-  color: #7dc4ff;
-}
+@keyframes moonFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
 
-.app.night .temperature {
-  color: #f1f7ff;
-}
-
-.app.night .location {
-  color: #c6d7e8;
-}
-
-.app.night .weather-details {
-  color: #b5c9dc;
-}
-
-.app.night .main-content h1 {
-  color: #ffffff;
-}
-
-.app.night .description {
-  color: #c4d4e4;
-}
-
-.app.night .login-header h2 {
-  color: #1e3a5f;
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 
-/* =========================================
-   NAVBAR
-========================================= */
+/* =========================================================
+   7. CLOUDS
+========================================================= */
+
+.cloud {
+  position: absolute;
+
+  font-size: 90px;
+
+  opacity: 0.16;
+
+  filter: blur(1px);
+
+  animation:
+    cloudMove 28s linear infinite;
+}
+
+.cloud-one {
+  top: 12%;
+  left: -120px;
+  animation-duration: 35s;
+}
+
+.cloud-two {
+  top: 28%;
+  left: -200px;
+  font-size: 65px;
+  animation-duration: 45s;
+  animation-delay: -15s;
+}
+
+.cloud-three {
+  top: 45%;
+  left: -160px;
+  font-size: 75px;
+  animation-duration: 50s;
+  animation-delay: -25s;
+}
+
+@keyframes cloudMove {
+  from {
+    transform: translateX(-100px);
+  }
+
+  to {
+    transform: translateX(calc(100vw + 300px));
+  }
+}
+
+
+/* =========================================================
+   8. STARS
+========================================================= */
+
+.stars {
+  position: absolute;
+  inset: 0;
+
+  opacity: 0;
+
+  transition: opacity 1s ease;
+}
+
+.app.night .stars {
+  opacity: 0.7;
+}
+
+.stars span {
+  position: absolute;
+
+  color: rgba(255, 255, 255, 0.8);
+
+  font-size: 10px;
+
+  animation: starTwinkle 3s ease-in-out infinite;
+}
+
+.stars span:nth-child(1) {
+  top: 12%;
+  left: 15%;
+}
+
+.stars span:nth-child(2) {
+  top: 20%;
+  left: 30%;
+}
+
+.stars span:nth-child(3) {
+  top: 8%;
+  left: 45%;
+}
+
+.stars span:nth-child(4) {
+  top: 30%;
+  left: 60%;
+}
+
+.stars span:nth-child(5) {
+  top: 18%;
+  left: 78%;
+}
+
+.stars span:nth-child(6) {
+  top: 42%;
+  left: 85%;
+}
+
+.stars span:nth-child(7) {
+  top: 35%;
+  left: 20%;
+}
+
+.stars span:nth-child(8) {
+  top: 52%;
+  left: 40%;
+}
+
+.stars span:nth-child(9) {
+  top: 14%;
+  left: 68%;
+}
+
+.stars span:nth-child(10) {
+  top: 55%;
+  left: 75%;
+}
+
+.stars span:nth-child(n + 11) {
+  top: calc(
+    5% + (var(--i, 1) * 6%)
+  );
+  left: calc(
+    3% + (var(--i, 1) * 8%)
+  );
+}
+
+@keyframes starTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+
+/* =========================================================
+   9. RAIN
+========================================================= */
+
+.rain-layer {
+  position: absolute;
+  inset: 0;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+.app.weather-rain .rain-layer,
+.app.weather-drizzle .rain-layer,
+.app.weather-storm .rain-layer {
+  opacity: 1;
+}
+
+.rain-drop {
+  position: absolute;
+
+  top: -30px;
+
+  width: 1px;
+  height: 35px;
+
+  background:
+    linear-gradient(
+      transparent,
+      rgba(210, 240, 255, 0.65)
+    );
+
+  animation: rainFall 0.8s linear infinite;
+}
+
+.rain-drop:nth-child(1) {
+  left: 3%;
+  animation-delay: 0.1s;
+}
+
+.rain-drop:nth-child(2) {
+  left: 7%;
+  animation-delay: 0.4s;
+}
+
+.rain-drop:nth-child(3) {
+  left: 11%;
+  animation-delay: 0.7s;
+}
+
+.rain-drop:nth-child(4) {
+  left: 15%;
+  animation-delay: 0.2s;
+}
+
+.rain-drop:nth-child(5) {
+  left: 19%;
+  animation-delay: 0.8s;
+}
+
+.rain-drop:nth-child(6) {
+  left: 23%;
+  animation-delay: 0.3s;
+}
+
+.rain-drop:nth-child(7) {
+  left: 27%;
+  animation-delay: 0.6s;
+}
+
+.rain-drop:nth-child(8) {
+  left: 31%;
+  animation-delay: 0.1s;
+}
+
+.rain-drop:nth-child(9) {
+  left: 35%;
+  animation-delay: 0.5s;
+}
+
+.rain-drop:nth-child(10) {
+  left: 39%;
+  animation-delay: 0.9s;
+}
+
+.rain-drop:nth-child(11) {
+  left: 43%;
+  animation-delay: 0.2s;
+}
+
+.rain-drop:nth-child(12) {
+  left: 47%;
+  animation-delay: 0.7s;
+}
+
+.rain-drop:nth-child(13) {
+  left: 51%;
+  animation-delay: 0.4s;
+}
+
+.rain-drop:nth-child(14) {
+  left: 55%;
+  animation-delay: 0.8s;
+}
+
+.rain-drop:nth-child(15) {
+  left: 59%;
+  animation-delay: 0.3s;
+}
+
+.rain-drop:nth-child(16) {
+  left: 63%;
+  animation-delay: 0.6s;
+}
+
+.rain-drop:nth-child(17) {
+  left: 67%;
+  animation-delay: 0.1s;
+}
+
+.rain-drop:nth-child(18) {
+  left: 71%;
+  animation-delay: 0.5s;
+}
+
+.rain-drop:nth-child(19) {
+  left: 75%;
+  animation-delay: 0.8s;
+}
+
+.rain-drop:nth-child(20) {
+  left: 79%;
+  animation-delay: 0.2s;
+}
+
+.rain-drop:nth-child(21) {
+  left: 83%;
+  animation-delay: 0.6s;
+}
+
+.rain-drop:nth-child(22) {
+  left: 87%;
+  animation-delay: 0.3s;
+}
+
+.rain-drop:nth-child(23) {
+  left: 91%;
+  animation-delay: 0.7s;
+}
+
+.rain-drop:nth-child(24) {
+  left: 95%;
+  animation-delay: 0.4s;
+}
+
+@keyframes rainFall {
+  from {
+    transform: translateY(-40px);
+  }
+
+  to {
+    transform: translateY(110vh);
+  }
+}
+
+
+/* =========================================================
+   10. SNOW
+========================================================= */
+
+.snow-layer {
+  position: absolute;
+  inset: 0;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+.app.weather-snow .snow-layer {
+  opacity: 1;
+}
+
+.snowflake {
+  position: absolute;
+
+  top: -30px;
+
+  color: rgba(255, 255, 255, 0.8);
+
+  font-size: 14px;
+
+  animation:
+    snowFall 8s linear infinite;
+}
+
+.snowflake:nth-child(1) {
+  left: 3%;
+  animation-delay: 0s;
+}
+
+.snowflake:nth-child(2) {
+  left: 8%;
+  animation-delay: 2s;
+}
+
+.snowflake:nth-child(3) {
+  left: 13%;
+  animation-delay: 4s;
+}
+
+.snowflake:nth-child(4) {
+  left: 18%;
+  animation-delay: 1s;
+}
+
+.snowflake:nth-child(5) {
+  left: 23%;
+  animation-delay: 3s;
+}
+
+.snowflake:nth-child(6) {
+  left: 28%;
+  animation-delay: 5s;
+}
+
+.snowflake:nth-child(7) {
+  left: 33%;
+  animation-delay: 1.5s;
+}
+
+.snowflake:nth-child(8) {
+  left: 38%;
+  animation-delay: 3.5s;
+}
+
+.snowflake:nth-child(9) {
+  left: 43%;
+  animation-delay: 5.5s;
+}
+
+.snowflake:nth-child(10) {
+  left: 48%;
+  animation-delay: 2.5s;
+}
+
+.snowflake:nth-child(11) {
+  left: 53%;
+  animation-delay: 4.5s;
+}
+
+.snowflake:nth-child(12) {
+  left: 58%;
+  animation-delay: 0.5s;
+}
+
+.snowflake:nth-child(13) {
+  left: 63%;
+  animation-delay: 3s;
+}
+
+.snowflake:nth-child(14) {
+  left: 68%;
+  animation-delay: 5s;
+}
+
+.snowflake:nth-child(15) {
+  left: 73%;
+  animation-delay: 1s;
+}
+
+.snowflake:nth-child(16) {
+  left: 78%;
+  animation-delay: 4s;
+}
+
+.snowflake:nth-child(17) {
+  left: 83%;
+  animation-delay: 2s;
+}
+
+.snowflake:nth-child(18) {
+  left: 88%;
+  animation-delay: 5.5s;
+}
+
+.snowflake:nth-child(19) {
+  left: 93%;
+  animation-delay: 1.5s;
+}
+
+@keyframes snowFall {
+  0% {
+    transform:
+      translateY(-30px)
+      translateX(0);
+  }
+
+  50% {
+    transform:
+      translateY(55vh)
+      translateX(35px);
+  }
+
+  100% {
+    transform:
+      translateY(110vh)
+      translateX(-20px);
+  }
+}
+
+
+/* =========================================================
+   11. NAVBAR
+========================================================= */
 
 .navbar {
   position: relative;
-  z-index: 10;
 
-  width: 100%;
-  height: 75px;
+  z-index: 20;
+
+  width: calc(100% - 40px);
+
+  min-height: 72px;
+
+  margin: 20px auto 0;
+
+  padding: 14px 24px;
 
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
-  padding: 0 7%;
+  border-radius: 18px;
 
-  background:
-    rgba(255, 255, 255, 0.58);
+  background: rgba(5, 18, 35, 0.42);
 
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.45);
-
-  backdrop-filter: blur(16px);
-}
-
-
-/* =========================================
-   NIGHT NAVBAR
-========================================= */
-
-.app.night .navbar {
-  background:
-    rgba(3, 10, 22, 0.68);
-
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 
   box-shadow:
-    0 5px 25px
-    rgba(0, 0, 0, 0.18);
+    0 12px 40px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 
-/* =========================================
-   BRAND
-========================================= */
+/* =========================================================
+   12. BRAND
+========================================================= */
 
 .brand {
   display: flex;
+
   align-items: center;
-  gap: 10px;
+
+  gap: 11px;
 }
 
 .brand-icon {
-  font-size: 28px;
+  display: flex;
 
-  transition:
-    transform 0.5s ease;
-}
+  align-items: center;
+  justify-content: center;
 
-.brand-icon:hover {
-  transform:
-    scale(1.12)
-    rotate(5deg);
+  width: 38px;
+  height: 38px;
+
+  font-size: 25px;
+
+  border-radius: 11px;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  box-shadow:
+    0 0 18px rgba(100, 200, 255, 0.15);
 }
 
 .brand-name {
-  font-size: 21px;
+  color: #ffffff;
+
+  font-size: 18px;
+
   font-weight: 700;
-  color: #1e3a5f;
+
+  letter-spacing: 0.2px;
 }
 
 
-/* =========================================
-   NAV LINKS
-========================================= */
+/* =========================================================
+   13. NAV LINKS
+========================================================= */
 
 .nav-links {
   display: flex;
-  gap: 35px;
+
+  align-items: center;
+
+  gap: 8px;
 }
 
 .nav-links button {
+  position: relative;
+
   border: none;
+
   background: transparent;
 
-  color: #526b7d;
+  color: rgba(255, 255, 255, 0.85);
 
-  font-size: 15px;
-  font-weight: 500;
+  padding: 10px 14px;
+
+  font-size: 14px;
+
+  font-weight: 600;
 
   cursor: pointer;
 
-  transition: 0.3s;
+  border-radius: 10px;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .nav-links button:hover {
-  color: #2196f3;
+  color: #ffffff;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  transform: translateY(-1px);
 }
 
 
-/* =========================================
-   MAIN CONTENT
-========================================= */
+/* =========================================================
+   14. MAIN CONTENT
+========================================================= */
 
 .main-content {
   position: relative;
-  z-index: 5;
 
-  flex: 1;
+  z-index: 5;
 
   width: 100%;
 
+  min-height: calc(100vh - 112px);
+
+  padding: 45px 20px 70px;
+
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
 
   text-align: center;
-
-  padding:
-    35px 20px 60px;
 }
 
 
-/* =========================================
-   LIVE WEATHER
-========================================= */
+/* =========================================================
+   15. LIVE WEATHER
+========================================================= */
 
 .live-weather {
   display: flex;
+
   align-items: center;
-  gap: 8px;
 
-  margin-bottom: 8px;
+  gap: 9px;
 
-  padding:
-    8px 15px;
+  padding: 9px 15px;
 
-  border-radius: 999px;
+  border-radius: 30px;
 
-  background:
-    rgba(255, 255, 255, 0.45);
+  background: rgba(5, 20, 35, 0.35);
 
-  border:
-    1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 
-  backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.88);
 
-  color: #405b70;
+  font-size: 12px;
 
-  font-size: 13px;
   font-weight: 600;
+
+  backdrop-filter: blur(12px);
 }
-
-
-/* Night live weather */
-
-.app.night .live-weather {
-  background:
-    rgba(255, 255, 255, 0.10);
-
-  border:
-    1px solid rgba(255, 255, 255, 0.16);
-
-  color: #e0edf8;
-
-  box-shadow:
-    0 5px 20px
-    rgba(0, 0, 0, 0.12);
-}
-
 
 .live-dot {
   width: 8px;
@@ -546,464 +984,397 @@ body {
 
   border-radius: 50%;
 
-  background: #22c55e;
+  background: #69ffb0;
 
   box-shadow:
-    0 0 0 4px
-    rgba(34, 197, 94, 0.15);
+    0 0 10px rgba(105, 255, 176, 0.8);
 
-  animation:
-    livePulse 2s infinite;
+  animation: livePulse 1.8s ease-in-out infinite;
 }
 
 @keyframes livePulse {
-
-  0% {
+  0%,
+  100% {
     transform: scale(1);
+    opacity: 1;
   }
 
   50% {
-    transform: scale(1.25);
+    transform: scale(1.4);
+    opacity: 0.55;
   }
-
-  100% {
-    transform: scale(1);
-  }
-
 }
 
 
-/* =========================================
-   WEATHER ICON
-========================================= */
+/* =========================================================
+   16. WEATHER ICON
+========================================================= */
 
 .weather-icon {
-  font-size: 82px;
+  margin-top: 24px;
 
-  margin-bottom: 2px;
+  font-size: 78px;
 
-  animation:
-    float 4s ease-in-out infinite;
+  line-height: 1;
 
   filter:
     drop-shadow(
-      0 12px 12px
-      rgba(30, 58, 95, 0.12)
+      0 12px 20px rgba(0, 0, 0, 0.2)
     );
+
+  animation:
+    weatherFloat 4s ease-in-out infinite;
 }
 
-@keyframes float {
-
-  0% {
-    transform:
-      translateY(0);
+@keyframes weatherFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
   }
 
   50% {
-    transform:
-      translateY(-9px);
+    transform: translateY(-8px) rotate(2deg);
   }
-
-  100% {
-    transform:
-      translateY(0);
-  }
-
 }
 
 
-/* =========================================
-   WEATHER INFO
-========================================= */
+/* =========================================================
+   17. WEATHER INFORMATION
+========================================================= */
 
 .weather-info {
+  margin-top: 12px;
+
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
+
+  gap: 5px;
 }
 
 .temperature {
-  font-size: 18px;
+  font-size: 38px;
+
   font-weight: 700;
 
-  color: #42627c;
-
-  margin-bottom: 4px;
+  line-height: 1;
 }
 
 .location {
-  color: #526b7d;
+  color: rgba(255, 255, 255, 0.82);
 
-  font-size: 13px;
-  font-weight: 500;
-
-  margin-bottom: 6px;
+  font-size: 14px;
 }
 
 .weather-details {
   display: flex;
 
-  gap: 15px;
+  gap: 14px;
 
-  color: #60798b;
+  margin-top: 4px;
+
+  color: rgba(255, 255, 255, 0.7);
 
   font-size: 12px;
-
-  margin-bottom: 8px;
 }
 
 
-/* =========================================
-   MAIN HEADING
-========================================= */
+/* =========================================================
+   18. MAIN HEADING
+========================================================= */
 
 .main-content h1 {
-  font-size:
-    clamp(40px, 5vw, 65px);
+  margin-top: 27px;
 
-  line-height: 1.12;
+  color: #ffffff;
 
-  color: #1e3a5f;
+  font-size: clamp(40px, 6vw, 68px);
 
-  margin-bottom: 20px;
+  line-height: 1.04;
 
-  font-weight: 700;
+  letter-spacing: -2px;
+
+  font-weight: 800;
+
+  text-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.18);
 }
 
 
-/* =========================================
-   DESCRIPTION
-========================================= */
+/* =========================================================
+   19. DESCRIPTION
+========================================================= */
 
 .description {
-  max-width: 650px;
+  max-width: 580px;
 
-  color: #60798b;
+  margin-top: 18px;
 
-  font-size: 18px;
+  color: rgba(255, 255, 255, 0.78);
 
-  line-height: 1.7;
+  font-size: 15px;
 
-  margin-bottom: 25px;
+  line-height: 1.65;
 }
 
 
-/* =========================================
-   WEATHER ICONS
-========================================= */
+/* =========================================================
+   20. WEATHER ICON ROW
+========================================================= */
 
 .weather-icons {
   display: flex;
 
-  justify-content: center;
   align-items: center;
 
-  gap: 25px;
+  gap: 13px;
 
-  font-size: 30px;
+  margin-top: 20px;
 
-  margin-bottom: 35px;
+  opacity: 0.85;
 }
 
 .weather-icons span {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.09);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  font-size: 20px;
+
   transition:
-    transform 0.3s ease;
+    transform 0.25s ease,
+    background 0.25s ease;
 }
 
 .weather-icons span:hover {
-  transform:
-    translateY(-5px)
-    scale(1.1);
+  transform: translateY(-4px);
+
+  background: rgba(255, 255, 255, 0.17);
 }
 
 
-/* =========================================
-   LOGIN CONTAINER
-========================================= */
+/* =========================================================
+   21. LOGIN CONTAINER
+========================================================= */
 
 .login-container {
-  width: 100%;
-  max-width: 430px;
+  width: min(430px, 94%);
 
-  padding: 35px 40px;
+  margin-top: 30px;
+
+  padding: 30px;
+
+  border-radius: 24px;
 
   background:
-    rgba(255, 255, 255, 0.72);
+    rgba(4, 18, 35, 0.56);
 
-  border:
-    1px solid rgba(255, 255, 255, 0.65);
-
-  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   box-shadow:
-    0 20px 60px
-    rgba(20, 45, 70, 0.14);
+    0 25px 60px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+
+  color: #ffffff;
 
   text-align: left;
-
-  animation:
-    loginAppear 0.5s ease;
-}
-
-@keyframes loginAppear {
-
-  from {
-    opacity: 0;
-
-    transform:
-      translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-
-    transform:
-      translateY(0);
-  }
-
 }
 
 
-/* =========================================
-   LOGIN HEADER
-========================================= */
+/* =========================================================
+   22. LOGIN HEADER
+========================================================= */
 
 .login-header {
   text-align: center;
 
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
 
 .login-header h2 {
-  font-size: 28px;
+  color: #ffffff;
 
-  color: #1e3a5f;
+  font-size: 25px;
 
-  margin-bottom: 8px;
+  font-weight: 700;
 }
 
 .login-header p {
-  font-size: 14px;
+  margin-top: 8px;
 
-  color: #71808c;
+  color: rgba(255, 255, 255, 0.72);
+
+  font-size: 13px;
 
   line-height: 1.5;
 }
 
 
-/* =========================================
-   FORM
-========================================= */
+/* =========================================================
+   23. FORM GROUP
+========================================================= */
 
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 17px;
 }
 
 .form-group label {
   display: block;
 
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.92);
+
+  font-size: 13px;
 
   font-weight: 600;
-
-  color: #334e68;
 }
 
 
-/* =========================================
-   INPUT
-========================================= */
+/* =========================================================
+   24. INPUTS
+========================================================= */
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
 
-  height: 48px;
+  min-height: 46px;
 
-  padding: 0 14px;
+  padding: 12px 14px;
 
-  border:
-    1px solid #d3e0e8;
-
-  border-radius: 8px;
-
-  background:
-    rgba(255, 255, 255, 0.92);
-
-  color: #1e3a5f;
-
-  font-size: 15px;
+  border-radius: 12px;
 
   outline: none;
 
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  background: rgba(255, 255, 255, 0.09);
+
+  color: #ffffff;
+
+  font-size: 14px;
+
+  font-family: inherit;
+
   transition:
-    border-color 0.3s,
-    box-shadow 0.3s,
-    transform 0.2s;
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .form-group input::placeholder {
-  color: #a3afb8;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.form-group input:focus {
-  border-color: #2196f3;
+.form-group input:focus,
+.form-group select:focus {
+  border-color: rgba(120, 215, 255, 0.8);
+
+  background: rgba(255, 255, 255, 0.13);
 
   box-shadow:
-    0 0 0 3px
-    rgba(33, 150, 243, 0.1);
+    0 0 0 3px rgba(100, 200, 255, 0.1);
+}
 
-  transform:
-    translateY(-1px);
+.form-group input:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
 }
 
 
-/* =========================================
-   PASSWORD
-========================================= */
+/* =========================================================
+   25. SELECT
+========================================================= */
+
+.form-group select {
+  cursor: pointer;
+}
+
+.form-group select option {
+  background: #102842;
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   26. PASSWORD WRAPPER
+========================================================= */
 
 .password-wrapper {
   position: relative;
+
   width: 100%;
 }
 
 .password-wrapper input {
-  padding-right: 50px;
+  padding-right: 50px !important;
 }
 
 .password-toggle {
   position: absolute;
 
-  right: 8px;
+  right: 9px;
   top: 50%;
 
-  transform:
-    translateY(-50%);
+  transform: translateY(-50%);
 
   width: 35px;
   height: 35px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
 
   border: none;
 
   background: transparent;
 
+  color: #ffffff;
+
   cursor: pointer;
 
-  font-size: 17px;
+  border-radius: 8px;
 
-  border-radius: 6px;
+  font-size: 16px;
 
   transition:
-    background 0.2s,
-    transform 0.2s;
+    background 0.2s ease;
 }
 
 .password-toggle:hover {
-  background:
-    rgba(33, 150, 243, 0.08);
-
-  transform:
-    translateY(-50%)
-    scale(1.05);
-}
-
-.password-toggle:focus-visible {
-  outline:
-    2px solid #2196f3;
-
-  outline-offset: 2px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 
-/* =========================================
-   CONFIRM PASSWORD
-========================================= */
-
-.confirm-password-group {
-  margin-bottom: 18px;
-}
-
-
-/* =========================================
-   PASSWORD MATCH STATUS
-========================================= */
-
-.password-match {
-  display: block;
-
-  margin-top: 6px;
-
-  font-size: 12px;
-
-  font-weight: 600;
-}
-
-.password-match.valid {
-  color: #16a34a;
-}
-
-.password-match.invalid {
-  color: #dc2626;
-}
-
-
-/* =========================================
-   ERROR MESSAGE
-========================================= */
-
-.form-error {
-  display: flex;
-
-  align-items: center;
-
-  gap: 6px;
-
-  margin-top: 7px;
-
-  color: #dc2626;
-
-  font-size: 12px;
-
-  line-height: 1.4;
-}
-
-
-/* =========================================
-   SUCCESS MESSAGE
-========================================= */
-
-.form-success {
-  display: flex;
-
-  align-items: center;
-
-  gap: 6px;
-
-  margin-top: 7px;
-
-  color: #16a34a;
-
-  font-size: 12px;
-
-  line-height: 1.4;
-}
-
-
-/* =========================================
-   FORGOT PASSWORD
-========================================= */
+/* =========================================================
+   27. FORGOT PASSWORD
+========================================================= */
 
 .forgot-container {
   display: flex;
 
   justify-content: flex-end;
 
-  margin-top: -3px;
-
-  margin-bottom: 18px;
+  margin: 2px 0 16px;
 }
 
 .forgot-button {
@@ -1011,93 +1382,73 @@ body {
 
   background: transparent;
 
-  color: #2196f3;
+  color: #8fdcff;
 
-  font-size: 13px;
-
-  cursor: pointer;
-
-  padding: 4px 0;
-
-  transition:
-    color 0.2s;
-}
-
-.forgot-button:hover {
-  color: #1976d2;
-
-  text-decoration: underline;
-}
-
-.forgot-button:focus-visible {
-  outline:
-    2px solid #2196f3;
-
-  outline-offset: 3px;
-
-  border-radius: 3px;
-}
-
-
-/* =========================================
-   LOGIN BUTTON
-========================================= */
-
-.login-button {
-  width: 100%;
-
-  height: 48px;
-
-  border: none;
-
-  border-radius: 8px;
-
-  background: #2196f3;
-
-  color: white;
-
-  font-size: 16px;
+  font-size: 12px;
 
   font-weight: 600;
 
   cursor: pointer;
+}
+
+.forgot-button:hover {
+  color: #ffffff;
+
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   28. LOGIN BUTTON
+========================================================= */
+
+.login-button {
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #35b8ff,
+      #5876ff
+    );
+
+  color: #ffffff;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 25px rgba(45, 130, 255, 0.3);
 
   transition:
-    background 0.3s,
-    transform 0.3s,
-    box-shadow 0.3s;
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .login-button:hover {
-  background: #1976d2;
-
-  transform:
-    translateY(-1px);
+  transform: translateY(-2px);
 
   box-shadow:
-    0 8px 20px
-    rgba(33, 150, 243, 0.22);
+    0 14px 30px rgba(45, 130, 255, 0.4);
 }
 
 .login-button:active {
-  transform:
-    translateY(0);
-}
-
-.login-button:disabled {
-  cursor: not-allowed;
-
-  opacity: 0.65;
-
-  transform: none;
-
-  box-shadow: none;
+  transform: translateY(0);
 }
 
 
-/* =========================================
-   DIVIDER
-========================================= */
+/* =========================================================
+   29. DIVIDER
+========================================================= */
 
 .divider {
   display: flex;
@@ -1106,7 +1457,7 @@ body {
 
   gap: 12px;
 
-  margin: 23px 0;
+  margin: 22px 0 18px;
 }
 
 .divider span {
@@ -1114,649 +1465,58 @@ body {
 
   height: 1px;
 
-  background: #dce6ec;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .divider p {
-  color: #9aa6af;
+  color: rgba(255, 255, 255, 0.5);
 
-  font-size: 12px;
+  font-size: 11px;
 
-  font-weight: 500;
+  font-weight: 600;
 }
 
 
-/* =========================================
-   SIGNUP
-========================================= */
+/* =========================================================
+   30. SIGNUP TEXT
+========================================================= */
 
 .signup-text {
   text-align: center;
 
-  color: #71808c;
+  color: rgba(255, 255, 255, 0.7);
 
   font-size: 13px;
 }
 
 .signup-button {
+  margin-left: 5px;
+
+  padding: 0;
+
   border: none;
 
   background: transparent;
 
-  color: #2196f3;
+  color: #8fdcff;
 
-  font-size: 13px;
+  font-size: inherit;
 
-  font-weight: 600;
+  font-weight: 700;
 
   cursor: pointer;
-
-  margin-left: 5px;
-
-  transition:
-    color 0.2s;
 }
 
 .signup-button:hover {
-  color: #1976d2;
+  color: #ffffff;
 
   text-decoration: underline;
 }
 
 
-/* =========================================
-   CLOUDS
-========================================= */
-
-.cloud {
-  position: absolute;
-
-  font-size: 100px;
-
-  opacity: 0.18;
-
-  filter: blur(1px);
-
-  animation:
-    cloudMove 35s linear infinite;
-}
-
-.cloud-one {
-  top: 13%;
-  left: -120px;
-}
-
-.cloud-two {
-  top: 28%;
-  left: -250px;
-
-  font-size: 75px;
-
-  animation-duration: 45s;
-}
-
-.cloud-three {
-  top: 8%;
-  left: -350px;
-
-  font-size: 60px;
-
-  animation-duration: 55s;
-}
-
-
-/* Reduce clouds during night */
-
-.app.night .cloud {
-  opacity: 0.06;
-
-  filter:
-    brightness(0.7)
-    blur(2px);
-}
-
-
-@keyframes cloudMove {
-
-  from {
-    transform:
-      translateX(0);
-  }
-
-  to {
-    transform:
-      translateX(
-        calc(100vw + 500px)
-      );
-  }
-
-}
-
-
-/* =========================================
-   SUN
-========================================= */
-
-.sun-glow {
-  position: absolute;
-
-  width: 300px;
-  height: 300px;
-
-  border-radius: 50%;
-
-  top: -120px;
-  right: -70px;
-
-  background:
-    radial-gradient(
-      circle,
-      rgba(255, 214, 74, 0.55),
-      rgba(255, 214, 74, 0.1)
-      55%,
-      transparent 72%
-    );
-
-  filter: blur(5px);
-
-  opacity: 0;
-
-  transition:
-    opacity 1.5s ease;
-}
-
-.app.weather-clear.day .sun-glow,
-.app.weather-partly-cloudy.day .sun-glow {
-  opacity: 1;
-}
-
-
-/* =========================================
-   MOON
-========================================= */
-
-.moon-glow {
-  position: absolute;
-
-  top: 90px;
-  right: 12%;
-
-  font-size: 100px;
-
-  opacity: 0;
-
-  filter:
-    drop-shadow(
-      0 0 25px
-      rgba(255, 255, 255, 0.5)
-    );
-
-  transition:
-    opacity 1.5s ease;
-}
-
-.app.night .moon-glow {
-  opacity: 0.9;
-}
-
-
-/* =========================================
-   STARS
-========================================= */
-
-.stars {
-  position: absolute;
-
-  inset: 0;
-
-  color: white;
-
-  opacity: 0;
-
-  font-size: 10px;
-
-  transition:
-    opacity 1.5s ease;
-}
-
-.stars span {
-  position: absolute;
-
-  animation:
-    twinkle 3s ease-in-out infinite;
-}
-
-
-/* Star positions */
-
-.stars span:nth-child(1) {
-  left: 10%;
-  top: 18%;
-}
-
-.stars span:nth-child(2) {
-  left: 25%;
-  top: 10%;
-}
-
-.stars span:nth-child(3) {
-  left: 40%;
-  top: 22%;
-}
-
-.stars span:nth-child(4) {
-  left: 55%;
-  top: 12%;
-}
-
-.stars span:nth-child(5) {
-  left: 70%;
-  top: 25%;
-}
-
-.stars span:nth-child(6) {
-  left: 82%;
-  top: 12%;
-}
-
-.stars span:nth-child(7) {
-  left: 92%;
-  top: 30%;
-}
-
-.stars span:nth-child(8) {
-  left: 15%;
-  top: 35%;
-}
-
-.stars span:nth-child(9) {
-  left: 48%;
-  top: 35%;
-}
-
-.stars span:nth-child(10) {
-  left: 75%;
-  top: 40%;
-}
-
-
-/* Additional stars */
-
-.stars span:nth-child(11) {
-  left: 6%;
-  top: 52%;
-}
-
-.stars span:nth-child(12) {
-  left: 20%;
-  top: 62%;
-}
-
-.stars span:nth-child(13) {
-  left: 34%;
-  top: 48%;
-}
-
-.stars span:nth-child(14) {
-  left: 58%;
-  top: 55%;
-}
-
-.stars span:nth-child(15) {
-  left: 67%;
-  top: 65%;
-}
-
-.stars span:nth-child(16) {
-  left: 86%;
-  top: 52%;
-}
-
-.stars span:nth-child(17) {
-  left: 94%;
-  top: 67%;
-}
-
-.stars span:nth-child(18) {
-  left: 30%;
-  top: 78%;
-}
-
-.stars span:nth-child(19) {
-  left: 52%;
-  top: 82%;
-}
-
-.stars span:nth-child(20) {
-  left: 78%;
-  top: 78%;
-}
-
-.stars span:nth-child(21) {
-  left: 12%;
-  top: 85%;
-}
-
-.stars span:nth-child(22) {
-  left: 42%;
-  top: 68%;
-}
-
-.stars span:nth-child(23) {
-  left: 62%;
-  top: 88%;
-}
-
-.stars span:nth-child(24) {
-  left: 88%;
-  top: 82%;
-}
-
-.stars span:nth-child(25) {
-  left: 97%;
-  top: 48%;
-}
-
-
-/* Show stars only at night */
-
-.app.night .stars {
-  opacity: 0.85;
-}
-
-
-/* Make some stars different sizes */
-
-.stars span:nth-child(3n) {
-  font-size: 14px;
-}
-
-.stars span:nth-child(5n) {
-  font-size: 7px;
-}
-
-
-/* Star glow */
-
-.app.night .stars span {
-  text-shadow:
-    0 0 5px rgba(255, 255, 255, 0.8),
-    0 0 12px rgba(150, 200, 255, 0.35);
-}
-
-
-@keyframes twinkle {
-
-  0%,
-  100% {
-    opacity: 0.25;
-
-    transform:
-      scale(0.8);
-  }
-
-  50% {
-    opacity: 1;
-
-    transform:
-      scale(1.25);
-  }
-
-}
-
-
-/* =========================================
-   RAIN
-========================================= */
-
-.rain-layer {
-  position: absolute;
-
-  inset: 0;
-
-  opacity: 0;
-}
-
-.app.weather-rain .rain-layer,
-.app.weather-drizzle .rain-layer,
-.app.weather-storm .rain-layer {
-  opacity: 0.55;
-}
-
-.rain-drop {
-  position: absolute;
-
-  top: -30px;
-
-  width: 2px;
-  height: 25px;
-
-  background:
-    rgba(255, 255, 255, 0.7);
-
-  transform:
-    rotate(15deg);
-
-  animation:
-    rainFall linear infinite;
-}
-
-.rain-drop:nth-child(1) {
-  left: 2%;
-  animation-duration: 0.7s;
-}
-
-.rain-drop:nth-child(2) {
-  left: 5%;
-  animation-duration: 0.9s;
-}
-
-.rain-drop:nth-child(3) {
-  left: 9%;
-  animation-duration: 0.8s;
-}
-
-.rain-drop:nth-child(4) {
-  left: 14%;
-  animation-duration: 0.65s;
-}
-
-.rain-drop:nth-child(5) {
-  left: 19%;
-  animation-duration: 1s;
-}
-
-.rain-drop:nth-child(6) {
-  left: 24%;
-  animation-duration: 0.75s;
-}
-
-.rain-drop:nth-child(7) {
-  left: 30%;
-  animation-duration: 0.85s;
-}
-
-.rain-drop:nth-child(8) {
-  left: 35%;
-  animation-duration: 0.7s;
-}
-
-.rain-drop:nth-child(9) {
-  left: 41%;
-  animation-duration: 0.9s;
-}
-
-.rain-drop:nth-child(10) {
-  left: 46%;
-  animation-duration: 0.8s;
-}
-
-.rain-drop:nth-child(11) {
-  left: 52%;
-  animation-duration: 0.7s;
-}
-
-.rain-drop:nth-child(12) {
-  left: 58%;
-  animation-duration: 0.95s;
-}
-
-.rain-drop:nth-child(13) {
-  left: 64%;
-  animation-duration: 0.75s;
-}
-
-.rain-drop:nth-child(14) {
-  left: 70%;
-  animation-duration: 0.85s;
-}
-
-.rain-drop:nth-child(15) {
-  left: 76%;
-  animation-duration: 0.7s;
-}
-
-.rain-drop:nth-child(16) {
-  left: 82%;
-  animation-duration: 0.9s;
-}
-
-.rain-drop:nth-child(17) {
-  left: 88%;
-  animation-duration: 0.8s;
-}
-
-.rain-drop:nth-child(18) {
-  left: 94%;
-  animation-duration: 0.75s;
-}
-
-.rain-drop:nth-child(19) {
-  left: 98%;
-  animation-duration: 0.85s;
-}
-
-.rain-drop:nth-child(20) {
-  left: 12%;
-  animation-duration: 0.95s;
-}
-
-@keyframes rainFall {
-
-  from {
-    transform:
-      translateY(-30px)
-      rotate(15deg);
-  }
-
-  to {
-    transform:
-      translateY(110vh)
-      rotate(15deg);
-  }
-
-}
-
-
-/* =========================================
-   SNOW
-========================================= */
-
-.snow-layer {
-  position: absolute;
-
-  inset: 0;
-
-  opacity: 0;
-}
-
-.app.weather-snow .snow-layer {
-  opacity: 0.75;
-}
-
-.snowflake {
-  position: absolute;
-
-  top: -30px;
-
-  color: white;
-
-  animation:
-    snowFall linear infinite;
-}
-
-.snowflake:nth-child(1) {
-  left: 5%;
-  animation-duration: 7s;
-}
-
-.snowflake:nth-child(2) {
-  left: 15%;
-  animation-duration: 9s;
-}
-
-.snowflake:nth-child(3) {
-  left: 25%;
-  animation-duration: 6s;
-}
-
-.snowflake:nth-child(4) {
-  left: 35%;
-  animation-duration: 8s;
-}
-
-.snowflake:nth-child(5) {
-  left: 45%;
-  animation-duration: 10s;
-}
-
-.snowflake:nth-child(6) {
-  left: 55%;
-  animation-duration: 7s;
-}
-
-.snowflake:nth-child(7) {
-  left: 65%;
-  animation-duration: 9s;
-}
-
-.snowflake:nth-child(8) {
-  left: 75%;
-  animation-duration: 6s;
-}
-
-.snowflake:nth-child(9) {
-  left: 85%;
-  animation-duration: 8s;
-}
-
-.snowflake:nth-child(10) {
-  left: 95%;
-  animation-duration: 10s;
-}
-
-@keyframes snowFall {
-
-  from {
-    transform:
-      translateY(-30px)
-      translateX(0)
-      rotate(0deg);
-  }
-
-  to {
-    transform:
-      translateY(110vh)
-      translateX(80px)
-      rotate(360deg);
-  }
-
-}
-
-
-/* =========================================
-   ABOUT / CONTACT OVERLAY
-========================================= */
+/* =========================================================
+   31. MODAL OVERLAY
+========================================================= */
 
 .info-overlay {
   position: fixed;
@@ -1773,16 +1533,15 @@ body {
   padding: 20px;
 
   background:
-    rgba(10, 30, 50, 0.45);
+    rgba(1, 8, 18, 0.68);
 
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 
-  animation:
-    overlayAppear 0.25s ease;
+  animation: overlayFade 0.25s ease;
 }
 
-@keyframes overlayAppear {
-
+@keyframes overlayFade {
   from {
     opacity: 0;
   }
@@ -1790,86 +1549,81 @@ body {
   to {
     opacity: 1;
   }
-
 }
 
 
-/* =========================================
-   MODAL
-========================================= */
+/* =========================================================
+   32. INFO MODAL
+========================================================= */
 
 .info-modal {
   position: relative;
 
-  width: 100%;
-  max-width: 620px;
+  width: min(620px, 94vw);
 
   max-height: 90vh;
 
   overflow-y: auto;
 
-  padding: 42px;
+  padding: 35px;
 
-  border-radius: 24px;
+  border-radius: 26px;
 
   background:
-    rgba(255, 255, 255, 0.95);
+    linear-gradient(
+      145deg,
+      rgba(17, 43, 72, 0.95),
+      rgba(7, 22, 40, 0.96)
+    );
 
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   box-shadow:
-    0 30px 80px
-    rgba(10, 30, 50, 0.25);
+    0 30px 90px rgba(0, 0, 0, 0.5);
 
-  text-align: center;
+  color: #ffffff;
 
-  animation:
-    modalAppear 0.3s ease;
+  animation: modalEnter 0.3s ease;
 }
 
-@keyframes modalAppear {
-
+@keyframes modalEnter {
   from {
     opacity: 0;
-
-    transform:
-      translateY(20px)
-      scale(0.97);
+    transform: translateY(20px) scale(0.97);
   }
 
   to {
     opacity: 1;
-
-    transform:
-      translateY(0)
-      scale(1);
+    transform: translateY(0) scale(1);
   }
-
 }
 
 
-/* =========================================
-   CLOSE BUTTON
-========================================= */
+/* =========================================================
+   33. MODAL CLOSE
+========================================================= */
 
 .modal-close {
   position: absolute;
 
+  right: 17px;
   top: 15px;
-  right: 18px;
 
   width: 35px;
   height: 35px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
 
   border: none;
 
   border-radius: 50%;
 
-  background: #eef5f9;
+  background: rgba(255, 255, 255, 0.1);
 
-  color: #526b7d;
+  color: #ffffff;
 
   font-size: 25px;
 
@@ -1877,115 +1631,123 @@ body {
 
   cursor: pointer;
 
-  transition: 0.3s;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .modal-close:hover {
-  background: #2196f3;
+  background: rgba(255, 255, 255, 0.18);
 
-  color: white;
-
-  transform:
-    rotate(90deg);
+  transform: rotate(90deg);
 }
 
 
-/* =========================================
-   MODAL ICON
-========================================= */
+/* =========================================================
+   34. MODAL ICON
+========================================================= */
 
-.modal-icon {
-  font-size: 55px;
+.modal-icon,
+.signup-modal-icon {
+  width: 65px;
+  height: 65px;
 
-  margin-bottom: 12px;
+  margin: 0 auto 17px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 20px;
+
+  background:
+    rgba(70, 180, 255, 0.12);
+
+  border: 1px solid rgba(120, 215, 255, 0.25);
+
+  font-size: 32px;
 }
-
-
-/* =========================================
-   MODAL HEADING
-========================================= */
 
 .info-modal h2 {
-  color: #1e3a5f;
+  text-align: center;
 
-  font-size: 30px;
+  color: #ffffff;
 
-  margin-bottom: 18px;
+  font-size: 27px;
+
+  margin-bottom: 13px;
 }
 
 .info-modal > p {
-  color: #60798b;
+  color: rgba(255, 255, 255, 0.72);
 
-  font-size: 15px;
+  font-size: 14px;
 
   line-height: 1.7;
 
-  margin-bottom: 15px;
+  margin-bottom: 13px;
 }
 
 
-/* =========================================
-   ABOUT FEATURES
-========================================= */
+/* =========================================================
+   35. ABOUT FEATURES
+========================================================= */
 
 .about-features {
   display: grid;
 
-  grid-template-columns:
-    repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 
   gap: 12px;
 
-  margin-top: 25px;
+  margin-top: 24px;
 }
 
-.about-features div {
-  padding: 18px 12px;
+.about-features > div {
+  display: flex;
 
-  border-radius: 14px;
+  flex-direction: column;
 
-  background: #f3f9fc;
+  align-items: center;
 
-  border:
-    1px solid #e1edf3;
+  text-align: center;
+
+  padding: 17px 10px;
+
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .about-features span {
-  display: block;
-
-  font-size: 28px;
+  font-size: 25px;
 
   margin-bottom: 8px;
 }
 
 .about-features strong {
-  display: block;
+  color: #ffffff;
 
-  color: #1e3a5f;
-
-  font-size: 14px;
+  font-size: 12px;
 
   margin-bottom: 5px;
 }
 
 .about-features small {
-  display: block;
+  color: rgba(255, 255, 255, 0.52);
 
-  color: #71808c;
-
-  font-size: 11px;
+  font-size: 10px;
 
   line-height: 1.4;
 }
 
 
-/* =========================================
-   CONTACT
-========================================= */
-
-.contact-modal {
-  max-width: 500px;
-}
+/* =========================================================
+   36. CONTACT
+========================================================= */
 
 .contact-details {
   display: flex;
@@ -1994,7 +1756,7 @@ body {
 
   gap: 12px;
 
-  margin-top: 25px;
+  margin-top: 20px;
 }
 
 .contact-item {
@@ -2006,28 +1768,25 @@ body {
 
   padding: 16px;
 
-  border-radius: 14px;
+  border-radius: 15px;
 
-  background: #f3f9fc;
+  background: rgba(255, 255, 255, 0.06);
 
-  border:
-    1px solid #e1edf3;
-
-  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .contact-item > span {
+  width: 42px;
+  height: 42px;
+
   display: flex;
 
   align-items: center;
   justify-content: center;
 
-  width: 42px;
-  height: 42px;
-
   border-radius: 12px;
 
-  background: #e3f2fd;
+  background: rgba(80, 190, 255, 0.12);
 
   font-size: 21px;
 }
@@ -2035,1886 +1794,848 @@ body {
 .contact-item small {
   display: block;
 
-  color: #71808c;
+  margin-bottom: 4px;
+
+  color: rgba(255, 255, 255, 0.5);
 
   font-size: 11px;
-
-  margin-bottom: 4px;
 }
 
 .contact-item a {
-  color: #1e3a5f;
+  color: #8fdcff;
 
   font-size: 14px;
-
-  font-weight: 600;
 
   text-decoration: none;
 }
 
 .contact-item a:hover {
-  color: #2196f3;
+  color: #ffffff;
 
   text-decoration: underline;
 }
 
 
-/* =========================================
-   SIGNUP / CREATE ACCOUNT
-========================================= */
-
-.signup-overlay {
-  z-index: 200;
-}
+/* =========================================================
+   37. SIGNUP MODAL
+========================================================= */
 
 .signup-modal {
-  max-width: 620px;
-
-  padding: 42px 54px;
+  width: min(480px, 94vw);
 
   max-height: 92vh;
-
-  overflow-y: auto;
 }
-
-
-/* =========================================
-   SIGNUP ICON
-========================================= */
-
-.signup-modal-icon {
-  font-size: 58px;
-
-  margin-bottom: 10px;
-
-  animation:
-    signupPlane 2s ease-in-out infinite;
-}
-
-@keyframes signupPlane {
-
-  0% {
-    transform:
-      translateY(0)
-      rotate(-4deg);
-  }
-
-  50% {
-    transform:
-      translateY(-5px)
-      rotate(4deg);
-  }
-
-  100% {
-    transform:
-      translateY(0)
-      rotate(-4deg);
-  }
-
-}
-
-
-/* =========================================
-   SIGNUP DESCRIPTION
-========================================= */
 
 .signup-description {
-  color: #60798b;
+  text-align: center;
 
-  font-size: 16px;
+  margin-bottom: 23px !important;
+}
 
-  line-height: 1.6;
+.signup-error {
+  margin: 10px 0 15px;
 
-  margin-bottom: 24px;
+  padding: 11px 13px;
+
+  border-radius: 11px;
+
+  background: rgba(255, 80, 80, 0.1);
+
+  border: 1px solid rgba(255, 100, 100, 0.25);
+
+  color: #ffb6b6;
+
+  font-size: 12px;
+
+  line-height: 1.5;
 }
 
 
-/* =========================================
-   CREATE ACCOUNT BUTTON
-========================================= */
+/* =========================================================
+   38. CREATE ACCOUNT BUTTON
+========================================================= */
 
 .create-account-button {
   width: 100%;
 
-  height: 48px;
+  min-height: 47px;
 
   border: none;
 
-  border-radius: 8px;
+  border-radius: 13px;
 
-  background: #2196f3;
+  background:
+    linear-gradient(
+      135deg,
+      #35b8ff,
+      #5876ff
+    );
 
-  color: white;
+  color: #ffffff;
 
-  font-size: 16px;
+  font-size: 14px;
 
-  font-weight: 600;
+  font-weight: 700;
 
   cursor: pointer;
 
+  box-shadow:
+    0 10px 25px rgba(45, 130, 255, 0.25);
+
   transition:
-    background 0.3s ease,
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.create-account-button:hover {
-  background: #1976d2;
-
-  transform:
-    translateY(-1px);
+.create-account-button:hover:not(:disabled) {
+  transform: translateY(-2px);
 
   box-shadow:
-    0 8px 20px
-    rgba(33, 150, 243, 0.25);
+    0 14px 30px rgba(45, 130, 255, 0.35);
 }
-
-.create-account-button:active {
-  transform:
-    translateY(0);
-}
-
-
-/* =========================================
-   CREATE ACCOUNT BUTTON - DISABLED
-========================================= */
 
 .create-account-button:disabled {
   cursor: default;
 }
 
 
-/* =========================================
-   ACCOUNT CREATED BUTTON
-========================================= */
+/* =========================================================
+   39. ACCOUNT CREATED
+========================================================= */
 
 .account-created-button {
-  background: #22c55e !important;
-
-  color: #ffffff !important;
-
-  cursor: default !important;
-
-  box-shadow:
-    0 8px 22px
-    rgba(34, 197, 94, 0.30);
-
-  animation:
-    createdButtonAppear 0.35s ease;
+  background:
+    linear-gradient(
+      135deg,
+      #27b987,
+      #27a977
+    );
 }
-
-.account-created-button:hover {
-  background: #22c55e !important;
-
-  color: #ffffff !important;
-
-  transform: none !important;
-
-  box-shadow:
-    0 8px 22px
-    rgba(34, 197, 94, 0.30);
-}
-
-.account-created-button:active {
-  transform: none !important;
-}
-
-@keyframes createdButtonAppear {
-
-  from {
-    opacity: 0.7;
-
-    transform:
-      scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-
-    transform:
-      scale(1);
-  }
-
-}
-
-
-/* =========================================
-   SIGNUP ERROR
-========================================= */
-
-.signup-error {
-  width: 100%;
-
-  margin-bottom: 15px;
-
-  padding: 11px 13px;
-
-  border-radius: 8px;
-
-  background: #fff1f2;
-
-  border:
-    1px solid #fecdd3;
-
-  color: #be123c;
-
-  font-size: 13px;
-
-  text-align: left;
-}
-
-
-/* =========================================
-   ACCOUNT SUCCESS BOX
-========================================= */
 
 .account-success {
-  width: 100%;
+  margin-top: 17px;
 
-  margin-top: 15px;
-
-  padding: 18px 16px;
-
-  border-radius: 12px;
-
-  background:
-    rgba(240, 253, 244, 0.98);
-
-  border:
-    1px solid #bbf7d0;
+  padding: 18px;
 
   text-align: center;
 
-  box-shadow:
-    0 8px 25px
-    rgba(34, 197, 94, 0.10);
+  border-radius: 15px;
 
-  animation:
-    successAppear 0.35s ease;
+  background: rgba(40, 200, 140, 0.08);
+
+  border: 1px solid rgba(80, 230, 170, 0.2);
 }
 
-
-/* =========================================
-   GREEN CHECK CIRCLE
-========================================= */
-
 .success-check {
-  width: 50px;
+  width: 42px;
+  height: 42px;
 
-  height: 50px;
-
-  margin: 0 auto 10px;
+  margin: 0 auto 8px;
 
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   border-radius: 50%;
 
-  background: #22c55e;
+  background: rgba(50, 220, 150, 0.18);
 
+  color: #6effbe;
+
+  font-size: 22px;
+
+  font-weight: 700;
+}
+
+.success-title {
+  color: #ffffff;
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+.success-message {
+  margin-top: 5px;
+
+  color: rgba(255, 255, 255, 0.58);
+
+  font-size: 12px;
+}
+
+.already-account {
+  margin-top: 18px;
+
+  text-align: center;
+
+  color: rgba(255, 255, 255, 0.65) !important;
+
+  font-size: 12px !important;
+}
+
+
+/* =========================================================
+   40. PROFILE PAGE
+========================================================= */
+
+.profile-page {
+  position: relative;
+
+  z-index: 10;
+
+  width: 100%;
+
+  min-height: calc(100vh - 112px);
+
+  padding: 25px 20px 60px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+}
+
+
+/* =========================================================
+   41. PROFILE BACK BUTTON
+========================================================= */
+
+.profile-back-button,
+.inner-back-button {
+  align-self: flex-start;
+
+  margin-bottom: 20px;
+
+  padding: 10px 16px;
+
+  border-radius: 11px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  background: rgba(5, 20, 35, 0.35);
+
+  color: #ffffff;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(12px);
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.profile-back-button:hover,
+.inner-back-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+
+  transform: translateX(-3px);
+}
+
+
+/* =========================================================
+   42. PROFILE CARD
+========================================================= */
+
+.profile-card {
+  width: min(720px, 95%);
+
+  padding: 32px;
+
+  border-radius: 26px;
+
+  background:
+    rgba(5, 20, 38, 0.58);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   43. PROFILE HEADINGS
+========================================================= */
+
+.profile-card h2 {
   color: #ffffff;
 
   font-size: 29px;
 
-  font-weight: 700;
-
-  line-height: 1;
-
-  box-shadow:
-    0 6px 18px
-    rgba(34, 197, 94, 0.28);
-
-  animation:
-    successCheck 0.45s ease;
-}
-
-
-/* =========================================
-   SUCCESS TITLE
-========================================= */
-
-.success-title {
-  color: #15803d;
-
-  font-size: 17px;
-
-  font-weight: 700;
+  font-weight: 750;
 
   margin-bottom: 5px;
 }
 
+.profile-eyebrow {
+  color: #8fdcff;
 
-/* =========================================
-   SUCCESS MESSAGE
-========================================= */
-
-.success-message {
-  color: #4b6354;
-
-  font-size: 13px;
-
-  line-height: 1.5;
-}
-
-
-/* =========================================
-   SUCCESS ANIMATION
-========================================= */
-
-@keyframes successAppear {
-
-  from {
-    opacity: 0;
-
-    transform:
-      translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-
-    transform:
-      translateY(0);
-  }
-
-}
-
-@keyframes successCheck {
-
-  0% {
-    opacity: 0;
-
-    transform:
-      scale(0.4)
-      rotate(-25deg);
-  }
-
-  70% {
-    opacity: 1;
-
-    transform:
-      scale(1.12)
-      rotate(5deg);
-  }
-
-  100% {
-    opacity: 1;
-
-    transform:
-      scale(1)
-      rotate(0);
-  }
-
-}
-
-
-/* =========================================
-   ALREADY HAVE ACCOUNT
-========================================= */
-
-.already-account {
-  text-align: center;
-
-  color: #71808c;
-
-  font-size: 13px;
-
-  margin-top: 17px;
-}
-
-
-/* =========================================
-   OPTIONAL SUCCESS TEXT
-========================================= */
-
-.account-success .success-title::before {
-  content: "✓ ";
-  font-weight: 800;
-}
-
-
-/* =========================================
-   TABLET
-========================================= */
-
-@media (max-width: 768px) {
-
-  .navbar {
-    height: 68px;
-
-    padding: 0 25px;
-  }
-
-  .brand-name {
-    font-size: 18px;
-  }
-
-  .nav-links {
-    gap: 20px;
-  }
-
-  .main-content {
-    padding:
-      30px 20px 50px;
-  }
-
-  .weather-icon {
-    font-size: 70px;
-  }
-
-  .main-content h1 {
-    font-size: 42px;
-  }
-
-  .description {
-    font-size: 16px;
-
-    max-width: 550px;
-  }
-
-  .weather-icons {
-    font-size: 27px;
-
-    margin-bottom: 30px;
-  }
-
-  .login-container {
-    max-width: 420px;
-
-    padding: 32px;
-  }
-
-  .cloud {
-    font-size: 70px;
-  }
-
-  .signup-modal {
-    max-width: 560px;
-
-    padding:
-      38px 40px;
-  }
-
-}
-
-
-/* =========================================
-   MOBILE
-========================================= */
-
-@media (max-width: 480px) {
-
-  .navbar {
-    height: 62px;
-
-    padding: 0 16px;
-  }
-
-  .brand-icon {
-    font-size: 23px;
-  }
-
-  .brand-name {
-    font-size: 16px;
-  }
-
-  .nav-links {
-    gap: 12px;
-  }
-
-  .nav-links button {
-    font-size: 12px;
-  }
-
-  .main-content {
-    padding:
-      25px 15px 40px;
-  }
-
-  .live-weather {
-    font-size: 11px;
-  }
-
-  .weather-icon {
-    font-size: 60px;
-  }
-
-  .temperature {
-    font-size: 16px;
-  }
-
-  .location {
-    font-size: 12px;
-  }
-
-  .weather-details {
-    font-size: 11px;
-  }
-
-  .main-content h1 {
-    font-size: 32px;
-
-    margin-bottom: 15px;
-  }
-
-  .description {
-    font-size: 14px;
-
-    line-height: 1.6;
-
-    max-width: 350px;
-  }
-
-  .weather-icons {
-    font-size: 23px;
-
-    gap: 16px;
-
-    margin-bottom: 25px;
-  }
-
-  .login-container {
-    width: 100%;
-
-    max-width: 390px;
-
-    padding:
-      28px 20px;
-
-    border-radius: 15px;
-  }
-
-  .login-header h2 {
-    font-size: 25px;
-  }
-
-  .cloud {
-    font-size: 55px;
-  }
-
-  .moon-glow {
-    font-size: 70px;
-
-    right: 5%;
-  }
-
-  .info-modal {
-    padding:
-      35px 22px;
-
-    border-radius: 20px;
-  }
-
-  .info-modal h2 {
-    font-size: 25px;
-  }
-
-  .about-features {
-    grid-template-columns: 1fr;
-  }
-
-  .about-features div {
-    display: grid;
-
-    grid-template-columns:
-      40px 1fr;
-
-    text-align: left;
-
-    align-items: center;
-  }
-
-  .about-features span {
-    grid-row:
-      span 2;
-
-    margin: 0;
-  }
-
-  /* SIGNUP MOBILE */
-
-  .signup-modal {
-    max-width: 390px;
-
-    padding:
-      35px 20px;
-  }
-
-  .signup-modal-icon {
-    font-size: 48px;
-  }
-
-  .signup-modal h2 {
-    font-size: 25px;
-  }
-
-  .signup-description {
-    font-size: 14px;
-  }
-
-  .success-check {
-    width: 46px;
-    height: 46px;
-
-    font-size: 27px;
-  }
-
-  .success-title {
-    font-size: 16px;
-  }
-
-  .success-message {
-    font-size: 12px;
-  }
-
-}
-
-
-/* =========================================
-   VERY SMALL PHONES
-========================================= */
-
-@media (max-width: 360px) {
-
-  .nav-links {
-    display: none;
-  }
-
-  .brand-name {
-    font-size: 17px;
-  }
-
-  .main-content h1 {
-    font-size: 28px;
-  }
-
-  .description {
-    font-size: 13px;
-  }
-
-  .weather-icons {
-    font-size: 20px;
-
-    gap: 12px;
-  }
-
-  .login-container {
-    padding:
-      25px 16px;
-  }
-
-  .signup-modal {
-    padding:
-      30px 16px;
-  }
-
-  .account-success {
-    padding:
-      15px 10px;
-  }
-
-}
-
-
-/* =========================================
-   GLASSMORPHISM DESIGN
-========================================= */
-
-.navbar,
-.login-container,
-.info-modal,
-.profile-card {
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  border: 1px solid rgba(255, 255, 255, 0.28);
-
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-/* Navbar */
-
-.navbar {
-  border-radius: 0 0 22px 22px;
-}
-
-/* Login Card */
-
-.login-container {
-  border-radius: 28px;
-}
-
-/* Modal */
-
-.info-modal {
-  border-radius: 26px;
-}
-
-/* Profile */
-
-.profile-card {
-  border-radius: 28px;
-}
-
-/* Inputs */
-
-.form-group input,
-.form-group select {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-/* Input focus */
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-
-  border-color: rgba(255, 255, 255, 0.55);
-
-  box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-/* Buttons */
-
-.login-button,
-.create-account-button,
-.profile-actions button,
-.profile-form-actions button {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-/* Glass hover */
-
-.login-button:hover,
-.create-account-button:hover,
-.profile-actions button:hover,
-.profile-form-actions button:hover {
-  transform: translateY(-2px);
-
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.22);
-}
-/* =========================================
-   GLASSMORPHISM + MICRO-INTERACTIONS
-========================================= */
-
-/* ---------- GLASS EFFECT ---------- */
-
-.navbar,
-.login-container,
-.info-modal,
-.profile-card {
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  border: 1px solid rgba(255, 255, 255, 0.28);
-
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-/* ---------- GLASS CARD HOVER ---------- */
-
-.login-container:hover,
-.info-modal:hover,
-.profile-card:hover {
-  transform: translateY(-3px);
-
-  box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.20),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* ---------- NAVBAR ---------- */
-
-.navbar {
-  border-radius: 0 0 22px 22px;
-}
-
-/* ---------- LOGIN CARD ---------- */
-
-.login-container {
-  border-radius: 28px;
-}
-
-/* ---------- MODAL ---------- */
-
-.info-modal {
-  border-radius: 26px;
-}
-
-/* ---------- PROFILE ---------- */
-
-.profile-card {
-  border-radius: 28px;
-}
-
-
-/* =========================================
-   GLASS INPUTS
-========================================= */
-
-.form-group input,
-.form-group select {
-  background: rgba(255, 255, 255, 0.12);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-
-  transition:
-    border-color 0.25s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.2s ease;
-}
-
-/* Input hover */
-
-.form-group input:hover,
-.form-group select:hover {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-/* Input focus */
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-
-  transform: translateY(-1px);
-
-  border-color: rgba(255, 255, 255, 0.55);
-
-  box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-
-/* =========================================
-   NAVIGATION MICRO-INTERACTIONS
-========================================= */
-
-.nav-links button {
-  position: relative;
-
-  transition:
-    color 0.25s ease,
-    transform 0.25s ease;
-}
-
-.nav-links button:hover {
-  color: #ffffff;
-
-  transform: translateY(-1px);
-}
-
-/* Animated underline */
-
-.nav-links button::after {
-  content: "";
-
-  position: absolute;
-
-  left: 50%;
-  bottom: -6px;
-
-  width: 0;
-  height: 2px;
-
-  border-radius: 999px;
-
-  background: currentColor;
-
-  transform: translateX(-50%);
-
-  transition: width 0.25s ease;
-}
-
-.nav-links button:hover::after {
-  width: 70%;
-}
-
-
-/* =========================================
-   LOGIN BUTTON
-========================================= */
-
-.login-button,
-.create-account-button,
-.profile-actions button,
-.profile-form-actions button {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.15);
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
-}
-
-.login-button:hover,
-.create-account-button:hover,
-.profile-actions button:hover,
-.profile-form-actions button:hover {
-  transform: translateY(-2px);
-
-  filter: brightness(1.05);
-
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.22);
-}
-
-.login-button:active,
-.create-account-button:active,
-.profile-actions button:active,
-.profile-form-actions button:active {
-  transform: translateY(0);
-}
-
-
-/* =========================================
-   SIGNUP BUTTON
-========================================= */
-
-.signup-button {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.signup-button:hover {
-  transform: translateY(-1px);
-
-  opacity: 0.8;
-}
-
-.signup-button:active {
-  transform: translateY(0);
-}
-
-
-/* =========================================
-   PASSWORD TOGGLE
-========================================= */
-
-.password-toggle {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.password-toggle:hover {
-  transform: scale(1.08);
-
-  opacity: 0.85;
-}
-
-.password-toggle:active {
-  transform: scale(0.95);
-}
-/* =========================================
-   RETRO CRT EFFECT
-========================================= */
-
-.app::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-
-  pointer-events: none;
-
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.025) 0px,
-      rgba(255, 255, 255, 0.025) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-
-  z-index: 9999;
-  opacity: 0.35;
-}
-
-
-/* =========================================
-   LIVE WEATHER PULSE
-========================================= */
-
-.live-dot {
-  animation: livePulse 1.8s infinite;
-}
-
-@keyframes livePulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.45;
-    transform: scale(0.75);
-  }
-}
-/* =========================================================
-   ✦ RETRO GLASS LOGIN EXPERIENCE ✦
-   ========================================================= */
-
-/* ---------- LOGIN AREA ---------- */
-
-.login-container {
-  position: relative;
-  width: min(440px, 90%);
-  padding: 42px 40px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.16),
-      rgba(255, 255, 255, 0.06)
-    ) !important;
-
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  border-radius: 28px !important;
-
-  box-shadow:
-    0 25px 70px rgba(0, 0, 0, 0.38),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    0 0 35px rgba(70, 170, 255, 0.10);
-
-  overflow: hidden;
-
-  transition:
-    transform 0.35s ease,
-    box-shadow 0.35s ease;
-}
-
-
-/* ---------- GLASS LIGHT REFLECTION ---------- */
-
-.login-container::before {
-  content: "";
-  position: absolute;
-
-  top: -120px;
-  left: -80px;
-
-  width: 280px;
-  height: 280px;
-
-  background: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.20),
-    transparent 70%
-  );
-
-  pointer-events: none;
-}
-
-
-/* ---------- SUBTLE NEON EDGE ---------- */
-
-.login-container::after {
-  content: "";
-
-  position: absolute;
-  inset: 0;
-
-  border-radius: inherit;
-
-  padding: 1px;
-
-  background: linear-gradient(
-    135deg,
-    rgba(255,255,255,0.45),
-    transparent 35%,
-    transparent 65%,
-    rgba(100,190,255,0.35)
-  );
-
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-
-  pointer-events: none;
-}
-
-
-/* ---------- LOGIN HEADER ---------- */
-
-.login-header h2 {
-  color: #ffffff !important;
-
-  font-size: 32px !important;
-  font-weight: 800;
-
-  letter-spacing: -0.8px;
-
-  text-shadow:
-    0 2px 15px rgba(0, 0, 0, 0.35),
-    0 0 18px rgba(130, 210, 255, 0.18);
-}
-
-
-.login-header p {
-  color: rgba(255, 255, 255, 0.72) !important;
-
-  font-size: 15px;
-
-  letter-spacing: 0.2px;
-}
-
-
-/* ---------- FORM LABELS ---------- */
-
-.login-container label {
-  color: rgba(255, 255, 255, 0.90) !important;
+  font-size: 11px;
 
   font-weight: 700;
 
-  letter-spacing: 0.4px;
+  letter-spacing: 2px;
+
+  margin-bottom: 5px;
+}
+
+.profile-subtitle {
+  color: rgba(255, 255, 255, 0.68);
+
+  font-size: 13px;
+
+  line-height: 1.55;
+
+  margin-bottom: 23px;
 }
 
 
-/* ---------- GLASS INPUTS ---------- */
+/* =========================================================
+   44. PROFILE PICTURE
+========================================================= */
 
-.login-container input {
-  width: 100%;
+.profile-picture {
+  width: 105px;
+  height: 105px;
 
-  box-sizing: border-box;
+  margin: 15px auto 27px;
 
-  background: rgba(255, 255, 255, 0.10) !important;
+  display: flex;
 
-  color: #ffffff !important;
+  align-items: center;
+  justify-content: center;
 
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  overflow: hidden;
 
-  border-radius: 14px !important;
-
-  padding: 15px 17px !important;
-
-  outline: none;
-
-  backdrop-filter: blur(10px);
-
-  box-shadow:
-    inset 0 1px 2px rgba(255,255,255,0.08),
-    0 5px 20px rgba(0,0,0,0.08);
-
-  transition:
-    border-color 0.25s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.25s ease;
-}
-
-
-/* INPUT PLACEHOLDER */
-
-.login-container input::placeholder {
-  color: rgba(255, 255, 255, 0.52) !important;
-}
-
-
-/* INPUT FOCUS */
-
-.login-container input:focus {
-  background: rgba(255, 255, 255, 0.16) !important;
-
-  border-color: rgba(130, 215, 255, 0.75) !important;
-
-  box-shadow:
-    0 0 0 3px rgba(80, 180, 255, 0.10),
-    0 0 22px rgba(80, 180, 255, 0.18);
-
-  transform: translateY(-1px);
-}
-
-
-/* ---------- PASSWORD TOGGLE ---------- */
-
-.password-toggle {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
-
-  opacity: 0.75;
-}
-
-.password-toggle:hover {
-  transform: scale(1.15);
-
-  opacity: 1;
-}
-
-
-/* ---------- FORGOT PASSWORD ---------- */
-
-.forgot-button {
-  color: #7fd5ff !important;
-
-  transition:
-    color 0.2s ease,
-    text-shadow 0.2s ease;
-}
-
-.forgot-button:hover {
-  color: #ffffff !important;
-
-  text-shadow:
-    0 0 12px rgba(100, 210, 255, 0.7);
-}
-
-
-/* ---------- LOGIN BUTTON ---------- */
-
-.login-button {
-  position: relative;
-
-  width: 100%;
-
-  border: 1px solid rgba(255,255,255,0.30) !important;
-
-  border-radius: 14px !important;
-
-  padding: 15px 20px !important;
+  border-radius: 50%;
 
   background:
     linear-gradient(
       135deg,
-      rgba(70, 180, 255, 0.95),
-      rgba(70, 110, 255, 0.95)
-    ) !important;
-
-  color: #ffffff !important;
-
-  font-weight: 800;
-
-  letter-spacing: 0.5px;
-
-  box-shadow:
-    0 10px 25px rgba(40, 130, 255, 0.25),
-    inset 0 1px rgba(255,255,255,0.35);
-
-  cursor: pointer;
-
-  overflow: hidden;
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
-}
-
-
-/* BUTTON SHINE */
-
-.login-button::before {
-  content: "";
-
-  position: absolute;
-
-  top: 0;
-  left: -120%;
-
-  width: 70%;
-  height: 100%;
-
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,0.35),
-    transparent
-  );
-
-  transform: skewX(-20deg);
-
-  transition: left 0.55s ease;
-}
-
-
-.login-button:hover {
-  transform: translateY(-3px);
-
-  filter: brightness(1.08);
-
-  box-shadow:
-    0 15px 35px rgba(40, 130, 255, 0.38),
-    0 0 25px rgba(80, 190, 255, 0.20);
-}
-
-
-.login-button:hover::before {
-  left: 140%;
-}
-
-
-.login-button:active {
-  transform: translateY(0) scale(0.98);
-}
-
-
-/* ---------- DIVIDER ---------- */
-
-.divider span {
-  background: rgba(255,255,255,0.18) !important;
-}
-
-
-.divider p {
-  color: rgba(255,255,255,0.55) !important;
-
-  font-size: 12px;
-
-  letter-spacing: 2px;
-}
-
-
-/* ---------- SIGNUP TEXT ---------- */
-
-.signup-text {
-  color: rgba(255,255,255,0.65) !important;
-}
-
-
-.signup-button {
-  color: #7fd5ff !important;
-
-  font-weight: 800;
-
-  transition:
-    color 0.2s ease,
-    text-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-
-.signup-button:hover {
-  color: #ffffff !important;
-
-  text-shadow:
-    0 0 15px rgba(100, 210, 255, 0.75);
-
-  transform: translateY(-1px);
-}
-
-
-/* =========================================================
-   RETRO CRT SCANLINES
-   ========================================================= */
-
-.app::after {
-  content: "";
-
-  position: fixed;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  z-index: 9999;
-
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255,255,255,0.018) 0px,
-      rgba(255,255,255,0.018) 1px,
-      transparent 1px,
-      transparent 4px
+      rgba(50, 185, 255, 0.25),
+      rgba(85, 100, 255, 0.3)
     );
 
-  opacity: 0.32;
-}
+  border: 3px solid rgba(255, 255, 255, 0.25);
 
-
-/* =========================================================
-   LIVE WEATHER INDICATOR
-   ========================================================= */
-
-.live-dot {
-  animation: livePulse 1.8s ease-in-out infinite;
-}
-
-
-@keyframes livePulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  50% {
-    transform: scale(0.72);
-    opacity: 0.45;
-  }
-}
-
-
-/* =========================================================
-   WEATHER ICON FLOAT
-   ========================================================= */
-
-.weather-icon {
-  animation: weatherFloat 4s ease-in-out infinite;
-}
-
-
-@keyframes weatherFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-
-/* =========================================================
-   MAIN HEADING GLOW
-   ========================================================= */
-
-.main-content h1 {
-  text-shadow:
-    0 3px 25px rgba(0,0,0,0.35),
-    0 0 30px rgba(120,200,255,0.10);
-}
-
-
-/* =========================================================
-   WEATHER ICON ROW
-   ========================================================= */
-
-.weather-icons span {
-  display: inline-block;
-
-  transition:
-    transform 0.25s ease,
-    filter 0.25s ease;
-}
-
-
-.weather-icons span:hover {
-  transform:
-    translateY(-6px)
-    scale(1.18);
-
-  filter:
-    drop-shadow(0 0 10px rgba(255,255,255,0.55));
-}
-
-
-/* =========================================================
-   RETRO HOVER ON NAVIGATION
-   ========================================================= */
-
-.nav-links button {
-  position: relative;
-
-  transition:
-    color 0.25s ease,
-    transform 0.25s ease;
-}
-
-
-.nav-links button::after {
-  content: "";
-
-  position: absolute;
-
-  left: 50%;
-  bottom: -6px;
-
-  width: 0;
-  height: 2px;
-
-  transform: translateX(-50%);
-
-  background: currentColor;
+  font-size: 48px;
 
   box-shadow:
-    0 0 10px currentColor;
-
-  transition: width 0.25s ease;
-}
-
-
-.nav-links button:hover {
-  transform: translateY(-2px);
-}
-
-
-.nav-links button:hover::after {
-  width: 70%;
-}
-/* =========================================
-   PROFILE PAGE - RETRO GLASSMORPHISM
-========================================= */
-
-.profile-page {
-  min-height: 100vh;
-  width: 100%;
-  padding: 90px 30px 60px;
-  box-sizing: border-box;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  background:
-    radial-gradient(circle at 15% 20%, rgba(79, 172, 254, 0.18), transparent 30%),
-    radial-gradient(circle at 85% 70%, rgba(255, 180, 80, 0.15), transparent 30%),
-    linear-gradient(135deg, #07111f, #10243b 50%, #07111f);
-
-  color: white;
-}
-
-.profile-card {
-  width: min(850px, 92%);
-  padding: 40px;
-  border-radius: 28px;
-
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  box-shadow:
-    0 25px 70px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-
-  animation: profileCardIn 0.6s ease;
-}
-
-.profile-card h2 {
-  margin: 0 0 30px;
-  text-align: center;
-
-  font-size: 36px;
-  font-weight: 800;
-
-  color: white;
-  letter-spacing: 1px;
-
-  text-shadow: 0 0 18px rgba(100, 190, 255, 0.35);
-}
-
-.profile-picture {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 30px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-
-  background: rgba(255, 255, 255, 0.14);
-  border: 3px solid rgba(255, 255, 255, 0.35);
-
-  font-size: 55px;
-
-  box-shadow:
-    0 10px 35px rgba(0, 0, 0, 0.35),
-    0 0 30px rgba(80, 180, 255, 0.20);
-
-  overflow: hidden;
+    0 0 35px rgba(65, 180, 255, 0.2);
 }
 
 .profile-picture img {
   width: 100%;
   height: 100%;
+
   object-fit: cover;
 }
 
-/* PROFILE DETAILS */
+
+/* =========================================================
+   45. PROFILE DETAILS
+========================================================= */
 
 .profile-details {
   display: grid;
+
   grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-  margin-bottom: 30px;
+
+  gap: 12px;
 }
 
 .profile-detail {
-  padding: 18px 20px;
+  min-width: 0;
 
-  border-radius: 16px;
+  padding: 15px;
 
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
 
-  transition: 0.25s ease;
-}
+  background: rgba(255, 255, 255, 0.06);
 
-.profile-detail:hover {
-  transform: translateY(-3px);
-
-  background: rgba(255, 255, 255, 0.13);
-
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .profile-detail span {
   display: block;
-  margin-bottom: 7px;
 
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  margin-bottom: 5px;
 
-  color: rgba(255, 255, 255, 0.60);
+  color: rgba(255, 255, 255, 0.48);
+
+  font-size: 11px;
 }
 
 .profile-detail strong {
   display: block;
 
-  font-size: 17px;
-  color: white;
+  color: #ffffff;
+
+  font-size: 13px;
+
+  word-break: break-word;
 }
 
-/* TRAVEL PREFERENCES */
+
+/* =========================================================
+   46. PROFILE PREFERENCES SUMMARY
+========================================================= */
 
 .profile-preferences-summary {
-  padding: 22px;
-  margin-bottom: 30px;
+  margin-top: 24px;
 
-  border-radius: 18px;
+  padding: 20px;
 
-  background: rgba(80, 170, 255, 0.10);
-  border: 1px solid rgba(100, 190, 255, 0.22);
+  border-radius: 19px;
+
+  background:
+    rgba(50, 175, 255, 0.07);
+
+  border: 1px solid rgba(100, 200, 255, 0.15);
 }
 
 .profile-preferences-summary h3 {
-  margin: 0 0 15px;
+  color: #ffffff;
 
-  font-size: 21px;
-  color: #8fd3ff;
+  font-size: 17px;
+
+  margin-bottom: 15px;
 }
 
-.profile-preferences-summary p {
-  margin: 8px 0;
-  color: rgba(255, 255, 255, 0.82);
+.preference-summary-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 10px;
 }
 
-/* BUTTONS */
+.preference-summary-grid div {
+  min-width: 0;
+
+  padding: 12px;
+
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.preference-summary-grid span {
+  display: block;
+
+  color: rgba(255, 255, 255, 0.45);
+
+  font-size: 10px;
+
+  margin-bottom: 4px;
+}
+
+.preference-summary-grid strong {
+  display: block;
+
+  color: #ffffff;
+
+  font-size: 12px;
+
+  line-height: 1.4;
+
+  word-break: break-word;
+}
+
+
+/* =========================================================
+   47. PROFILE ACTIONS
+========================================================= */
 
 .profile-actions {
   display: grid;
+
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+
+  gap: 10px;
+
+  margin-top: 23px;
 }
 
 .profile-actions button,
 .profile-form-actions button {
-  padding: 14px 18px;
+  min-height: 44px;
 
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 14px;
+  border: none;
 
-  background: rgba(255, 255, 255, 0.10);
-  color: white;
+  border-radius: 12px;
 
-  font-size: 14px;
+  padding: 11px 13px;
+
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(50, 180, 255, 0.85),
+      rgba(82, 100, 255, 0.85)
+    );
+
+  font-size: 12px;
+
   font-weight: 700;
 
   cursor: pointer;
 
+  box-shadow:
+    0 7px 20px rgba(40, 120, 255, 0.18);
+
   transition:
-    transform 0.25s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease;
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .profile-actions button:hover,
 .profile-form-actions button:hover {
-  transform: translateY(-4px);
-
-  background: rgba(70, 170, 255, 0.25);
+  transform: translateY(-2px);
 
   box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.30),
-    0 0 20px rgba(70, 170, 255, 0.18);
+    0 11px 25px rgba(40, 120, 255, 0.28);
 }
 
-.profile-actions button:active,
-.profile-form-actions button:active {
-  transform: translateY(-1px) scale(0.98);
+
+/* =========================================================
+   48. PROFILE FORM
+========================================================= */
+
+.profile-card .form-group {
+  margin-bottom: 17px;
 }
 
-/* BACK BUTTON */
+.profile-card .form-group label {
+  color: rgba(255, 255, 255, 0.86);
+}
 
-.profile-back-button {
-  align-self: flex-start;
+.profile-card .form-group input,
+.profile-card .form-group select {
+  background: rgba(255, 255, 255, 0.07);
 
-  margin-bottom: 20px;
+  color: #ffffff;
+}
 
-  padding: 11px 18px;
+.profile-card .form-group input[type="file"] {
+  padding: 9px;
 
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  border-radius: 12px;
-
-  background: rgba(255, 255, 255, 0.08);
-
-  color: white;
-
-  font-weight: 600;
   cursor: pointer;
-
-  backdrop-filter: blur(10px);
-
-  transition: 0.25s ease;
 }
 
-.profile-back-button:hover {
-  transform: translateX(-4px);
+.profile-card .form-group input[type="file"]::file-selector-button {
+  border: none;
 
-  background: rgba(255, 255, 255, 0.16);
+  margin-right: 10px;
 
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  padding: 7px 10px;
+
+  border-radius: 8px;
+
+  background: rgba(90, 190, 255, 0.18);
+
+  color: #ffffff;
+
+  cursor: pointer;
 }
 
-/* FORMS */
 
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-
-  color: rgba(255, 255, 255, 0.85);
-
-  font-weight: 700;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  box-sizing: border-box;
-
-  padding: 14px 16px;
-
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.20);
-
-  background: rgba(255, 255, 255, 0.10);
-
-  color: white;
-
-  outline: none;
-
-  transition: 0.25s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: rgba(100, 190, 255, 0.70);
-
-  box-shadow:
-    0 0 0 3px rgba(70, 170, 255, 0.12),
-    0 0 20px rgba(70, 170, 255, 0.15);
-}
-
-.form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
-}
+/* =========================================================
+   49. PROFILE FORM ACTIONS
+========================================================= */
 
 .profile-form-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 25px;
+
+  gap: 10px;
+
+  margin-top: 24px;
 }
 
 .profile-form-actions button {
   flex: 1;
 }
 
-/* PASSWORD FORM */
+.profile-form-actions button:last-child {
+  background:
+    rgba(255, 255, 255, 0.08);
 
-.profile-card form {
-  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  box-shadow: none;
 }
 
-/* ANIMATION */
+.profile-form-actions button:last-child:hover {
+  background:
+    rgba(255, 255, 255, 0.13);
 
-@keyframes profileCardIn {
-  from {
-    opacity: 0;
-    transform: translateY(25px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  box-shadow: none;
 }
 
-/* MOBILE */
+
+/* =========================================================
+   50. TRAVEL PREFERENCES
+========================================================= */
+
+.preference-card {
+  width: min(760px, 95%);
+}
+
+.preference-section {
+  margin-bottom: 26px;
+
+  padding-bottom: 21px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.preference-section:last-of-type {
+  border-bottom: none;
+}
+
+.preference-title {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #ffffff;
+
+  font-size: 15px;
+
+  font-weight: 700;
+}
+
+.preference-hint {
+  margin-bottom: 12px;
+
+  color: rgba(255, 255, 255, 0.48);
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   51. CLICKABLE PREFERENCE BUTTONS
+========================================================= */
+
+.choice-grid {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 9px;
+}
+
+.choice-button {
+  min-height: 43px;
+
+  padding: 10px 14px;
+
+  border-radius: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  color: rgba(255, 255, 255, 0.8);
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    all 0.2s ease;
+}
+
+.choice-button:hover {
+  background:
+    rgba(255, 255, 255, 0.12);
+
+  border-color:
+    rgba(130, 215, 255, 0.4);
+
+  transform: translateY(-1px);
+}
+
+.choice-button.selected {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(40, 180, 255, 0.78),
+      rgba(82, 100, 255, 0.8)
+    );
+
+  border-color:
+    rgba(140, 225, 255, 0.75);
+
+  color: #ffffff;
+
+  box-shadow:
+    0 6px 18px rgba(45, 150, 255, 0.2);
+}
+
+
+/* =========================================================
+   52. PASSWORD PAGE
+========================================================= */
+
+.profile-card .password-wrapper {
+  position: relative;
+}
+
+.profile-card .password-wrapper input {
+  padding-right: 50px !important;
+}
+
+
+/* =========================================================
+   53. SCROLLBAR
+========================================================= */
+
+* {
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    rgba(150, 210, 255, 0.35)
+    rgba(255, 255, 255, 0.05);
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(150, 210, 255, 0.35);
+
+  border-radius: 20px;
+}
+
+
+/* =========================================================
+   54. MOBILE — 700px
+========================================================= */
 
 @media (max-width: 700px) {
+
+  .navbar {
+    width: calc(100% - 24px);
+
+    margin-top: 12px;
+
+    padding: 12px 15px;
+
+    min-height: 62px;
+  }
+
+  .brand-name {
+    font-size: 15px;
+  }
+
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+
+    font-size: 21px;
+  }
+
+  .nav-links {
+    gap: 2px;
+  }
+
+  .nav-links button {
+    padding: 8px 7px;
+
+    font-size: 11px;
+  }
+
+  .main-content {
+    padding:
+      30px
+      12px
+      50px;
+  }
+
+  .weather-icon {
+    font-size: 65px;
+  }
+
+  .temperature {
+    font-size: 32px;
+  }
+
+  .main-content h1 {
+    font-size: 42px;
+
+    letter-spacing: -1.5px;
+  }
+
+  .description {
+    font-size: 13px;
+
+    max-width: 360px;
+  }
+
+  .login-container {
+    width: 100%;
+
+    padding: 23px 18px;
+
+    border-radius: 20px;
+  }
+
+  .info-modal {
+    padding: 27px 20px;
+  }
+
+  .about-features {
+    grid-template-columns: 1fr;
+  }
+
   .profile-page {
-    padding: 70px 15px 40px;
+    padding:
+      20px
+      12px
+      45px;
   }
 
   .profile-card {
-    padding: 25px 20px;
+    width: 100%;
+
+    padding: 24px 18px;
+
+    border-radius: 21px;
   }
 
   .profile-card h2 {
-    font-size: 28px;
+    font-size: 25px;
   }
 
   .profile-details {
+    grid-template-columns: 1fr;
+  }
+
+  .preference-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3922,7 +2643,140 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .choice-grid {
+    gap: 7px;
+  }
+
+  .choice-button {
+    padding:
+      9px
+      11px;
+
+    min-height: 40px;
+
+    font-size: 11px;
+  }
+
   .profile-form-actions {
     flex-direction: column;
+  }
+
+  .profile-back-button,
+  .inner-back-button {
+    font-size: 12px;
+  }
+}
+
+
+/* =========================================================
+   55. SMALL PHONES — 450px
+========================================================= */
+
+@media (max-width: 450px) {
+
+  .navbar {
+    width: calc(100% - 16px);
+
+    padding:
+      10px 11px;
+  }
+
+  .brand-name {
+    font-size: 13px;
+  }
+
+  .brand-icon {
+    width: 31px;
+    height: 31px;
+
+    font-size: 19px;
+  }
+
+  .nav-links button {
+    padding:
+      7px 5px;
+
+    font-size: 10px;
+  }
+
+  .main-content {
+    padding-top: 24px;
+  }
+
+  .live-weather {
+    font-size: 10px;
+
+    padding:
+      8px 11px;
+  }
+
+  .weather-icon {
+    font-size: 58px;
+  }
+
+  .main-content h1 {
+    font-size: 35px;
+  }
+
+  .description {
+    font-size: 12px;
+  }
+
+  .weather-icons {
+    gap: 7px;
+  }
+
+  .weather-icons span {
+    width: 35px;
+    height: 35px;
+
+    font-size: 17px;
+  }
+
+  .login-header h2 {
+    font-size: 22px;
+  }
+
+  .login-header p {
+    font-size: 12px;
+  }
+
+  .profile-picture {
+    width: 90px;
+    height: 90px;
+
+    font-size: 40px;
+  }
+
+  .profile-preferences-summary {
+    padding: 15px;
+  }
+
+  .choice-button {
+    flex: 1 1 auto;
+  }
+
+  .info-modal h2 {
+    font-size: 23px;
+  }
+}
+
+
+/* =========================================================
+   56. ACCESSIBILITY / REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+
+    animation-iteration-count: 1 !important;
+
+    scroll-behavior: auto !important;
+
+    transition-duration: 0.01ms !important;
   }
 }
