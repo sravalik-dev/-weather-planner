@@ -1,4 +1,4 @@
-package backend.security;
+package backend.Security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;

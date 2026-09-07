@@ -28,9 +28,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     @Column(name = "mobile_number")
     private String mobileNumber;
 
@@ -42,11 +39,7 @@ public class User {
 
     @Column(name = "profile_picture")
     private String profilePicture;
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
@@ -64,19 +57,16 @@ public class User {
 
     @Column(name = "reset_otp_verified", nullable = false)
     private boolean resetOtpVerified = false;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public User() {
     }
+
+    // ==========================================
+    // USER ID
+    // ==========================================
 
     public Integer getUserId() {
         return userId;
@@ -86,6 +76,10 @@ public class User {
         this.userId = userId;
     }
 
+    // ==========================================
+    // FULL NAME
+    // ==========================================
+
     public String getFullName() {
         return fullName;
     }
@@ -93,6 +87,10 @@ public class User {
     public void setFullName(String fullName) {
         this.fullName = fullName;
     }
+
+    // ==========================================
+    // EMAIL
+    // ==========================================
 
     public String getEmail() {
         return email;
@@ -102,6 +100,10 @@ public class User {
         this.email = email;
     }
 
+    // ==========================================
+    // PASSWORD
+    // ==========================================
+
     public String getPassword() {
         return password;
     }
@@ -110,9 +112,10 @@ public class User {
         this.password = password;
     }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+    // ==========================================
+    // MOBILE NUMBER
+    // ==========================================
+
     public String getMobileNumber() {
         return mobileNumber;
     }
@@ -120,6 +123,10 @@ public class User {
     public void setMobileNumber(String mobileNumber) {
         this.mobileNumber = mobileNumber;
     }
+
+    // ==========================================
+    // GENDER
+    // ==========================================
 
     public String getGender() {
         return gender;
@@ -129,6 +136,10 @@ public class User {
         this.gender = gender;
     }
 
+    // ==========================================
+    // DATE OF BIRTH
+    // ==========================================
+
     public LocalDate getDateOfBirth() {
         return dateOfBirth;
     }
@@ -137,17 +148,22 @@ public class User {
         this.dateOfBirth = dateOfBirth;
     }
 
+    // ==========================================
+    // PROFILE PICTURE
+    // ==========================================
+
     public String getProfilePicture() {
         return profilePicture;
     }
 
     public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+    }
+
+    // ==========================================
+    // EMAIL VERIFIED
+    // ==========================================
+
     public boolean isEmailVerified() {
         return emailVerified;
     }
@@ -155,6 +171,10 @@ public class User {
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
     }
+
+    // ==========================================
+    // OTP CODE
+    // ==========================================
 
     public String getOtpCode() {
         return otpCode;
@@ -164,6 +184,10 @@ public class User {
         this.otpCode = otpCode;
     }
 
+    // ==========================================
+    // OTP EXPIRY
+    // ==========================================
+
     public LocalDateTime getOtpExpiry() {
         return otpExpiry;
     }
@@ -171,6 +195,10 @@ public class User {
     public void setOtpExpiry(LocalDateTime otpExpiry) {
         this.otpExpiry = otpExpiry;
     }
+
+    // ==========================================
+    // RESET OTP
+    // ==========================================
 
     public String getResetOtp() {
         return resetOtp;
@@ -180,6 +208,10 @@ public class User {
         this.resetOtp = resetOtp;
     }
 
+    // ==========================================
+    // RESET OTP EXPIRY
+    // ==========================================
+
     public LocalDateTime getResetOtpExpiry() {
         return resetOtpExpiry;
     }
@@ -188,20 +220,21 @@ public class User {
         this.resetOtpExpiry = resetOtpExpiry;
     }
 
+    // ==========================================
+    // RESET OTP VERIFIED
+    // ==========================================
+
     public boolean isResetOtpVerified() {
         return resetOtpVerified;
     }
 
     public void setResetOtpVerified(boolean resetOtpVerified) {
         this.resetOtpVerified = resetOtpVerified;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     }
+
+    // ==========================================
+    // CREATED AT
+    // ==========================================
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
