@@ -547,18 +547,12 @@ const [showConfirmPassword, setShowConfirmPassword] =
           <div className="form-group">
             <label>Interests</label>
 <select
-  multiple
-  value={preferences.interests}
+  value={preferences.interests?.[0] || ""}
   onChange={(e) => {
-    const selected = Array.from(
-      e.target.selectedOptions,
-      (option) => option.value
-    );
-
     setPreferences({
-      ...preferences,
-      interests: selected,
-    });
+  ...preferences,
+  interests: [e.target.value],
+});
   }}
 >
   <option value="Adventure">Adventure</option>
