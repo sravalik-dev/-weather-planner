@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  changePassword,
+  getProfile,
+  updatePreferences,
+  updateProfile,
+} from "../profileService";
 
 function Profile({ onBack }) {
   const [profile, setProfile] = useState({
@@ -26,6 +32,9 @@ function Profile({ onBack }) {
     newPassword: "",
     confirmPassword: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] =
   useState(false);
 
@@ -35,16 +44,87 @@ const [showNewPassword, setShowNewPassword] =
 const [showConfirmPassword, setShowConfirmPassword] =
   useState(false);
 
-  const updateProfile = (field, value) => {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const data = await getProfile();
+
+        setProfile({
+          fullName: data.fullName || "",
+          email: data.email || "",
+          mobile: data.mobileNumber || "",
+          gender: data.gender || "",
+          dateOfBirth: data.dateOfBirth || "",
+          profilePicture: data.profilePicture || "",
+        });
+        setPreferences({
+          budget: data.budget || "",
+          transport: data.transport ? data.transport.split(",") : [],
+          accommodation: data.accommodation
+            ? data.accommodation.split(",")
+            : [],
+          food: data.foodPreferences || "",
+          interests: data.interests ? data.interests.split(",") : [],
+          pace: data.travelPace || "",
+        });
+      } catch (loadError) {
+        console.error("Error loading profile:", loadError);
+        setError(loadError.message || "Unable to load profile.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const updateProfileField = (field, value) => {
     setProfile((previous) => ({
       ...previous,
       [field]: value,
     }));
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    setPage("view");
+    try {
+      setSaving(true);
+      setError("");
+      await updateProfile({
+        fullName: profile.fullName,
+        mobileNumber: profile.mobile,
+        gender: profile.gender,
+        dateOfBirth: profile.dateOfBirth || null,
+        profilePicture: profile.profilePicture,
+      });
+      setPage("view");
+    } catch (saveError) {
+      console.error("Error updating profile:", saveError);
+      setError(saveError.message || "Unable to update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePreferencesSave = async () => {
+    try {
+      setSaving(true);
+      setError("");
+      await updatePreferences({
+        budget: preferences.budget,
+        transport: preferences.transport.join(","),
+        accommodation: preferences.accommodation.join(","),
+        foodPreferences: preferences.food,
+        interests: preferences.interests.join(","),
+        travelPace: preferences.pace,
+      });
+      setPage("view");
+    } catch (saveError) {
+      console.error("Error updating preferences:", saveError);
+      setError(saveError.message || "Unable to update preferences.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePasswordChange = (field, value) => {
@@ -54,7 +134,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
     }));
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
   e.preventDefault();
 
   const password = passwordData.newPassword;
@@ -91,16 +171,27 @@ const [showConfirmPassword, setShowConfirmPassword] =
     return;
   }
 
-  alert("Password changed successfully.");
-
-  setPasswordData({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  setPage("view");
+  try {
+    setSaving(true);
+    setError("");
+    await changePassword(passwordData);
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setPage("view");
+  } catch (saveError) {
+    console.error("Error changing password:", saveError);
+    setError(saveError.message || "Unable to change password.");
+  } finally {
+    setSaving(false);
+  }
 };
+
+  if (loading) {
+    return <section className="profile-page"><div className="profile-card"><h2>Loading profile...</h2></div></section>;
+  }
 
   /* ================================
      VIEW PROFILE
@@ -109,6 +200,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
   if (page === "view") {
     return (
       <section className="profile-page">
+        {error && <div className="trip-error">{error}</div>}
 
         <button
           type="button"
@@ -219,6 +311,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
   if (page === "edit") {
     return (
       <section className="profile-page">
+        {error && <div className="trip-error">{error}</div>}
 
         <div className="profile-card">
 
@@ -238,7 +331,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
       if (file) {
         const imageUrl = URL.createObjectURL(file);
 
-        updateProfile("profilePicture", imageUrl);
+                updateProfileField("profilePicture", imageUrl);
       }
     }}
   />
@@ -251,7 +344,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
                 type="text"
                 value={profile.fullName}
                 onChange={(e) =>
-                  updateProfile(
+                  updateProfileField(
                     "fullName",
                     e.target.value
                   )
@@ -278,7 +371,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
                 placeholder="10-digit mobile number"
                 value={profile.mobile}
                 onChange={(e) =>
-                  updateProfile(
+                  updateProfileField(
                     "mobile",
                     e.target.value
                   )
@@ -292,7 +385,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
               <select
                 value={profile.gender}
                 onChange={(e) =>
-                  updateProfile(
+                  updateProfileField(
                     "gender",
                     e.target.value
                   )
@@ -315,7 +408,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
                 type="date"
                 value={profile.dateOfBirth}
                 onChange={(e) =>
-                  updateProfile(
+                  updateProfileField(
                     "dateOfBirth",
                     e.target.value
                   )
@@ -326,7 +419,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
             <div className="profile-form-actions">
 
               <button type="submit">
-                Save Changes
+                {saving ? "Saving..." : "Save Changes"}
               </button>
 
               <button
@@ -352,6 +445,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
   if (page === "preferences") {
     return (
       <section className="profile-page">
+        {error && <div className="trip-error">{error}</div>}
 
         <div className="profile-card">
 
@@ -517,9 +611,10 @@ const [showConfirmPassword, setShowConfirmPassword] =
 
             <button
               type="button"
-              onClick={() => setPage("view")}
+              onClick={handlePreferencesSave}
+              disabled={saving}
             >
-              Save Preferences
+              {saving ? "Saving..." : "Save Preferences"}
             </button>
 
             <button
@@ -545,6 +640,7 @@ const [showConfirmPassword, setShowConfirmPassword] =
   if (page === "password") {
     return (
       <section className="profile-page">
+        {error && <div className="trip-error">{error}</div>}
 
         <div className="profile-card">
 
@@ -647,8 +743,8 @@ const [showConfirmPassword, setShowConfirmPassword] =
 
             <div className="profile-form-actions">
 
-              <button type="submit">
-                Change Password
+              <button type="submit" disabled={saving}>
+                {saving ? "Changing..." : "Change Password"}
               </button>
 
               <button
