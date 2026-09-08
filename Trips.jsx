@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import { getTrips, createTrip, saveDraft } from "./tripService";
-import RoutePlanner from "./components/RoutePlanner";
+import {
+  getTrips,
+  createTrip,
+  saveDraft,
+  updateTrip,
+  deleteTrip,
+} from "../services/tripService";
 
 function Trips() {
   const [showForm, setShowForm] = useState(false);
@@ -8,9 +13,7 @@ function Trips() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const [routeTrip, setRouteTrip] = useState(null);
-
+  const [editingTripId, setEditingTripId] = useState(null);document
   const [formData, setFormData] = useState({
     tripName: "",
     origin: "",
@@ -30,15 +33,6 @@ function Trips() {
 
   const loadTrips = async () => {
     try {
-      const token = localStorage.getItem("jwtToken");
-
-      if (!token) {
-        setTrips([]);
-        setError("Please log in to view your trips.");
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       setError("");
 
@@ -46,19 +40,7 @@ function Trips() {
       setTrips(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading trips:", err);
-
-      if (
-        err.message &&
-        (err.message.includes("Please log in") ||
-          err.message.includes("expired") ||
-          err.message.includes("401") ||
-          err.message.includes("not authorized"))
-      ) {
-        localStorage.removeItem("jwtToken");
-        setError("Your session expired. Please log in again.");
-      } else {
-        setError(err.message || "Unable to load trips.");
-      }
+      setError(err.message || "Unable to load trips.");
     } finally {
       setLoading(false);
     }
@@ -121,44 +103,42 @@ function Trips() {
     };
   };
 
-  const handleCreateTrip = async (e) => {
-    e.preventDefault();
+ const handleCreateTrip = async (e) => {
+  e.preventDefault();
 
-    try {
-      const token = localStorage.getItem("jwtToken");
+  try {
+    setSubmitting(true);
+    setError("");
 
-      if (!token) {
-        setError("Please log in to create a trip.");
-        return;
-      }
+    if (editingTripId) {
+      const updatedTrip = await updateTrip(
+        editingTripId,
+        prepareTripData()
+      );
 
-      setSubmitting(true);
-      setError("");
+      setTrips((previous) =>
+        previous.map((trip) =>
+          trip.tripId === editingTripId ? updatedTrip : trip
+        )
+      );
 
+      setEditingTripId(null);
+      resetForm();
+      setShowForm(false);
+    } else {
       const trip = await createTrip(prepareTripData());
 
       setTrips((previous) => [trip, ...previous]);
       resetForm();
       setShowForm(false);
-    } catch (err) {
-      console.error("Error creating trip:", err);
-
-      if (
-        err.message &&
-        (err.message.includes("Please log in") ||
-          err.message.includes("expired") ||
-          err.message.includes("401") ||
-          err.message.includes("not authorized"))
-      ) {
-        localStorage.removeItem("jwtToken");
-        setError("Your session expired. Please log in again.");
-      } else {
-        setError(err.message || "Unable to create trip.");
-      }
-    } finally {
-      setSubmitting(false);
     }
-  };
+  } catch (err) {
+    console.error("Error saving trip:", err);
+    setError(err.message || "Unable to save trip.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleSaveDraft = async () => {
     try {
@@ -177,12 +157,6 @@ function Trips() {
       setSubmitting(false);
     }
   };
-
-  if (routeTrip) {
-    return (
-      <RoutePlanner trip={routeTrip} onBack={() => setRouteTrip(null)} />
-    );
-  }
 
   return (
     <div className="trips-page">
@@ -384,7 +358,13 @@ function Trips() {
                 className="submit-trip-btn"
                 disabled={submitting}
               >
-                {submitting ? "Creating..." : "Create Trip"}
+                {submitting
+  ? editingTripId
+    ? "Updating..."
+    : "Creating..."
+  : editingTripId
+    ? "Update Trip"
+    : "Create Trip"}
               </button>
             </div>
           </form>
@@ -435,16 +415,59 @@ function Trips() {
                 </p>
                 <p>Budget: ₹{trip.budget}</p>
               </div>
+             <div className="trip-card-actions">
+              <button
+  className="delete-trip-btn"
+  onClick={async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this trip?"
+    );
 
-              <div className="trip-card-actions">
-                <button
-                  type="button"
-                  className="manage-route-btn"
-                  onClick={() => setRouteTrip(trip)}
-                >
-                  🗺️ Manage Route
-                </button>
-              </div>
+    if (!confirmed) return;
+
+    try {
+      await deleteTrip(trip.tripId);
+
+      setTrips((previous) =>
+        previous.filter((item) => item.tripId !== trip.tripId)
+      );
+    } catch (err) {
+      console.error("Error deleting trip:", err);
+      setError(err.message || "Unable to delete trip.");
+    }
+  }}
+>
+  🗑️ Delete Trip
+</button>
+  <button
+    className="edit-trip-btn"
+    onClick={() => {
+      setEditingTripId(trip.tripId);
+
+      setFormData({
+        tripName: trip.tripName || "",
+        origin: trip.origin || "",
+        destination: trip.destination || "",
+        startDate: trip.startDate || "",
+        endDate: trip.endDate || "",
+        noOfDays: trip.noOfDays || "",
+        noOfTravelers: trip.noOfTravelers || "",
+        budget: trip.budget || "",
+        pace: trip.pace || "",
+        features: trip.features || "",
+      });
+
+      setShowForm(true);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }}
+  >
+    ✏️ Edit Trip
+  </button>
+</div> 
             </div>
           ))}
         </div>
