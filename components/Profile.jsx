@@ -484,18 +484,12 @@ const [showConfirmPassword, setShowConfirmPassword] =
             <label>Preferred Transport</label>
 
             <select
-  multiple
-  value={preferences.transport}
+  value={preferences.transport?.[0] || ""}
   onChange={(e) => {
-    const selected = Array.from(
-      e.target.selectedOptions,
-      (option) => option.value
-    );
-
-    setPreferences({
-      ...preferences,
-      transport: selected,
-    });
+   setPreferences({
+  ...preferences,
+  transport: [e.target.value],
+});
   }}
 >
   <option value="Flight">Flight</option>
