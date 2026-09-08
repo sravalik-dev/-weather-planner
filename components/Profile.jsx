@@ -504,18 +504,12 @@ const [showConfirmPassword, setShowConfirmPassword] =
             <label>Accommodation Type</label>
 
            <select
-  multiple
-  value={preferences.accommodation}
+  value={preferences.accommodation?.[0] || ""}
   onChange={(e) => {
-    const selected = Array.from(
-      e.target.selectedOptions,
-      (option) => option.value
-    );
-
     setPreferences({
-      ...preferences,
-      accommodation: selected,
-    });
+  ...preferences,
+  accommodation: [e.target.value],
+});
   }}
 >
   <option value="Hotel">Hotel</option>
