@@ -33,6 +33,10 @@ public class RouteService {
     private TripDestinationRepository
             tripDestinationRepository;
 
+    // ==========================================
+    // ADD DESTINATION
+    // ==========================================
+
     public DestinationResponse addDestination(
             Integer userId,
             Integer tripId,
@@ -52,21 +56,84 @@ public class RouteService {
                 new TripDestination();
 
         destination.setTrip(trip);
+
+        // Module 4
         destination.setDestinationName(
                 request.getDestinationName().trim()
         );
-        destination.setLatitude(request.getLatitude());
-        destination.setLongitude(request.getLongitude());
+
+        destination.setLatitude(
+                request.getLatitude()
+        );
+
+        destination.setLongitude(
+                request.getLongitude()
+        );
 
         destination.setDestinationOrder(
                 destinations.size() + 1
         );
+
+        // Module 5
+        setModule5Data(destination, request);
 
         TripDestination saved =
                 tripDestinationRepository.save(destination);
 
         return convertToResponse(saved);
     }
+
+    // ==========================================
+    // UPDATE DESTINATION
+    // ==========================================
+
+    public DestinationResponse updateDestination(
+            Integer userId,
+            Integer tripId,
+            Integer destinationId,
+            DestinationRequest request) {
+
+        getUserTrip(tripId, userId);
+
+        validateDestinationRequest(request);
+
+        TripDestination destination =
+                tripDestinationRepository
+                        .findByDestinationIdAndTrip_TripId(
+                                destinationId,
+                                tripId
+                        )
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Destination not found"
+                                )
+                        );
+
+        // Module 4
+        destination.setDestinationName(
+                request.getDestinationName().trim()
+        );
+
+        destination.setLatitude(
+                request.getLatitude()
+        );
+
+        destination.setLongitude(
+                request.getLongitude()
+        );
+
+        // Module 5
+        setModule5Data(destination, request);
+
+        TripDestination updated =
+                tripDestinationRepository.save(destination);
+
+        return convertToResponse(updated);
+    }
+
+    // ==========================================
+    // REMOVE DESTINATION
+    // ==========================================
 
     public void removeDestination(
             Integer userId,
@@ -92,6 +159,10 @@ public class RouteService {
         reorderAfterDelete(tripId);
     }
 
+    // ==========================================
+    // GET DESTINATIONS
+    // ==========================================
+
     public List<DestinationResponse> getDestinations(
             Integer userId,
             Integer tripId) {
@@ -106,6 +177,10 @@ public class RouteService {
                 .map(this::convertToResponse)
                 .toList();
     }
+
+    // ==========================================
+    // REORDER DESTINATIONS
+    // ==========================================
 
     public List<DestinationResponse> reorderDestinations(
             Integer userId,
@@ -171,6 +246,10 @@ public class RouteService {
                 .toList();
     }
 
+    // ==========================================
+    // CALCULATE DISTANCE
+    // ==========================================
+
     public RouteDistanceResponse calculateDistance(
             Integer userId,
             Integer tripId) {
@@ -219,6 +298,10 @@ public class RouteService {
         );
     }
 
+    // ==========================================
+    // CALCULATE ETA
+    // ==========================================
+
     public RouteEtaResponse calculateEta(
             Integer userId,
             Integer tripId) {
@@ -240,6 +323,63 @@ public class RouteService {
                 estimatedHours
         );
     }
+
+    // ==========================================
+    // SET MODULE 5 DATA
+    // ==========================================
+
+    private void setModule5Data(
+            TripDestination destination,
+            DestinationRequest request) {
+
+        destination.setCategory(
+                request.getCategory()
+        );
+
+        destination.setBestTime(
+                request.getBestTime()
+        );
+
+        destination.setOpeningTime(
+                request.getOpeningTime()
+        );
+
+        destination.setClosingTime(
+                request.getClosingTime()
+        );
+
+        destination.setTicketPrice(
+                request.getTicketPrice()
+        );
+
+        destination.setExpectedDuration(
+                request.getExpectedDuration()
+        );
+
+        destination.setPopularity(
+                request.getPopularity()
+        );
+
+        destination.setIndoorOutdoor(
+                request.getIndoorOutdoor()
+        );
+
+        destination.setFamilyFriendly(
+                request.getFamilyFriendly()
+        );
+
+        destination.setWheelchairFriendly(
+                request.getWheelchairFriendly()
+        );
+
+        destination.setKidsFriendly(
+                request.getKidsFriendly()
+        );
+    }
+
+    // ==========================================
+    // HAVERSINE DISTANCE
+    // ==========================================
 
     private double calculateHaversineDistance(
             double latitude1,
@@ -273,6 +413,10 @@ public class RouteService {
         return EARTH_RADIUS_KM * c;
     }
 
+    // ==========================================
+    // REORDER AFTER DELETE
+    // ==========================================
+
     private void reorderAfterDelete(Integer tripId) {
 
         List<TripDestination> destinations =
@@ -294,12 +438,17 @@ public class RouteService {
         }
     }
 
+    // ==========================================
+    // CONVERT ENTITY TO RESPONSE
+    // ==========================================
+
     private DestinationResponse convertToResponse(
             TripDestination destination) {
 
         DestinationResponse response =
                 new DestinationResponse();
 
+        // Module 4
         response.setDestinationId(
                 destination.getDestinationId()
         );
@@ -320,8 +469,57 @@ public class RouteService {
                 destination.getDestinationOrder()
         );
 
+        // Module 5
+        response.setCategory(
+                destination.getCategory()
+        );
+
+        response.setBestTime(
+                destination.getBestTime()
+        );
+
+        response.setOpeningTime(
+                destination.getOpeningTime()
+        );
+
+        response.setClosingTime(
+                destination.getClosingTime()
+        );
+
+        response.setTicketPrice(
+                destination.getTicketPrice()
+        );
+
+        response.setExpectedDuration(
+                destination.getExpectedDuration()
+        );
+
+        response.setPopularity(
+                destination.getPopularity()
+        );
+
+        response.setIndoorOutdoor(
+                destination.getIndoorOutdoor()
+        );
+
+        response.setFamilyFriendly(
+                destination.getFamilyFriendly()
+        );
+
+        response.setWheelchairFriendly(
+                destination.getWheelchairFriendly()
+        );
+
+        response.setKidsFriendly(
+                destination.getKidsFriendly()
+        );
+
         return response;
     }
+
+    // ==========================================
+    // GET USER TRIP
+    // ==========================================
 
     private Trip getUserTrip(
             Integer tripId,
@@ -350,6 +548,10 @@ public class RouteService {
                         )
                 );
     }
+
+    // ==========================================
+    // VALIDATE DESTINATION
+    // ==========================================
 
     private void validateDestinationRequest(
             DestinationRequest request) {
@@ -385,6 +587,45 @@ public class RouteService {
 
             throw new RuntimeException(
                     "Longitude must be between -180 and 180"
+            );
+        }
+
+        // ==========================================
+        // MODULE 5 VALIDATION
+        // ==========================================
+
+        if (request.getTicketPrice() != null &&
+                request.getTicketPrice().signum() < 0) {
+
+            throw new RuntimeException(
+                    "Ticket price cannot be negative"
+            );
+        }
+
+        if (request.getExpectedDuration() != null &&
+                request.getExpectedDuration() <= 0) {
+
+            throw new RuntimeException(
+                    "Expected duration must be greater than zero"
+            );
+        }
+
+        if (request.getPopularity() != null &&
+                (request.getPopularity() < 0 ||
+                        request.getPopularity() > 5)) {
+
+            throw new RuntimeException(
+                    "Popularity must be between 0 and 5"
+            );
+        }
+
+        if (request.getOpeningTime() != null &&
+                request.getClosingTime() != null &&
+                !request.getOpeningTime()
+                        .isBefore(request.getClosingTime())) {
+
+            throw new RuntimeException(
+                    "Opening time must be before closing time"
             );
         }
     }

@@ -1,4 +1,3 @@
-
 package backend.controller;
 
 import java.util.List;
@@ -195,7 +194,7 @@ public class TripController {
     }
 
     // ==========================================
-    // MODULE 4
+    // MODULE 4 + MODULE 5
     // ADD DESTINATION
     // ==========================================
 
@@ -217,7 +216,34 @@ public class TripController {
     }
 
     // ==========================================
-    // MODULE 4
+    // MODULE 5
+    // UPDATE DESTINATION
+    // ==========================================
+
+    @PutMapping(
+            "/{tripId}/destinations/{destinationId}"
+    )
+    public ResponseEntity<DestinationResponse>
+    updateDestination(
+            Authentication authentication,
+            @PathVariable Integer tripId,
+            @PathVariable Integer destinationId,
+            @RequestBody DestinationRequest request) {
+
+        Integer userId = getUserId(authentication);
+
+        return ResponseEntity.ok(
+                routeService.updateDestination(
+                        userId,
+                        tripId,
+                        destinationId,
+                        request
+                )
+        );
+    }
+
+    // ==========================================
+    // MODULE 4 + MODULE 5
     // GET DESTINATIONS
     // ==========================================
 
@@ -338,4 +364,3 @@ public class TripController {
         return (Integer) authentication.getPrincipal();
     }
 }
-
