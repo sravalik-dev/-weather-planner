@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Profile from "./components/Profile";
-import Trips from "./pages/Trips";
+import Trips from "./Trips";
 
 /* =========================================================
    WEATHER HELPERS

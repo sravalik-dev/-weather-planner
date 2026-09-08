@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  getTrips,
-  createTrip,
-  saveDraft,
-} from "../services/tripService";
+import { getTrips, createTrip, saveDraft } from "./tripService";
+import RoutePlanner from "./components/RoutePlanner";
 
 function Trips() {
   const [showForm, setShowForm] = useState(false);
@@ -11,6 +8,8 @@ function Trips() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const [routeTrip, setRouteTrip] = useState(null);
 
   const [formData, setFormData] = useState({
     tripName: "",
@@ -31,6 +30,15 @@ function Trips() {
 
   const loadTrips = async () => {
     try {
+      const token = localStorage.getItem("jwtToken");
+
+      if (!token) {
+        setTrips([]);
+        setError("Please log in to view your trips.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError("");
 
@@ -38,7 +46,19 @@ function Trips() {
       setTrips(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading trips:", err);
-      setError(err.message || "Unable to load trips.");
+
+      if (
+        err.message &&
+        (err.message.includes("Please log in") ||
+          err.message.includes("expired") ||
+          err.message.includes("401") ||
+          err.message.includes("not authorized"))
+      ) {
+        localStorage.removeItem("jwtToken");
+        setError("Your session expired. Please log in again.");
+      } else {
+        setError(err.message || "Unable to load trips.");
+      }
     } finally {
       setLoading(false);
     }
@@ -105,6 +125,13 @@ function Trips() {
     e.preventDefault();
 
     try {
+      const token = localStorage.getItem("jwtToken");
+
+      if (!token) {
+        setError("Please log in to create a trip.");
+        return;
+      }
+
       setSubmitting(true);
       setError("");
 
@@ -115,7 +142,19 @@ function Trips() {
       setShowForm(false);
     } catch (err) {
       console.error("Error creating trip:", err);
-      setError(err.message || "Unable to create trip.");
+
+      if (
+        err.message &&
+        (err.message.includes("Please log in") ||
+          err.message.includes("expired") ||
+          err.message.includes("401") ||
+          err.message.includes("not authorized"))
+      ) {
+        localStorage.removeItem("jwtToken");
+        setError("Your session expired. Please log in again.");
+      } else {
+        setError(err.message || "Unable to create trip.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -138,6 +177,12 @@ function Trips() {
       setSubmitting(false);
     }
   };
+
+  if (routeTrip) {
+    return (
+      <RoutePlanner trip={routeTrip} onBack={() => setRouteTrip(null)} />
+    );
+  }
 
   return (
     <div className="trips-page">
@@ -389,6 +434,16 @@ function Trips() {
                   {trip.noOfDays} days · {trip.noOfTravelers} travelers
                 </p>
                 <p>Budget: ₹{trip.budget}</p>
+              </div>
+
+              <div className="trip-card-actions">
+                <button
+                  type="button"
+                  className="manage-route-btn"
+                  onClick={() => setRouteTrip(trip)}
+                >
+                  🗺️ Manage Route
+                </button>
               </div>
             </div>
           ))}
