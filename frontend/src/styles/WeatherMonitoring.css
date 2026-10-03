@@ -1,0 +1,696 @@
+/* =========================================================
+   WEATHER MONITORING
+   Complete UI styling
+   Existing functionality/classes preserved
+   ========================================================= */
+
+.weather-monitoring-page {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 28px 0 70px;
+  color: #ffffff;
+}
+
+/* =========================================================
+   BACK BUTTON
+   Styled to match Refresh Weather button
+   ========================================================= */
+
+.weather-monitoring-back-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.weather-monitoring-back {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 11px 18px;
+  background: #2563eb;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Replace the old "← Back" text visually */
+.weather-monitoring-back::after {
+  content: "Go Back";
+  font-size: 13px;
+}
+
+.weather-monitoring-back:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
+}
+
+.weather-monitoring-back:active {
+  transform: translateY(0);
+}
+
+.weather-monitoring-back:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.weather-monitoring-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.wm-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #dff7ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+
+.weather-monitoring-header h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.8px;
+}
+
+.weather-monitoring-header p {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.wm-primary-button {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 11px 18px;
+  background: #2563eb;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.wm-primary-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
+}
+
+.wm-primary-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.wm-primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.wm-message {
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.wm-error {
+  border: 1px solid #f3a5a5;
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.wm-success {
+  border: 1px solid #9ad9bc;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+/* =========================================================
+   CURRENT WEATHER HERO
+   ========================================================= */
+
+.wm-current-card {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
+  gap: 24px;
+  margin-bottom: 22px;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  background: #174e70;
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.18);
+}
+
+.wm-current-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.wm-current-label {
+  color: #bdefff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.wm-current-temperature {
+  margin-top: 10px;
+  color: #ffffff;
+  font-size: clamp(52px, 7vw, 78px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -2px;
+}
+
+.wm-current-condition {
+  margin-top: 14px;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 650;
+}
+
+.wm-current-location {
+  margin-top: 9px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+}
+
+/* =========================================================
+   CURRENT METRICS
+   ========================================================= */
+
+.wm-current-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: center;
+}
+
+.wm-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 86px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  background: #236486;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.wm-metric-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  background: #3482a8;
+  font-size: 21px;
+}
+
+.wm-metric-content {
+  min-width: 0;
+}
+
+.wm-metric-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.wm-metric-value {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   GENERAL SECTION CARDS
+   ========================================================= */
+
+.wm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.wm-section-card {
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid #d6e2eb;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #17324d;
+  box-shadow: 0 8px 25px rgba(15, 45, 65, 0.12);
+}
+
+.wm-grid .wm-section-card {
+  margin-bottom: 0;
+}
+
+.wm-wide-section {
+  width: 100%;
+}
+
+.wm-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+
+.wm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.wm-section-title h2 {
+  margin: 0;
+  color: #17324d;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.wm-section-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 11px;
+  background: #e8f4fa;
+  font-size: 18px;
+}
+
+/* =========================================================
+   DATA GRID
+   ========================================================= */
+
+.wm-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 11px;
+}
+
+.wm-data-item {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e2ebf1;
+  border-radius: 11px;
+  background: #f7fafc;
+}
+
+.wm-data-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: #6b8192;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wm-data-item strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #17324d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.wm-empty {
+  padding: 30px 15px;
+  color: #718596;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   HOURLY FORECAST
+   ========================================================= */
+
+.wm-horizontal-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.wm-horizontal-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+
+.wm-horizontal-scroll::-webkit-scrollbar-track {
+  background: #edf3f7;
+  border-radius: 10px;
+}
+
+.wm-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #b5c8d5;
+  border-radius: 10px;
+}
+
+.wm-forecast-card {
+  min-width: 170px;
+  padding: 17px;
+  border: 1px solid #dce7ee;
+  border-radius: 14px;
+  background: #f8fbfd;
+  box-shadow: 0 4px 12px rgba(25, 60, 80, 0.06);
+}
+
+.wm-forecast-time {
+  display: block;
+  color: #61798a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wm-forecast-temp {
+  display: block;
+  margin-top: 10px;
+  color: #17324d;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.wm-forecast-condition {
+  display: block;
+  min-height: 34px;
+  margin-top: 7px;
+  color: #456174;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wm-forecast-detail {
+  margin-top: 9px;
+  color: #607989;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   DAILY FORECAST
+   ========================================================= */
+
+.wm-daily-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.wm-daily-card {
+  padding: 17px;
+  border: 1px solid #dce7ee;
+  border-radius: 14px;
+  background: #f8fbfd;
+}
+
+.wm-daily-date {
+  display: block;
+  color: #60798b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wm-daily-card strong {
+  display: block;
+  margin-top: 9px;
+  color: #17324d;
+  font-size: 14px;
+}
+
+.wm-temperature-range {
+  display: flex;
+  gap: 15px;
+  margin-top: 16px;
+  color: #244b63;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wm-daily-rain {
+  display: block;
+  margin-top: 13px;
+  color: #647e8f;
+  font-size: 11px;
+}
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+
+.wm-alert-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wm-alert-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid #f2d49a;
+  border-radius: 13px;
+  background: #fff9ed;
+}
+
+.wm-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 9px;
+  background: #fff0c7;
+  font-size: 17px;
+}
+
+.wm-alert-card strong {
+  display: block;
+  color: #684b0c;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.wm-alert-card small {
+  display: block;
+  margin-top: 5px;
+  color: #8a7138;
+  font-size: 11px;
+}
+
+/* =========================================================
+   HISTORY FORM
+   ========================================================= */
+
+.wm-history-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 13px;
+  align-items: end;
+}
+
+.wm-history-form label {
+  display: block;
+  min-width: 0;
+  color: #60798a;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.wm-history-form input {
+  display: block;
+  width: 100%;
+  height: 43px;
+  margin-top: 7px;
+  border: 1px solid #d4e1e9;
+  border-radius: 9px;
+  outline: none;
+  padding: 10px 11px;
+  background: #ffffff;
+  color: #17324d;
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.wm-history-form input::placeholder {
+  color: #9aabb7;
+}
+
+.wm-history-form input:focus {
+  border-color: #2993c5;
+  box-shadow: 0 0 0 3px rgba(41, 147, 197, 0.12);
+}
+
+.wm-history-form input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.wm-history-form .wm-primary-button {
+  min-height: 43px;
+}
+
+/* =========================================================
+   HISTORY RESULTS
+   ========================================================= */
+
+.wm-history-result {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #e4edf2;
+}
+
+.wm-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.wm-history-item {
+  padding: 0;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .wm-current-card {
+    grid-template-columns: 1fr;
+  }
+
+  .wm-history-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .weather-monitoring-page {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .weather-monitoring-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .weather-monitoring-header .wm-primary-button {
+    width: fit-content;
+  }
+
+  .wm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .weather-monitoring-page {
+    width: calc(100% - 20px);
+    padding-top: 20px;
+  }
+
+  .weather-monitoring-header h1 {
+    font-size: 31px;
+  }
+
+  .wm-current-card {
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .wm-current-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wm-section-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .wm-history-form {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-monitoring-back {
+    width: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .wm-current-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .wm-current-temperature {
+    font-size: 54px;
+  }
+
+  .wm-primary-button {
+    width: 100%;
+  }
+
+  .weather-monitoring-back {
+    width: 100%;
+  }
+}
