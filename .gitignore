@@ -1,4 +1,6 @@
+# ==============================
+# Node / React / Vite
+# ==============================
 node_modules/
-dist/
 .env
 backend/node_modules/

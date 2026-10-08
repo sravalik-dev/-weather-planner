@@ -1,5 +1,7 @@
 package backend.controller;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +23,6 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-
     // REGISTER
     @PostMapping("/register")
     public String register(
@@ -29,7 +30,6 @@ public class AuthController {
 
         return authService.register(request);
     }
-
 
     // VERIFY REGISTRATION OTP
     @PostMapping("/verify-otp")
@@ -39,7 +39,6 @@ public class AuthController {
         return authService.verifyOtp(request);
     }
 
-
     // RESEND OTP
     @PostMapping("/resend-otp")
     public String resendOtp(
@@ -48,15 +47,25 @@ public class AuthController {
         return authService.resendOtp(email);
     }
 
-
     // LOGIN
     @PostMapping("/login")
-    public String login(
+    public Map<String, String> login(
             @RequestBody LoginRequest request) {
 
-        return authService.login(request);
-    }
+        String result = authService.login(request);
 
+        // If authentication failed, return the message
+        // instead of treating it as a JWT.
+        if (result == null ||
+                !result.matches(
+                        "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$")) {
+
+            return Map.of("message", result);
+        }
+
+        // Successful login
+        return Map.of("token", result);
+    }
 
     // FORGOT PASSWORD
     @PostMapping("/forgot-password")
@@ -66,7 +75,6 @@ public class AuthController {
         return authService.forgotPassword(request);
     }
 
-
     // VERIFY RESET OTP
     @PostMapping("/verify-reset-otp")
     public String verifyResetOtp(
@@ -74,7 +82,6 @@ public class AuthController {
 
         return authService.verifyResetOtp(request);
     }
-
 
     // RESET PASSWORD
     @PostMapping("/reset-password")

@@ -7,21 +7,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/**
- * MODULE 4
- *
- * Central exception handler for the whole application.
- *
- * Every RuntimeException thrown by existing services
- * (TripService, RouteService, ProfileService, AuthService, etc.)
- * is caught here and converted into a consistent JSON error
- * response instead of Spring's default whitelabel error page.
- *
- * No existing service code is modified by this class — it only
- * changes how already-thrown exceptions are serialized back to
- * the client, and assigns an appropriate HTTP status code based
- * on the exception's message text.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -29,6 +14,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRuntimeException(
             RuntimeException ex,
             HttpServletRequest request) {
+
+        System.err.println();
+        System.err.println("========== RUNTIME EXCEPTION ==========");
+        System.err.println("Request: " + request.getRequestURI());
+        System.err.println("Exception: " + ex.getClass().getName());
+        System.err.println("Message: " + ex.getMessage());
+        ex.printStackTrace(System.err);
+        System.err.println("=======================================");
+        System.err.println();
 
         HttpStatus status = resolveStatus(ex.getMessage());
 
@@ -49,6 +43,15 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        System.err.println();
+        System.err.println("========== UNEXPECTED EXCEPTION ==========");
+        System.err.println("Request: " + request.getRequestURI());
+        System.err.println("Exception: " + ex.getClass().getName());
+        System.err.println("Message: " + ex.getMessage());
+        ex.printStackTrace(System.err);
+        System.err.println("==========================================");
+        System.err.println();
+
         ErrorResponse body = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
@@ -61,15 +64,6 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
-    /**
-     * Maps a RuntimeException's message to the most appropriate
-     * HTTP status code, based on the wording already used across
-     * TripService / RouteService / ProfileService / AuthService.
-     *
-     * This keeps every existing "throw new RuntimeException(...)"
-     * statement completely untouched while still returning correct
-     * status codes and readable messages to the frontend.
-     */
     private HttpStatus resolveStatus(String message) {
 
         if (message == null) {
