@@ -26,19 +26,45 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            .cors(cors ->
+                cors.configurationSource(
+                    corsConfigurationSource()
+                )
+            )
+
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
                 )
             )
+
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/profile/**").authenticated()
-                .requestMatchers("/api/trips/**").authenticated()
+
+                .requestMatchers(
+                    HttpMethod.OPTIONS,
+                    "/**"
+                ).permitAll()
+
+                .requestMatchers(
+                    "/api/auth/**"
+                ).permitAll()
+
+                .requestMatchers(
+                    "/api/profile/**"
+                ).authenticated()
+
+                .requestMatchers(
+                    "/api/trips/**"
+                ).authenticated()
+
+                .requestMatchers(
+                    "/api/accommodations/**"
+                ).authenticated()
+
                 .anyRequest().permitAll()
             )
+
             .addFilterBefore(
                 jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class
@@ -49,42 +75,52 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+
+        CorsConfiguration config =
+                new CorsConfiguration();
 
         config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:5177",
-                "http://localhost:5178"
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:5177",
+            "http://localhost:5178"
         ));
 
         config.setAllowedMethods(List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "DELETE",
-                "OPTIONS",
-                "PATCH"
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "PATCH"
         ));
 
         config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Origin",
-                "X-Requested-With"
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin",
+            "X-Requested-With"
         ));
 
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(
+                List.of("Authorization")
+        );
+
         config.setAllowCredentials(true);
+
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration(
+                "/**",
+                config
+        );
+
         return source;
     }
 }

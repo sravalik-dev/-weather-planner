@@ -5,6 +5,7 @@ import WeatherMonitoring from "./components/WeatherMonitoring";
 import RecommendationEngine from "./components/RecommendationEngine";
 import Trips from "./components/Trips";
 import Food from "./components/Food";
+import Accommodation from "./components/Accommodation";
 
 /* =========================================================
    BACKEND API
@@ -298,6 +299,11 @@ function App() {
   ========================================================= */
 
   const [showFood, setShowFood] = useState(false);
+
+  /* =========================================================
+     MODULE 9 — ACCOMMODATION
+  ========================================================= */
+  const [showAccommodation, setShowAccommodation] = useState(false);
 
   /* =========================================================
      MODULE 7 — WEATHER MONITORING
@@ -1346,6 +1352,7 @@ function App() {
 
   const openProfile = () => {
     setShowFood(false);
+    setShowAccommodation(false);
     setShowTrips(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
@@ -1356,6 +1363,7 @@ function App() {
   const backFromProfile = () => {
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowTrips(false);
     setProfileView("profile");
   };
@@ -1363,6 +1371,32 @@ function App() {
   /* =========================================================
      TRIPS NAVIGATION
   ========================================================= */
+
+  const openAccommodation = () => {
+    const token = getAuthToken();
+
+    if (!token) {
+      setShowAccommodation(false);
+      setShowProfile(true);
+      setProfileView("profile");
+      alert("Your login session is missing or expired. Please login again.");
+      return;
+    }
+
+    setShowProfile(false);
+    setShowTrips(false);
+    setShowFood(false);
+    setShowWeatherMonitoring(false);
+    setShowRecommendationEngine(false);
+    setRecommendationNavigationError("");
+    setShowAccommodation(true);
+  };
+
+  const backFromAccommodation = () => {
+    setShowAccommodation(false);
+    setProfileView("profile");
+    setShowProfile(true);
+  };
 
   const openTrips = () => {
     const token = getAuthToken();
@@ -1376,6 +1410,7 @@ function App() {
 
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
@@ -1384,6 +1419,7 @@ function App() {
 
   const backFromTrips = () => {
     setShowTrips(false);
+    setShowAccommodation(false);
     setProfileView("profile");
     setShowProfile(true);
   };
@@ -1405,6 +1441,7 @@ function App() {
 
     setShowProfile(false);
     setShowTrips(false);
+    setShowAccommodation(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
@@ -1413,6 +1450,7 @@ function App() {
 
   const backFromFood = () => {
     setShowFood(false);
+    setShowAccommodation(false);
     setProfileView("profile");
     setShowProfile(true);
   };
@@ -1423,6 +1461,7 @@ function App() {
   const openWeatherMonitoring = () => {
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
     setShowWeatherMonitoring(true);
@@ -1681,6 +1720,15 @@ function App() {
           {isLoggedIn && (
             <button
               type="button"
+              onClick={openAccommodation}
+            >
+              Accommodation
+            </button>
+          )}
+
+          {isLoggedIn && (
+            <button
+              type="button"
               onClick={openProfile}
             >
               Profile
@@ -1696,6 +1744,7 @@ function App() {
       {!showProfile &&
         !showTrips &&
         !showFood &&
+        !showAccommodation &&
         !showWeatherMonitoring &&
         !showRecommendationEngine && (
         <main className="main-content">
@@ -1908,6 +1957,15 @@ function App() {
       {showFood && (
         <main className="food-page-container">
           <Food onBack={backFromFood} />
+        </main>
+      )}
+
+      {/* =====================================================
+          MODULE 9 — ACCOMMODATION
+      ===================================================== */}
+      {showAccommodation && (
+        <main className="accommodation-page-container">
+          <Accommodation onBack={backFromAccommodation} />
         </main>
       )}
 
@@ -2144,6 +2202,13 @@ function App() {
                     onClick={openTrips}
                   >
                     ✈️ My Trips
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openAccommodation}
+                  >
+                    🏨 Accommodation
                   </button>
 
                   <button
