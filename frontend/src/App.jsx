@@ -5,87 +5,22 @@ import WeatherMonitoring from "./components/WeatherMonitoring";
 import RecommendationEngine from "./components/RecommendationEngine";
 import Trips from "./components/Trips";
 import Food from "./components/Food";
-
-/* =========================================================
-   BACKEND API
-========================================================= */
-
-const API_BASE_URL = "http://localhost:8080";
-
-const getAuthToken = () => {
-  const token =
-    localStorage.getItem("itineraryToken") ||
-    localStorage.getItem("jwtToken") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("token") ||
-    "";
-
-  return String(token)
-    .replace(/^Bearer\s+/i, "")
-    .replace(/^"|"$/g, "")
-    .trim();
-};
-
-const saveAuthToken = (token) => {
-  const normalizedToken = String(token || "")
-    .replace(/^Bearer\s+/i, "")
-    .replace(/^"|"$/g, "")
-    .trim();
-
-  if (!normalizedToken) {
-    return false;
-  }
-
-  localStorage.setItem("jwtToken", normalizedToken);
-  localStorage.setItem("itineraryToken", normalizedToken);
-  localStorage.setItem("isLoggedIn", "true");
-
-  return true;
-};
-
-const clearAuthToken = () => {
-  localStorage.removeItem("jwtToken");
-  localStorage.removeItem("itineraryToken");
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("token");
-  localStorage.removeItem("isLoggedIn");
-};
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
-
-const readApiResponse = async (response) => {
-  const text = await response.text();
-
-  let data = text;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    // The backend may return plain text.
-  }
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      clearAuthToken();
-    }
-
-    const message =
-      typeof data === "string"
-        ? data
-        : data?.message || data?.error || `Request failed with status ${response.status}`;
-
-    throw new Error(message);
-  }
-
-  return data;
-};
+import Accommodation from "./components/Accommodation";
+import {
+  apiRequest,
+  clearAuthStorage,
+  getCurrentWeather,
+  getToken,
+  saveToken,
+} from "./utils/apiUtils";
+import {
+  loginUser,
+  logoutUser,
+  registerUser,
+  resendOtp,
+  verifyOtp,
+} from "./services/authService";
+import { getTrips } from "./services/tripService";
 
 const formatEta = (hours) => {
   if (hours === null || hours === undefined) return "--";
@@ -270,6 +205,9 @@ function App() {
     useState(false);
 
   const [accountCreated, setAccountCreated] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [signupError, setSignupError] = useState("");
 
   /* =========================================================
@@ -298,6 +236,11 @@ function App() {
   ========================================================= */
 
   const [showFood, setShowFood] = useState(false);
+
+  /* =========================================================
+     MODULE 9 — ACCOMMODATION
+  ========================================================= */
+  const [showAccommodation, setShowAccommodation] = useState(false);
 
   /* =========================================================
      MODULE 7 — WEATHER MONITORING
@@ -370,47 +313,58 @@ function App() {
   ========================================================= */
 
   useEffect(() => {
-    try {
-      const storedPreferences = localStorage.getItem(
-        "itineraryPreferences"
-      );
+    let active = true;
 
-      if (storedPreferences) {
-        const parsedPreferences =
-          JSON.parse(storedPreferences);
-
-        setPreferences({
-          ...defaultPreferences,
-          ...parsedPreferences,
-        });
-
-        setSavedPreferences({
-          ...defaultPreferences,
-          ...parsedPreferences,
-        });
+    const restoreSession = async () => {
+      if (!getToken()) {
+        clearAuthStorage();
+        return;
       }
 
-      const storedUser =
-        localStorage.getItem("itineraryUser");
+      try {
+        const profile = await apiRequest("/profile");
+        const storedPreferences = localStorage.getItem("itineraryPreferences");
+        const parsedPreferences = storedPreferences
+          ? JSON.parse(storedPreferences)
+          : {};
+        const backendPreferences = {
+          travelType: profile.transport || defaultPreferences.travelType,
+          budget: profile.budget || defaultPreferences.budget,
+          climate: profile.climate || defaultPreferences.climate,
+          activities: (profile.interests || profile.foodPreferences || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          accommodation: profile.accommodation || defaultPreferences.accommodation,
+          pace: profile.travelPace || defaultPreferences.pace,
+        };
+        const mergedPreferences = {
+          ...defaultPreferences,
+          ...parsedPreferences,
+          ...backendPreferences,
+        };
 
-      const storedToken = getAuthToken();
-
-      if (storedUser && storedToken) {
-        const parsedUser = JSON.parse(storedUser);
-
-        if (parsedUser.email) {
-          setLoggedInUser(parsedUser);
+        if (active) {
+          setLoggedInUser({
+            name: profile.fullName || profile.email?.split("@")[0] || "Traveler",
+            email: profile.email || "",
+          });
+          setPreferences(mergedPreferences);
+          setSavedPreferences(mergedPreferences);
           setIsLoggedIn(true);
         }
-      } else if (!storedToken) {
-        clearAuthToken();
+      } catch (error) {
+        if (active && /401|403|authentication/i.test(error.message)) {
+          clearAuthStorage();
+          setIsLoggedIn(false);
+        }
       }
-    } catch (error) {
-      console.error(
-        "Unable to load saved application data:",
-        error
-      );
-    }
+    };
+
+    restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   /* =========================================================
@@ -420,93 +374,23 @@ function App() {
   useEffect(() => {
     const getWeather = async (latitude, longitude) => {
       try {
-        const weatherUrl =
-          `https://api.open-meteo.com/v1/forecast?` +
-          `latitude=${latitude}` +
-          `&longitude=${longitude}` +
-          `&current=temperature_2m,weather_code,is_day,wind_speed_10m,relative_humidity_2m` +
-          `&timezone=auto`;
-
-        const weatherResponse = await fetch(weatherUrl);
-
-        if (!weatherResponse.ok) {
-          throw new Error("Unable to fetch weather");
-        }
-
-        const weatherData =
-          await weatherResponse.json();
-
-        const current = weatherData.current;
-
-        let locationName = "Your location";
-
-        try {
-          const locationUrl =
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?` +
-            `latitude=${encodeURIComponent(latitude)}` +
-            `&longitude=${encodeURIComponent(longitude)}` +
-            `&localityLanguage=en`;
-
-          const locationResponse =
-            await fetch(locationUrl);
-
-          if (locationResponse.ok) {
-            const locationData =
-              await locationResponse.json();
-
-            const city =
-              locationData?.city ||
-              locationData?.locality ||
-              locationData?.principalSubdivision ||
-              "Your location";
-
-            const country =
-              locationData?.countryName ||
-              "";
-
-            locationName = country
-              ? `${city}, ${country}`
-              : city;
-          }
-        } catch (locationError) {
-          console.log(
-            "Location name unavailable; weather will still be shown."
-          );
-        }
-
+        const weatherData = await getCurrentWeather(latitude, longitude);
         setWeather({
-          type: getWeatherType(
-            current.weather_code
-          ),
-
-          temperature: Math.round(
-            current.temperature_2m
-          ),
-
-          isDay: current.is_day === 1,
-
-          location: locationName,
-
-          humidity:
-            current.relative_humidity_2m,
-
-          wind: current.wind_speed_10m,
-
+          type: getWeatherType(weatherData.weatherCode),
+          temperature: Math.round(weatherData.temperature),
+          isDay: weatherData.isDay !== false,
+          location: "Your location",
+          humidity: weatherData.humidity,
+          wind: weatherData.windSpeed,
           loading: false,
-
           error: "",
         });
       } catch (error) {
-        console.error(
-          "Weather error:",
-          error
-        );
-
+        console.error("Weather error:", error);
         setWeather((previous) => ({
           ...previous,
           loading: false,
-          error:
-            "Unable to load live weather.",
+          error: "Unable to load live weather.",
         }));
       }
     };
@@ -557,131 +441,56 @@ function App() {
   ========================================================= */
 
   const handleLogin = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!email.trim() || !password) {
-    alert("Please enter your email and password.");
-    return;
-  }
-
-  try {
-    clearAuthToken();
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
-      }
-    );
-
-    const result = await response.json();
-
-    console.log("LOGIN STATUS:", response.status);
-    console.log("LOGIN RESPONSE:", result);
-
-    // Backend returned an error
-    if (!response.ok) {
-      throw new Error(
-        result?.message ||
-        result?.error ||
-        "Invalid email or password."
-      );
+    if (!email.trim() || !password) {
+      alert("Please enter your email and password.");
+      return;
     }
 
-    // Backend should return { token: "..." }
-    const token = result?.token;
+    try {
+      await loginUser(email, password);
+      const profile = await apiRequest("/profile");
+      const user = {
+        name: profile.fullName || email.trim().split("@")[0],
+        email: profile.email || email.trim(),
+      };
 
-    // Validate JWT
-    if (
-      !token ||
-      typeof token !== "string" ||
-      !token.match(
-        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/
-      )
-    ) {
-      throw new Error(
-        result?.message ||
-        "Login succeeded, but the backend did not return a valid JWT token."
-      );
+      localStorage.setItem("itineraryUser", JSON.stringify(user));
+      setLoggedInUser(user);
+      setIsLoggedIn(true);
+      setShowProfile(true);
+      setProfileView("profile");
+      setShowTrips(false);
+      setShowFood(false);
+      setShowAccommodation(false);
+      setShowWeatherMonitoring(false);
+      setShowRecommendationEngine(false);
+      setRecommendationNavigationError("");
+      setRecommendationNavigationLoading(false);
+      setPassword("");
+    } catch (error) {
+      clearAuthStorage();
+      setIsLoggedIn(false);
+      alert(error.message || "Login failed. Please check your email and password.");
     }
-
-    // Save JWT
-    const tokenSaved = saveAuthToken(token);
-
-    if (!tokenSaved) {
-      throw new Error("Unable to save authentication token.");
-    }
-
-    // Create logged-in user
-    const user = {
-      name: email.trim().split("@")[0],
-      email: email.trim(),
-    };
-
-    setLoggedInUser(user);
-
-    localStorage.setItem(
-      "itineraryUser",
-      JSON.stringify(user)
-    );
-
-    setIsLoggedIn(true);
-
-    // Open Profile after login
-    setShowTrips(false);
-    setShowFood(false);
-    setShowWeatherMonitoring(false);
-    setShowRecommendationEngine(false);
-
-    setRecommendationNavigationError("");
-    setRecommendationNavigationLoading(false);
-
-    setProfileView("profile");
-    setShowProfile(true);
-
-    setPassword("");
-
-  } catch (error) {
-    console.error("Login error:", error);
-
-    clearAuthToken();
-    setIsLoggedIn(false);
-
-    alert(
-      error?.message ||
-      "Login failed. Please check your email and password."
-    );
-  }
-};
+  };
 
   /* =========================================================
      LOGOUT
   ========================================================= */
 
   const handleLogout = () => {
+    logoutUser();
     setIsLoggedIn(false);
     setShowProfile(false);
     setShowTrips(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
     setProfileView("profile");
-
-    localStorage.removeItem(
-      "itineraryUser"
-    );
-
-    clearAuthToken();
-
     setEmail("");
     setPassword("");
   };
@@ -693,88 +502,71 @@ function App() {
   const openSignup = () => {
     setShowSignup(true);
     setAccountCreated(false);
+    setOtp("");
+    setOtpError("");
     setSignupError("");
   };
 
   const closeSignup = () => {
     setShowSignup(false);
     setSignupError("");
+    setOtpError("");
   };
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
-
     setSignupError("");
 
-    if (
-      registerPassword !==
-      confirmPassword
-    ) {
-      setSignupError(
-        "Passwords do not match."
-      );
-
+    if (registerPassword !== confirmPassword) {
+      setSignupError("Passwords do not match.");
       setAccountCreated(false);
-
       return;
     }
 
     if (registerPassword.length < 6) {
-      setSignupError(
-        "Password must contain at least 6 characters."
-      );
-
+      setSignupError("Password must contain at least 6 characters.");
       setAccountCreated(false);
-
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/register`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            fullName:
-              registerUsername,
-            email: registerEmail,
-            password:
-              registerPassword,
-          }),
-        }
-      );
-
-      const result =
-        await response.text();
-
-      if (response.ok) {
-        setAccountCreated(true);
-        setSignupError("");
-      } else {
-        setAccountCreated(false);
-
-        setSignupError(
-          result ||
-            "Registration failed."
-        );
-      }
+      await registerUser(registerUsername, registerEmail, registerPassword);
+      setAccountCreated(true);
+      setOtp("");
+      setOtpError("");
+      setSignupError("");
     } catch (error) {
-      console.error(
-        "Registration error:",
-        error
-      );
-
       setAccountCreated(false);
+      setSignupError(error.message || "Registration failed.");
+    }
+  };
 
-      setSignupError(
-        "Cannot connect to backend. Check if Spring Boot is running."
-      );
+  const handleVerifyOtp = async (event) => {
+    event.preventDefault();
+    setOtpError("");
+
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setOtpError("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setVerifyingOtp(true);
+    try {
+      const result = await verifyOtp(registerEmail, otp.trim());
+      if (result !== "OTP verified successfully") {
+        throw new Error(result || "Unable to verify your account.");
+      }
+      setAccountCreated(false);
+      setOtp("");
+      setShowSignup(false);
+      setEmail(registerEmail);
+      setPassword(registerPassword);
+      setSignupError("");
+      alert("Account verified. Please log in.");
+    } catch (error) {
+      setOtpError(error.message || "Unable to verify your account.");
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -818,17 +610,26 @@ function App() {
     setPreferencesSaved(false);
   };
 
-  const savePreferences = () => {
-    localStorage.setItem(
-      "itineraryPreferences",
-      JSON.stringify(preferences)
-    );
+  const savePreferences = async () => {
+    try {
+      await apiRequest("/profile/preferences", {
+        method: "PUT",
+        body: JSON.stringify({
+          budget: preferences.budget,
+          transport: preferences.travelType,
+          accommodation: preferences.accommodation,
+          foodPreferences: preferences.activities?.join(", ") || "",
+          interests: preferences.activities?.join(", ") || "",
+          travelPace: preferences.pace,
+        }),
+      });
 
-    setSavedPreferences(
-      preferences
-    );
-
-    setPreferencesSaved(true);
+      localStorage.setItem("itineraryPreferences", JSON.stringify(preferences));
+      setSavedPreferences(preferences);
+      setPreferencesSaved(true);
+    } catch (error) {
+      alert(error.message || "Unable to save preferences.");
+    }
   };
 
   /* =========================================================
@@ -882,15 +683,9 @@ function App() {
       return;
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/trips/${tripId}/destinations`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
-      }
+    const data = await apiRequest(
+      `/trips/${encodeURIComponent(tripId)}/destinations`
     );
-
-    const data = await readApiResponse(response);
     const items = Array.isArray(data) ? data : [];
 
     setDestinations(
@@ -903,9 +698,7 @@ function App() {
   };
 
   const loadTripHistory = async () => {
-    const token = getAuthToken();
-
-    if (!token) {
+    if (!getToken()) {
       setHistoryLoading(false);
       setTripHistory([]);
       setSelectedTripId("");
@@ -922,7 +715,7 @@ function App() {
       setShowRecommendationEngine(false);
       setProfileView("profile");
       localStorage.removeItem("itineraryUser");
-      clearAuthToken();
+      clearAuthStorage();
       return;
     }
 
@@ -930,15 +723,7 @@ function App() {
     setRouteError("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/trips`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const data = await readApiResponse(response);
+      const data = await getTrips();
       const trips = Array.isArray(data) ? data : [];
 
       setTripHistory(trips);
@@ -979,7 +764,7 @@ function App() {
         setShowRecommendationEngine(false);
         setProfileView("profile");
         localStorage.removeItem("itineraryUser");
-        clearAuthToken();
+        clearAuthStorage();
         setRouteError("Your login session expired. Please login again.");
       } else {
         setRouteError(message);
@@ -996,9 +781,7 @@ function App() {
   };
 
   const openRoutePlanner = async () => {
-    const token = getAuthToken();
-
-    if (!token) {
+    if (!getToken()) {
       setRouteError(
         "Your login session is missing or expired. Please login again."
       );
@@ -1061,11 +844,10 @@ function App() {
     setRouteMessage("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/trips/${selectedTripId}/destinations`,
+      await apiRequest(
+        `/trips/${encodeURIComponent(selectedTripId)}/destinations`,
         {
           method: "POST",
-          headers: getAuthHeaders(),
           body: JSON.stringify({
             destinationName: destinationName.trim(),
             latitude,
@@ -1073,8 +855,6 @@ function App() {
           }),
         }
       );
-
-      await readApiResponse(response);
       await loadDestinations(selectedTripId);
 
       setDestinationName("");
@@ -1096,15 +876,10 @@ function App() {
     setRouteMessage("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/trips/${selectedTripId}/destinations/${destinationId}`,
-        {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-        }
+      await apiRequest(
+        `/trips/${encodeURIComponent(selectedTripId)}/destinations/${encodeURIComponent(destinationId)}`,
+        { method: "DELETE" }
       );
-
-      await readApiResponse(response);
       await loadDestinations(selectedTripId);
       setRouteMessage("Destination removed.");
     } catch (error) {
@@ -1121,16 +896,13 @@ function App() {
       (item) => item.destinationId ?? item.id
     );
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/trips/${selectedTripId}/destinations/reorder`,
+    await apiRequest(
+      `/trips/${encodeURIComponent(selectedTripId)}/destinations/reorder`,
       {
         method: "PUT",
-        headers: getAuthHeaders(),
         body: JSON.stringify({ destinationIds }),
       }
     );
-
-    await readApiResponse(response);
     await loadDestinations(selectedTripId);
   };
 
@@ -1207,25 +979,14 @@ function App() {
     setRouteMessage("");
 
     try {
-      const distanceResponse = await fetch(
-        `${API_BASE_URL}/api/trips/${selectedTripId}/route/distance`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const distanceData = await readApiResponse(distanceResponse);
-
-      const etaResponse = await fetch(
-        `${API_BASE_URL}/api/trips/${selectedTripId}/route/eta`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const etaData = await readApiResponse(etaResponse);
+      const [distanceData, etaData] = await Promise.all([
+        apiRequest(
+          `/trips/${encodeURIComponent(selectedTripId)}/route/distance`
+        ),
+        apiRequest(
+          `/trips/${encodeURIComponent(selectedTripId)}/route/eta`
+        ),
+      ]);
 
       setRouteDistance(
         distanceData?.distanceKm ??
@@ -1247,41 +1008,36 @@ function App() {
     }
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
 
     if (newPassword.length < 6) {
-      alert(
-        "New password must contain at least 6 characters."
-      );
-
+      alert("New password must contain at least 6 characters.");
       return;
     }
 
-    if (
-      newPassword !==
-      confirmNewPassword
-    ) {
-      alert(
-        "New passwords do not match."
-      );
-
+    if (newPassword !== confirmNewPassword) {
+      alert("New passwords do not match.");
       return;
     }
 
-    /*
-      Frontend validation only for now.
-      The actual password API can be connected
-      without changing the Profile UI.
-    */
-
-    alert(
-      "Password details are valid. Connect the change-password backend endpoint to update your password."
-    );
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
+    try {
+      await apiRequest("/profile/change-password", {
+        method: "PUT",
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword: confirmNewPassword,
+        }),
+      });
+      alert("Password changed successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setProfileView("profile");
+    } catch (error) {
+      alert(error.message || "Unable to change password.");
+    }
   };
 
   /* =========================================================
@@ -1290,6 +1046,7 @@ function App() {
 
   const openProfile = () => {
     setShowFood(false);
+    setShowAccommodation(false);
     setShowTrips(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
@@ -1300,6 +1057,7 @@ function App() {
   const backFromProfile = () => {
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowTrips(false);
     setProfileView("profile");
   };
@@ -1308,10 +1066,32 @@ function App() {
      TRIPS NAVIGATION
   ========================================================= */
 
-  const openTrips = () => {
-    const token = getAuthToken();
+  const openAccommodation = () => {
+    if (!getToken()) {
+      setShowAccommodation(false);
+      setShowProfile(true);
+      setProfileView("profile");
+      alert("Your login session is missing or expired. Please login again.");
+      return;
+    }
 
-    if (!token) {
+    setShowProfile(false);
+    setShowTrips(false);
+    setShowFood(false);
+    setShowWeatherMonitoring(false);
+    setShowRecommendationEngine(false);
+    setRecommendationNavigationError("");
+    setShowAccommodation(true);
+  };
+
+  const backFromAccommodation = () => {
+    setShowAccommodation(false);
+    setProfileView("profile");
+    setShowProfile(true);
+  };
+
+  const openTrips = () => {
+    if (!getToken()) {
       setShowProfile(true);
       setShowTrips(false);
       alert("Your login session is missing or expired. Please login again.");
@@ -1320,6 +1100,7 @@ function App() {
 
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
@@ -1328,6 +1109,7 @@ function App() {
 
   const backFromTrips = () => {
     setShowTrips(false);
+    setShowAccommodation(false);
     setProfileView("profile");
     setShowProfile(true);
   };
@@ -1337,9 +1119,7 @@ function App() {
   ========================================================= */
 
   const openFood = () => {
-    const token = getAuthToken();
-
-    if (!token) {
+    if (!getToken()) {
       setShowFood(false);
       setShowProfile(true);
       setProfileView("profile");
@@ -1349,6 +1129,7 @@ function App() {
 
     setShowProfile(false);
     setShowTrips(false);
+    setShowAccommodation(false);
     setShowWeatherMonitoring(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
@@ -1357,6 +1138,7 @@ function App() {
 
   const backFromFood = () => {
     setShowFood(false);
+    setShowAccommodation(false);
     setProfileView("profile");
     setShowProfile(true);
   };
@@ -1367,6 +1149,7 @@ function App() {
   const openWeatherMonitoring = () => {
     setShowProfile(false);
     setShowFood(false);
+    setShowAccommodation(false);
     setShowRecommendationEngine(false);
     setRecommendationNavigationError("");
     setShowWeatherMonitoring(true);
@@ -1380,9 +1163,7 @@ function App() {
      MODULE 8 — DYNAMIC RECOMMENDATION ENGINE NAVIGATION
   ========================================================= */
   const openRecommendationEngine = async () => {
-    const token = getAuthToken();
-
-    if (!token) {
+    if (!getToken()) {
       setShowProfile(true);
       setShowRecommendationEngine(false);
       setRecommendationNavigationError(
@@ -1399,12 +1180,7 @@ function App() {
     setRecommendationNavigationLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
-
-      const data = await readApiResponse(response);
+      const data = await getTrips();
       const trips = Array.isArray(data) ? data : [];
 
       setRecommendationTrips(trips);
@@ -1452,7 +1228,7 @@ function App() {
         setShowRecommendationEngine(false);
         setProfileView("profile");
         localStorage.removeItem("itineraryUser");
-        clearAuthToken();
+        clearAuthStorage();
         setRecommendationNavigationError(
           "Your login session expired. Please login again."
         );
@@ -1625,6 +1401,15 @@ function App() {
           {isLoggedIn && (
             <button
               type="button"
+              onClick={openAccommodation}
+            >
+              Accommodation
+            </button>
+          )}
+
+          {isLoggedIn && (
+            <button
+              type="button"
               onClick={openProfile}
             >
               Profile
@@ -1640,6 +1425,7 @@ function App() {
       {!showProfile &&
         !showTrips &&
         !showFood &&
+        !showAccommodation &&
         !showWeatherMonitoring &&
         !showRecommendationEngine && (
         <main className="main-content">
@@ -1852,6 +1638,15 @@ function App() {
       {showFood && (
         <main className="food-page-container">
           <Food onBack={backFromFood} />
+        </main>
+      )}
+
+      {/* =====================================================
+          MODULE 9 — ACCOMMODATION
+      ===================================================== */}
+      {showAccommodation && (
+        <main className="accommodation-page-container">
+          <Accommodation onBack={backFromAccommodation} />
         </main>
       )}
 
@@ -2088,6 +1883,13 @@ function App() {
                     onClick={openTrips}
                   >
                     ✈️ My Trips
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openAccommodation}
+                  >
+                    🏨 Accommodation
                   </button>
 
                   <button
@@ -3436,25 +3238,6 @@ function App() {
                   : "Create Account"}
               </button>
 
-              {accountCreated && (
-                <div className="account-success">
-                  <div className="success-check">
-                    ✓
-                  </div>
-
-                  <div className="success-title">
-                    Account created
-                    successfully!
-                  </div>
-
-                  <div className="success-message">
-                    Your account has
-                    been created. You
-                    can now login.
-                  </div>
-                </div>
-              )}
-
               <p className="already-account">
                 Already have an
                 account?
@@ -3470,6 +3253,59 @@ function App() {
                 </button>
               </p>
             </form>
+
+            {accountCreated && (
+              <div className="account-success">
+                <div className="success-check">✓</div>
+                <div className="success-title">
+                  Account created successfully!
+                </div>
+                <div className="success-message">
+                  Enter the OTP sent to your email to verify your account.
+                </div>
+
+                <form
+                  className="otp-form"
+                  onSubmit={handleVerifyOtp}
+                >
+                  <label>Verification code</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength="6"
+                    placeholder="6-digit code"
+                    value={otp}
+                    onChange={(event) =>
+                      setOtp(event.target.value.replace(/\D/g, ""))
+                    }
+                    disabled={verifyingOtp}
+                    required
+                  />
+                  {otpError && (
+                    <div className="signup-error">⚠️ {otpError}</div>
+                  )}
+                  <button
+                    type="submit"
+                    className="create-account-button"
+                    disabled={verifyingOtp}
+                  >
+                    {verifyingOtp ? "Verifying..." : "Verify OTP"}
+                  </button>
+                  <button
+                    type="button"
+                    className="resend-otp-button"
+                    onClick={() =>
+                      resendOtp(registerEmail).catch((error) =>
+                        setOtpError(error.message || "Unable to resend OTP.")
+                      )
+                    }
+                  >
+                    Resend OTP
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       )}
