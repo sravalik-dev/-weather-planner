@@ -1,80 +1,32 @@
-import {
-  API_BASE_URL,
-  getAuthHeaders,
-  readApiError,
-} from "../utils/apiUtils";
+﻿import { apiRequest } from "../utils/apiUtils";
 
-const request = async (endpoint, options = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...(options.headers || {}),
-    },
-  });
+const coords = (latitude, longitude) =>
+  `latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
 
-  if (!response.ok) {
-    throw new Error(await readApiError(response));
-  }
-
-  const text = await response.text();
-
-  if (!text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-};
-
-export const getWeatherDashboard = () =>
-  request("/api/weather/dashboard");
-
-export const getWeatherCurrent = () =>
-  request("/api/weather/current");
-
-export const getWeatherHourly = () =>
-  request("/api/weather/hourly");
-
-export const getWeatherDaily = () =>
-  request("/api/weather/daily");
-
-export const getWeatherRain = () =>
-  request("/api/weather/rain");
-
-export const getWeatherTemperature = () =>
-  request("/api/weather/temperature");
-
-export const getWeatherHumidity = () =>
-  request("/api/weather/humidity");
-
-export const getWeatherWind = () =>
-  request("/api/weather/wind");
-
-export const getWeatherUV = () =>
-  request("/api/weather/uv");
-
-export const getWeatherAirQuality = () =>
-  request("/api/weather/air-quality");
-
-export const getWeatherAlerts = () =>
-  request("/api/weather/alerts");
-
-export const getWeatherHistory = ({
-  latitude,
-  longitude,
-  startDate,
-  endDate,
-}) =>
-  request("/api/weather/history", {
+export const getWeatherDashboard = (latitude, longitude) =>
+  apiRequest(`/weather/dashboard?${coords(latitude, longitude)}`);
+export const getWeatherCurrent = (latitude, longitude) =>
+  apiRequest(`/weather/current?${coords(latitude, longitude)}`);
+export const getWeatherHourly = (latitude, longitude) =>
+  apiRequest(`/weather/hourly?${coords(latitude, longitude)}`);
+export const getWeatherDaily = (latitude, longitude) =>
+  apiRequest(`/weather/daily?${coords(latitude, longitude)}`);
+export const getWeatherRain = (latitude, longitude) =>
+  apiRequest(`/weather/rain?${coords(latitude, longitude)}`);
+export const getWeatherTemperature = (latitude, longitude) =>
+  apiRequest(`/weather/temperature?${coords(latitude, longitude)}`);
+export const getWeatherHumidity = (latitude, longitude) =>
+  apiRequest(`/weather/humidity?${coords(latitude, longitude)}`);
+export const getWeatherWind = (latitude, longitude) =>
+  apiRequest(`/weather/wind?${coords(latitude, longitude)}`);
+export const getWeatherUV = (latitude, longitude) =>
+  apiRequest(`/weather/uv?${coords(latitude, longitude)}`);
+export const getWeatherAirQuality = (latitude, longitude) =>
+  apiRequest(`/weather/air-quality?${coords(latitude, longitude)}`);
+export const getWeatherAlerts = (latitude, longitude) =>
+  apiRequest(`/weather/alerts?${coords(latitude, longitude)}`);
+export const getWeatherHistory = (latitude, longitude, startDate, endDate) =>
+  apiRequest("/weather/history", {
     method: "POST",
-    body: JSON.stringify({
-      latitude,
-      longitude,
-      startDate,
-      endDate,
-    }),
+    body: JSON.stringify({ latitude, longitude, startDate, endDate }),
   });

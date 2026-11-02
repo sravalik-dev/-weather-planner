@@ -1272,6 +1272,39 @@ body {
   font-size: 12px;
   line-height: 1.5;
 }
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.otp-form label {
+  align-self: flex-start;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #d8eefc;
+}
+.otp-form input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 1rem;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.otp-form input::placeholder {
+  color: #a9bbca;
+}
+.resend-otp-button {
+  padding: 7px;
+  font-size: 0.8rem;
+  color: #88d7ff;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
 /* =========================================================
    38. CREATE ACCOUNT BUTTON
 ========================================================= */

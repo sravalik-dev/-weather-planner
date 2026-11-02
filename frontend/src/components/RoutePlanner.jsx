@@ -7,9 +7,15 @@ import {
   calculateDistance,
   calculateEta,
 } from "../services/routeService";
-
-const ITINERARY_STORAGE_PREFIX =
-  "weather_planner_itinerary_module6_";
+import {
+  addItineraryActivity,
+  deleteItineraryActivity,
+  generateItinerary as backendGenerateItinerary,
+  getItinerary,
+  reorderItineraryActivities,
+  toggleItineraryActivityLock,
+  updateItineraryActivity,
+} from "../services/itineraryService";
 
 const getTripId = (trip) =>
   trip?.tripId ?? trip?.id ?? trip?.tripID ?? null;
@@ -44,35 +50,47 @@ const createActivityId = () =>
     .slice(2, 9)}`;
 
 const normalizeActivity = (activity, day) => ({
-  id: activity?.id || createActivityId(),
-  day: Number(activity?.day) || day,
-  time: activity?.time || "09:00",
-  title: activity?.title || "Untitled Activity",
-  location: activity?.location || "",
+  id: activity?.activityId ?? activity?.id ?? null,
+  day,
+  activityDate: activity?.activityDate || "",
+  time: activity?.startTime || "09:00",
+  endTime: activity?.endTime || "",
+  title: activity?.activityName || "Untitled Activity",
+  location: activity?.destinationName || "",
   duration: activity?.duration || "60",
-  notes: activity?.notes || "",
+  notes: activity?.description || "",
+  category: activity?.category || "",
+  destinationId: activity?.destinationId ?? null,
   locked: Boolean(activity?.locked),
 });
 
-const normalizeItinerary = (value, days) => {
+const normalizeItinerary = (value, days, startDate) => {
   const source = Array.isArray(value) ? value : [];
+  const start = new Date(`${startDate}T00:00:00`);
 
   return Array.from({ length: days }, (_, index) => {
     const dayNumber = index + 1;
-
-    const existingDay = source.find(
-      (item) => Number(item?.day) === dayNumber
-    );
+    const activityDate = new Date(start);
+    activityDate.setDate(start.getDate() + index);
+    const dateKey = activityDate.toISOString().slice(0, 10);
+    const existingActivities = source
+      .filter((item) => item?.activityDate === dateKey)
+      .sort((a, b) => Number(a.orderIndex) - Number(b.orderIndex));
 
     return {
       day: dayNumber,
-      activities: Array.isArray(existingDay?.activities)
-        ? existingDay.activities.map((activity) =>
-            normalizeActivity(activity, dayNumber)
-          )
-        : [],
+      activities: existingActivities.map((activity) =>
+        normalizeActivity(activity, dayNumber)
+      ),
     };
   });
+};
+
+const getActivityDate = (trip, day) => {
+  const start = new Date(`${trip?.startDate}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return "";
+  start.setDate(start.getDate() + day - 1);
+  return start.toISOString().slice(0, 10);
 };
 
 const formatDistance = (value) => {
@@ -460,47 +478,46 @@ function RoutePlanner({ trip, onBack }) {
   // =====================================================
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!tripId) {
-      setItinerary(
-        createEmptyItinerary(tripDays)
-      );
+      setItinerary(createEmptyItinerary(tripDays));
       setItineraryLoading(false);
       return;
     }
 
-    setItineraryLoading(true);
+    const loadItinerary = async () => {
+      setItineraryLoading(true);
+      setItineraryError("");
 
-    try {
-      const key =
-        `${ITINERARY_STORAGE_PREFIX}${tripId}`;
-
-      const saved =
-        localStorage.getItem(key);
-
-      if (saved) {
-        setItinerary(
-          normalizeItinerary(
-            JSON.parse(saved),
-            tripDays
-          )
-        );
-      } else {
-        setItinerary(
-          createEmptyItinerary(tripDays)
-        );
+      try {
+        const activities = await getItinerary(tripId);
+        if (!cancelled) {
+          setItinerary(
+            normalizeItinerary(
+              activities,
+              tripDays,
+              trip?.startDate
+            )
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setItineraryError(
+            error?.message || "Unable to load itinerary."
+          );
+          setItinerary(createEmptyItinerary(tripDays));
+        }
+      } finally {
+        if (!cancelled) setItineraryLoading(false);
       }
-    } catch (error) {
-      console.error(
-        "Failed to load itinerary",
-        error
-      );
+    };
 
-      setItinerary(
-        createEmptyItinerary(tripDays)
-      );
-    } finally {
-      setItineraryLoading(false);
-    }
+    loadItinerary();
+
+    return () => {
+      cancelled = true;
+    };
   }, [tripId, tripDays]);
 
   // =====================================================
@@ -773,172 +790,63 @@ function RoutePlanner({ trip, onBack }) {
   // GENERATE ITINERARY
   // =====================================================
 
-  const generateItinerary =
-    async () => {
-      setItineraryGenerating(true);
-      setItineraryError("");
-      setItineraryMessage("");
+  const generateItinerary = async () => {
+    if (!tripId) {
+      setItineraryError("No trip is selected.");
+      return;
+    }
 
-      try {
-        const names =
-          getTripDestinationNames();
+    setItineraryGenerating(true);
+    setItineraryError("");
+    setItineraryMessage("");
 
-        setItinerary((current) => {
-          const generated =
-            createEmptyItinerary(
-              tripDays
-            );
-
-          const locked =
-            current.flatMap(
-              (day) =>
-                day.activities
-                  .filter(
-                    (item) =>
-                      item.locked
-                  )
-                  .map((item) => ({
-                    ...item,
-                    day: day.day,
-                  }))
-            );
-
-          const templates = [
-            [
-              "09:00",
-              "Morning Exploration",
-              "120",
-            ],
-            [
-              "11:30",
-              "Sightseeing & Local Experience",
-              "90",
-            ],
-            [
-              "13:30",
-              "Lunch Break",
-              "60",
-            ],
-            [
-              "16:00",
-              "Afternoon Discovery",
-              "120",
-            ],
-            [
-              "19:00",
-              "Evening Leisure",
-              "120",
-            ],
-          ];
-
-          generated.forEach(
-            (day, index) => {
-              const destination =
-                names[
-                  index %
-                    names.length
-                ];
-
-              const lockedForDay =
-                locked.filter(
-                  (item) =>
-                    Number(item.day) ===
-                    day.day
-                );
-
-              day.activities =
-                [...lockedForDay];
-
-              templates.forEach(
-                (
-                  [
-                    time,
-                    title,
-                    duration,
-                  ]
-                ) => {
-                  if (
-                    day.activities
-                      .length >= 5
-                  ) {
-                    return;
-                  }
-
-                  if (
-                    day.activities.some(
-                      (item) =>
-                        item.time ===
-                        time
-                    )
-                  ) {
-                    return;
-                  }
-
-                  day.activities.push(
-                    {
-                      id:
-                        createActivityId(),
-                      day: day.day,
-                      time,
-                      title:
-                        title ===
-                        "Morning Exploration"
-                          ? `${title} — ${destination}`
-                          : title,
-                      location:
-                        destination,
-                      duration,
-                      notes:
-                        "Plan this activity around your route and travel time.",
-                      locked: false,
-                    }
-                  );
-                }
-              );
-            }
-          );
-
-          return generated;
-        });
-
-        setItineraryMessage(
-          "Itinerary generated successfully. Locked activities were preserved."
-        );
-      } finally {
-        setItineraryGenerating(
-          false
-        );
-      }
-    };
+    try {
+      const activities = await backendGenerateItinerary(tripId);
+      setItinerary(
+        normalizeItinerary(
+          activities,
+          tripDays,
+          trip?.startDate
+        )
+      );
+      setItineraryMessage(
+        "Itinerary generated successfully from your route."
+      );
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to generate itinerary."
+      );
+    } finally {
+      setItineraryGenerating(false);
+    }
+  };
 
   // =====================================================
   // SAVE
   // =====================================================
 
-  const saveItinerary = () => {
+  const saveItinerary = async () => {
     if (!tripId) {
-      setItineraryError(
-        "No trip is selected."
-      );
+      setItineraryError("No trip is selected.");
       return;
     }
 
     setItinerarySaving(true);
+    setItineraryError("");
 
     try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify(
-          itinerary
+      const activities = await getItinerary(tripId);
+      setItinerary(
+        normalizeItinerary(
+          activities,
+          tripDays,
+          trip?.startDate
         )
       );
-
-      setItineraryMessage(
-        "Itinerary saved successfully on this device."
-      );
-    } catch {
+      setItineraryMessage("Itinerary refreshed from the backend.");
+    } catch (error) {
       setItineraryError(
-        "Unable to save itinerary."
+        error?.message || "Unable to save itinerary."
       );
     } finally {
       setItinerarySaving(false);
@@ -1026,243 +934,206 @@ function RoutePlanner({ trip, onBack }) {
       );
     };
 
-  const handleActivitySubmit =
-    (event) => {
-      event.preventDefault();
+  const handleActivitySubmit = async (event) => {
+    event.preventDefault();
 
-      if (
-        !activityForm.title.trim()
-      ) {
-        setItineraryError(
-          "Activity title is required."
+    if (!activityForm.title.trim()) {
+      setItineraryError("Activity title is required.");
+      return;
+    }
+
+    if (!tripId) {
+      setItineraryError("No trip is selected.");
+      return;
+    }
+
+    const selectedDay = Math.min(
+      tripDays,
+      Math.max(1, Number(activityForm.day) || 1)
+    );
+    const startTime = activityForm.time || "09:00";
+    const duration = Number(activityForm.duration) || 60;
+    const endTime = new Date(
+      `2000-01-01T${startTime}:00`
+    );
+    endTime.setMinutes(endTime.getMinutes() + duration);
+    const endTimeValue = `${String(endTime.getHours()).padStart(2, "0")}:${String(
+      endTime.getMinutes()
+    ).padStart(2, "0")}`;
+    const activityDate = getActivityDate(trip, selectedDay);
+    const request = {
+      destinationId: null,
+      activityDate,
+      startTime,
+      endTime: endTimeValue,
+      activityName: activityForm.title.trim(),
+      description: activityForm.notes.trim(),
+      category: "Custom",
+      duration,
+      locked: false,
+    };
+
+    try {
+      if (editingActivity) {
+        const existing = itinerary
+          .find((day) => day.day === selectedDay)
+          ?.activities.find((activity) => activity.id === editingActivity.id);
+
+        if (!existing) {
+          throw new Error("Activity not found.");
+        }
+
+        if (existing.locked) {
+          throw new Error("Unlock this activity before editing it.");
+        }
+
+        const updated = await updateItineraryActivity(
+          tripId,
+          existing.id,
+          request
         );
-        return;
-      }
-
-      const selectedDay =
-        Math.min(
-          tripDays,
-          Math.max(
-            1,
-            Number(
-              activityForm.day
-            ) || 1
+        setItinerary((current) =>
+          current.map((day) =>
+            day.day === selectedDay
+              ? {
+                  ...day,
+                  activities: day.activities.map((activity) =>
+                    activity.id === existing.id
+                      ? {
+                          ...activity,
+                          ...updated,
+                          day: selectedDay,
+                          time: updated.startTime,
+                          title: updated.activityName,
+                          location: updated.destinationName || activity.location,
+                          duration: updated.duration,
+                          notes: updated.description,
+                          locked: Boolean(updated.locked),
+                        }
+                      : activity
+                  ),
+                }
+              : day
           )
         );
-
-      if (editingActivity) {
-        let movedActivity =
-          null;
-
-        setItinerary(
-          (current) => {
-            const without =
-              current.map(
-                (day) => ({
-                  ...day,
-                  activities:
-                    day.activities.filter(
-                      (activity) => {
-                        if (
-                          activity.id ===
-                          editingActivity.id
-                        ) {
-                          movedActivity =
-                            {
-                              ...activity,
-                              day:
-                                selectedDay,
-                              time:
-                                activityForm.time,
-                              title:
-                                activityForm.title.trim(),
-                              location:
-                                activityForm.location.trim(),
-                              duration:
-                                activityForm.duration,
-                              notes:
-                                activityForm.notes.trim(),
-                            };
-
-                          return false;
-                        }
-
-                        return true;
-                      }
-                    ),
-                })
-              );
-
-            if (!movedActivity) {
-              return current;
-            }
-
-            return without.map(
-              (day) =>
-                day.day ===
-                selectedDay
-                  ? {
-                      ...day,
-                      activities:
-                        [
-                          ...day.activities,
-                          movedActivity,
-                        ],
-                    }
-                  : day
-            );
-          }
-        );
       } else {
-        const activity = {
-          id: createActivityId(),
-          day: selectedDay,
-          time: activityForm.time,
-          title:
-            activityForm.title.trim(),
-          location:
-            activityForm.location.trim(),
-          duration:
-            activityForm.duration,
-          notes:
-            activityForm.notes.trim(),
-          locked: false,
-        };
-
-        updateItinerary(
-          (current) =>
-            current.map(
-              (day) =>
-                day.day ===
-                selectedDay
-                  ? {
-                      ...day,
-                      activities: [
-                        ...day.activities,
-                        activity,
-                      ],
-                    }
-                  : day
-            )
+        const saved = await addItineraryActivity(tripId, request);
+        setItinerary((current) =>
+          current.map((day) =>
+            day.day === selectedDay
+              ? {
+                  ...day,
+                  activities: [
+                    ...day.activities,
+                    {
+                      ...saved,
+                      day: selectedDay,
+                      time: saved.startTime,
+                      title: saved.activityName,
+                      location: saved.destinationName || "",
+                      duration: saved.duration,
+                      notes: saved.description,
+                      locked: Boolean(saved.locked),
+                    },
+                  ],
+                }
+              : day
+          )
         );
       }
 
+      setItineraryMessage(
+        editingActivity ? "Activity updated." : "Activity added."
+      );
       closeActivityModal();
-    };
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to save activity."
+      );
+    }
+  };
 
   // =====================================================
   // ACTIVITY ACTIONS
   // =====================================================
 
-  const removeActivity = (
-    dayNumber,
-    activityId
-  ) => {
-    const activity =
-      itinerary
-        .find(
-          (day) =>
-            day.day ===
-            dayNumber
-        )
-        ?.activities.find(
-          (item) =>
-            item.id ===
-            activityId
-        );
+  const removeActivity = async (dayNumber, activityId) => {
+    const activity = itinerary
+      .find((day) => day.day === dayNumber)
+      ?.activities.find((item) => item.id === activityId);
 
-    if (!activity) {
-      return;
-    }
-
+    if (!activity) return;
     if (activity.locked) {
-      setItineraryError(
-        "Unlock this activity before removing it."
-      );
+      setItineraryError("Unlock this activity before removing it.");
       return;
     }
 
-    updateItinerary(
-      (current) =>
-        current.map(
-          (day) =>
-            day.day ===
-            dayNumber
-              ? {
-                  ...day,
-                  activities:
-                    day.activities.filter(
-                      (item) =>
-                        item.id !==
-                        activityId
-                    ),
-                }
-              : day
+    try {
+      await deleteItineraryActivity(tripId, activityId);
+      setItinerary((current) =>
+        current.map((day) =>
+          day.day === dayNumber
+            ? {
+                ...day,
+                activities: day.activities.filter(
+                  (item) => item.id !== activityId
+                ),
+              }
+            : day
         )
-    );
+      );
+      setItineraryMessage("Activity deleted.");
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to delete activity."
+      );
+    }
   };
 
-  const toggleActivityLock =
-    (
-      dayNumber,
-      activityId
-    ) => {
-      updateItinerary(
-        (current) =>
-          current.map(
-            (day) =>
-              day.day ===
-              dayNumber
-                ? {
-                    ...day,
-                    activities:
-                      day.activities.map(
-                        (activity) =>
-                          activity.id ===
-                          activityId
-                            ? {
-                                ...activity,
-                                locked:
-                                  !activity.locked,
-                              }
-                            : activity
-                      ),
-                  }
-                : day
-          )
-      );
-    };
+  const toggleActivityLock = async (dayNumber, activityId) => {
+    const activity = itinerary
+      .find((day) => day.day === dayNumber)
+      ?.activities.find((item) => item.id === activityId);
 
-  const moveActivity = (
-    dayNumber,
-    index,
-    direction
-  ) => {
-    const day =
-      itinerary.find(
-        (item) =>
-          item.day ===
-          dayNumber
-      );
+    if (!activity) return;
 
+    try {
+      const nextLocked = !activity.locked;
+      await toggleItineraryActivityLock(
+        tripId,
+        activityId,
+        nextLocked
+      );
+      setItinerary((current) =>
+        current.map((day) =>
+          day.day === dayNumber
+            ? {
+                ...day,
+                activities: day.activities.map((item) =>
+                  item.id === activityId
+                    ? { ...item, locked: nextLocked }
+                    : item
+                ),
+              }
+            : day
+        )
+      );
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to change activity lock."
+      );
+    }
+  };
+
+  const moveActivity = async (dayNumber, index, direction) => {
+    const day = itinerary.find((item) => item.day === dayNumber);
     if (!day) return;
 
-    const target =
-      index + direction;
-
+    const target = index + direction;
+    if (target < 0 || target >= day.activities.length) return;
     if (
-      target < 0 ||
-      target >=
-        day.activities.length
-    ) {
-      return;
-    }
-
-    if (
-      day.activities[index]
-        .locked ||
-      day.activities[target]
-        .locked
+      day.activities[index].locked ||
+      day.activities[target].locked
     ) {
       setItineraryError(
         "Unlock the activities before rearranging them."
@@ -1270,41 +1141,28 @@ function RoutePlanner({ trip, onBack }) {
       return;
     }
 
-    updateItinerary(
-      (current) =>
-        current.map(
-          (item) => {
-            if (
-              item.day !==
-              dayNumber
-            ) {
-              return item;
-            }
+    const reordered = [...day.activities];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(target, 0, moved);
 
-            const activities =
-              [...item.activities];
-
-            const [
-              moved,
-            ] =
-              activities.splice(
-                index,
-                1
-              );
-
-            activities.splice(
-              target,
-              0,
-              moved
-            );
-
-            return {
-              ...item,
-              activities,
-            };
-          }
+    try {
+      await reorderItineraryActivities(
+        tripId,
+        getActivityDate(trip, dayNumber),
+        reordered.map((activity) => activity.id)
+      );
+      setItinerary((current) =>
+        current.map((item) =>
+          item.day === dayNumber
+            ? { ...item, activities: reordered }
+            : item
         )
-    );
+      );
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to reorder activities."
+      );
+    }
   };
 
   // =====================================================
@@ -1365,7 +1223,7 @@ function RoutePlanner({ trip, onBack }) {
       });
     };
 
-  const handleDrop = (
+  const handleDrop = async (
     event,
     targetDay,
     targetId = null
@@ -1376,96 +1234,65 @@ function RoutePlanner({ trip, onBack }) {
       return;
     }
 
-    const sourceDay =
-      draggedActivity.day;
+    const sourceDay = draggedActivity.day;
+    const sourceId = draggedActivity.id;
 
-    const sourceId =
-      draggedActivity.id;
+    if (sourceDay !== targetDay) {
+      setItineraryError(
+        "Activities can be reordered within the same day."
+      );
+      handleDragEnd();
+      return;
+    }
 
-    updateItinerary(
-      (current) => {
-        let moved = null;
-
-        const without =
-          current.map(
-            (day) => ({
-              ...day,
-              activities:
-                day.activities.filter(
-                  (activity) => {
-                    if (
-                      day.day ===
-                        sourceDay &&
-                      activity.id ===
-                        sourceId
-                    ) {
-                      moved = {
-                        ...activity,
-                        day: targetDay,
-                      };
-
-                      return false;
-                    }
-
-                    return true;
-                  }
-                ),
-            })
-          );
-
-        if (!moved) {
-          return current;
-        }
-
-        return without.map(
-          (day) => {
-            if (
-              day.day !==
-              targetDay
-            ) {
-              return day;
-            }
-
-            const activities =
-              [...day.activities];
-
-            if (!targetId) {
-              activities.push(
-                moved
-              );
-            } else {
-              const index =
-                activities.findIndex(
-                  (item) =>
-                    item.id ===
-                    targetId
-                );
-
-              if (
-                index >= 0
-              ) {
-                activities.splice(
-                  index,
-                  0,
-                  moved
-                );
-              } else {
-                activities.push(
-                  moved
-                );
-              }
-            }
-
-            return {
-              ...day,
-              activities,
-            };
-          }
-        );
-      }
+    const source = itinerary.find((day) => day.day === sourceDay);
+    const sourceIndex = source?.activities.findIndex(
+      (activity) => activity.id === sourceId
     );
+    const targetIndex = targetId
+      ? source?.activities.findIndex((activity) => activity.id === targetId)
+      : source?.activities.length;
 
-    handleDragEnd();
+    if (
+      sourceIndex === undefined ||
+      sourceIndex < 0 ||
+      targetIndex === undefined ||
+      targetIndex < 0 ||
+      source.activities[sourceIndex].locked ||
+      source.activities[targetIndex]?.locked
+    ) {
+      setItineraryError("Unlock the activities before rearranging them.");
+      handleDragEnd();
+      return;
+    }
+
+    const reordered = [...source.activities];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    const adjustedTarget = reordered.findIndex(
+      (activity) => activity.id === targetId
+    );
+    reordered.splice(adjustedTarget >= 0 ? adjustedTarget : reordered.length, 0, moved);
+
+    try {
+      await reorderItineraryActivities(
+        tripId,
+        getActivityDate(trip, sourceDay),
+        reordered.map((activity) => activity.id)
+      );
+      setItinerary((current) =>
+        current.map((day) =>
+          day.day === sourceDay
+            ? { ...day, activities: reordered }
+            : day
+        )
+      );
+    } catch (error) {
+      setItineraryError(
+        error?.message || "Unable to reorder activities."
+      );
+    } finally {
+      handleDragEnd();
+    }
   };
 
   // =====================================================

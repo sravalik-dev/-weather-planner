@@ -1,11 +1,14 @@
+
 package backend.service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Random;
+import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import backend.dto.ForgotPasswordRequest;
 import backend.dto.LoginRequest;
@@ -14,7 +17,7 @@ import backend.dto.ResetPasswordRequest;
 import backend.dto.VerifyOtpRequest;
 import backend.entity.User;
 import backend.repository.UserRepository;
-import backend.Security.JwtService;
+import backend.security.JwtService;
 
 @Service
 public class AuthService {
@@ -31,16 +34,32 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder =
             new BCryptPasswordEncoder();
 
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
+
+    private static final int OTP_EXPIRY_MINUTES = 5;
+    private static final int OTP_LENGTH = 6;
 
     // ==========================================
     // REGISTER
     // ==========================================
 
+    @Transactional
     public String register(RegisterRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getEmail().trim().isEmpty()) {
+            return "Email is required!";
+        }
+
+        if (request.getPassword() == null ||
+                request.getPassword().trim().isEmpty()) {
+            return "Password is required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user != null && user.isEmailVerified()) {
@@ -50,24 +69,22 @@ public class AuthService {
         String otp = generateOtp();
 
         if (user == null) {
-
             user = new User();
-
             user.setFullName(request.getFullName());
-
-            user.setEmail(request.getEmail());
-
-            user.setPassword(
-                    passwordEncoder.encode(
-                            request.getPassword()
-                    )
-            );
+            user.setEmail(email);
+        } else if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
         }
 
-        user.setOtpCode(otp);
+        user.setEmail(email);
 
+        user.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
+
+        user.setOtpCode(otp);
         user.setOtpExpiry(
-                LocalDateTime.now().plusMinutes(5)
+                LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)
         );
 
         user.setEmailVerified(false);
@@ -86,10 +103,27 @@ public class AuthService {
     // VERIFY REGISTRATION OTP
     // ==========================================
 
+    @Transactional
     public String verifyOtp(VerifyOtpRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getOtp() == null) {
+            return "Email and OTP are required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+        String otp = normalizeOtp(request.getOtp());
+
+        if (email.isEmpty()) {
+            return "Email is required!";
+        }
+
+        if (!isValidOtp(otp)) {
+            return "OTP must contain exactly 6 digits!";
+        }
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
@@ -106,21 +140,18 @@ public class AuthService {
 
         if (user.getOtpExpiry() == null ||
                 LocalDateTime.now().isAfter(user.getOtpExpiry())) {
-
-            return "OTP expired!";
+            return "OTP expired! Please request a new OTP.";
         }
 
-        if (!user.getOtpCode().equals(request.getOtp())) {
+        if (!user.getOtpCode().equals(otp)) {
             return "Invalid OTP!";
         }
 
         user.setEmailVerified(true);
-
         user.setOtpCode(null);
-
         user.setOtpExpiry(null);
 
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
 
         return "Account verified successfully!";
     }
@@ -129,10 +160,16 @@ public class AuthService {
     // RESEND OTP
     // ==========================================
 
+    @Transactional
     public String resendOtp(String email) {
 
-        User user = userRepository
-                .findByEmail(email)
+        if (email == null || email.trim().isEmpty()) {
+            return "Email is required!";
+        }
+
+        String normalizedEmail = normalizeEmail(email);
+
+        User user = userRepository.findByEmail(normalizedEmail)
                 .orElse(null);
 
         if (user == null) {
@@ -146,15 +183,14 @@ public class AuthService {
         String otp = generateOtp();
 
         user.setOtpCode(otp);
-
         user.setOtpExpiry(
-                LocalDateTime.now().plusMinutes(5)
+                LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)
         );
 
         userRepository.save(user);
 
         emailService.sendVerificationOtp(
-                email,
+                user.getEmail(),
                 otp
         );
 
@@ -165,59 +201,64 @@ public class AuthService {
     // LOGIN
     // ==========================================
 
+    @Transactional
     public String login(LoginRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getEmail().trim().isEmpty()) {
+            return "Email is required!";
+        }
+
+        if (request.getPassword() == null ||
+                request.getPassword().isEmpty()) {
+            return "Password is required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
-            return "User not found!";
+            return "Invalid email or password!";
         }
 
+        // Email verification must happen before login.
         if (!user.isEmailVerified()) {
             return "Please verify your email first!";
         }
 
         String storedPassword = user.getPassword();
 
+        if (storedPassword == null || storedPassword.isEmpty()) {
+            return "Invalid email or password!";
+        }
+
         boolean passwordMatches;
 
-        // ==========================================
-        // CHECK BCRYPT PASSWORD
-        // ==========================================
+        // BCrypt password verification.
+        if (storedPassword.startsWith("$2a$") ||
+                storedPassword.startsWith("$2b$") ||
+                storedPassword.startsWith("$2y$")) {
 
-        if (storedPassword.startsWith("$2a$")
-                || storedPassword.startsWith("$2b$")
-                || storedPassword.startsWith("$2y$")) {
-
-            passwordMatches =
-                    passwordEncoder.matches(
-                            request.getPassword(),
-                            storedPassword
-                    );
+            passwordMatches = passwordEncoder.matches(
+                    request.getPassword(),
+                    storedPassword
+            );
 
         } else {
 
-            // ==========================================
-            // SUPPORT EXISTING PLAIN-TEXT PASSWORDS
-            // ==========================================
+            // Legacy plain-text password compatibility.
+            // Successful legacy login upgrades the password to BCrypt.
 
-            passwordMatches =
-                    storedPassword.equals(
-                            request.getPassword()
-                    );
-
-            // ==========================================
-            // UPGRADE OLD PASSWORD TO BCRYPT
-            // ==========================================
+            passwordMatches = storedPassword.equals(
+                    request.getPassword()
+            );
 
             if (passwordMatches) {
-
                 user.setPassword(
-                        passwordEncoder.encode(
-                                request.getPassword()
-                        )
+                        passwordEncoder.encode(request.getPassword())
                 );
 
                 userRepository.save(user);
@@ -225,18 +266,20 @@ public class AuthService {
         }
 
         if (!passwordMatches) {
-            return "Invalid password!";
+            return "Invalid email or password!";
         }
 
-        // ==========================================
-        // GENERATE JWT
-        // ==========================================
+        // Generate JWT.
+        String token = jwtService.generateToken(
+                user.getUserId(),
+                user.getEmail()
+        );
 
-        String token =
-                jwtService.generateToken(
-                        user.getUserId(),
-                        user.getEmail()
-                );
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "JWT generation failed."
+            );
+        }
 
         return token;
     }
@@ -245,11 +288,18 @@ public class AuthService {
     // FORGOT PASSWORD
     // ==========================================
 
-    public String forgotPassword(
-            ForgotPasswordRequest request) {
+    @Transactional
+    public String forgotPassword(ForgotPasswordRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getEmail().trim().isEmpty()) {
+            return "Email is required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
@@ -265,7 +315,7 @@ public class AuthService {
         user.setResetOtp(otp);
 
         user.setResetOtpExpiry(
-                LocalDateTime.now().plusMinutes(5)
+                LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)
         );
 
         user.setResetOtpVerified(false);
@@ -284,11 +334,27 @@ public class AuthService {
     // VERIFY RESET OTP
     // ==========================================
 
-    public String verifyResetOtp(
-            VerifyOtpRequest request) {
+    @Transactional
+    public String verifyResetOtp(VerifyOtpRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getOtp() == null) {
+            return "Email and OTP are required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+        String otp = normalizeOtp(request.getOtp());
+
+        if (email.isEmpty()) {
+            return "Email is required!";
+        }
+
+        if (!isValidOtp(otp)) {
+            return "OTP must contain exactly 6 digits!";
+        }
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
@@ -300,20 +366,16 @@ public class AuthService {
         }
 
         if (user.getResetOtpExpiry() == null ||
-                LocalDateTime.now().isAfter(
-                        user.getResetOtpExpiry())) {
-
-            return "OTP expired!";
+                LocalDateTime.now().isAfter(user.getResetOtpExpiry())) {
+            return "OTP expired! Please request a new OTP.";
         }
 
-        if (!user.getResetOtp().equals(request.getOtp())) {
+        if (!user.getResetOtp().equals(otp)) {
             return "Invalid OTP!";
         }
 
         user.setResetOtpVerified(true);
-
         user.setResetOtp(null);
-
         user.setResetOtpExpiry(null);
 
         userRepository.save(user);
@@ -325,11 +387,18 @@ public class AuthService {
     // RESET PASSWORD
     // ==========================================
 
-    public String resetPassword(
-            ResetPasswordRequest request) {
+    @Transactional
+    public String resetPassword(ResetPasswordRequest request) {
 
-        User user = userRepository
-                .findByEmail(request.getEmail())
+        if (request == null ||
+                request.getEmail() == null ||
+                request.getEmail().trim().isEmpty()) {
+            return "Email is required!";
+        }
+
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
@@ -342,17 +411,16 @@ public class AuthService {
 
         if (request.getNewPassword() == null ||
                 request.getNewPassword().length() < 6) {
-
             return "Password must be at least 6 characters!";
         }
 
         user.setPassword(
-                passwordEncoder.encode(
-                        request.getNewPassword()
-                )
+                passwordEncoder.encode(request.getNewPassword())
         );
 
         user.setResetOtpVerified(false);
+        user.setResetOtp(null);
+        user.setResetOtpExpiry(null);
 
         userRepository.save(user);
 
@@ -360,14 +428,45 @@ public class AuthService {
     }
 
     // ==========================================
-    // GENERATE 4 DIGIT OTP
+    // GENERATE SIX-DIGIT OTP
     // ==========================================
 
     private String generateOtp() {
 
         return String.format(
-                "%04d",
-                random.nextInt(10000)
+                "%06d",
+                random.nextInt(1_000_000)
         );
+    }
+
+    // ==========================================
+    // NORMALIZE EMAIL
+    // ==========================================
+
+    private String normalizeEmail(String email) {
+
+        return email == null
+                ? ""
+                : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    // ==========================================
+    // NORMALIZE OTP
+    // ==========================================
+
+    private String normalizeOtp(String otp) {
+
+        return otp == null
+                ? ""
+                : otp.trim();
+    }
+
+    // ==========================================
+    // VALIDATE OTP
+    // ==========================================
+
+    private boolean isValidOtp(String otp) {
+
+        return otp != null && otp.matches("\\d{6}");
     }
 }

@@ -3,11 +3,9 @@ package backend.controller;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import backend.dto.ForgotPasswordRequest;
 import backend.dto.LoginRequest;
@@ -18,76 +16,97 @@ import backend.service.AuthService;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "http://localhost:5177",
+    "http://localhost:5178"
+})
 public class AuthController {
 
     @Autowired
     private AuthService authService;
 
-    // REGISTER
     @PostMapping("/register")
-    public String register(
-            @RequestBody RegisterRequest request) {
-
+    public String register(@RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
-    // VERIFY REGISTRATION OTP
     @PostMapping("/verify-otp")
-    public String verifyOtp(
-            @RequestBody VerifyOtpRequest request) {
-
+    public String verifyOtp(@RequestBody VerifyOtpRequest request) {
         return authService.verifyOtp(request);
     }
 
-    // RESEND OTP
     @PostMapping("/resend-otp")
-    public String resendOtp(
-            @RequestParam String email) {
-
+    public String resendOtp(@RequestParam String email) {
         return authService.resendOtp(email);
     }
 
-    // LOGIN
     @PostMapping("/login")
-    public Map<String, String> login(
+    public ResponseEntity<Map<String, String>> login(
             @RequestBody LoginRequest request) {
 
-        String result = authService.login(request);
+        try {
+            String result = authService.login(request);
 
-        // If authentication failed, return the message
-        // instead of treating it as a JWT.
-        if (result == null ||
-                !result.matches(
-                        "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$")) {
+            if (result == null || !isJwt(result)) {
+                return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                        "message",
+                        result == null
+                            ? "Invalid username/email or password."
+                            : result
+                    ));
+            }
 
-            return Map.of("message", result);
+            return ResponseEntity.ok(Map.of("token", result));
+
+        } catch (IllegalArgumentException |
+                 IllegalStateException ex) {
+
+            return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                    "message",
+                    ex.getMessage() == null
+                        ? "Login failed."
+                        : ex.getMessage()
+                ));
         }
-
-        // Successful login
-        return Map.of("token", result);
     }
 
-    // FORGOT PASSWORD
+    private boolean isJwt(String value) {
+        if (value == null) {
+            return false;
+        }
+
+        String[] parts = value.trim().split("\\.", -1);
+
+        return parts.length == 3
+            && !parts[0].isEmpty()
+            && !parts[1].isEmpty()
+            && !parts[2].isEmpty();
+    }
+
     @PostMapping("/forgot-password")
     public String forgotPassword(
             @RequestBody ForgotPasswordRequest request) {
-
         return authService.forgotPassword(request);
     }
 
-    // VERIFY RESET OTP
     @PostMapping("/verify-reset-otp")
     public String verifyResetOtp(
             @RequestBody VerifyOtpRequest request) {
-
         return authService.verifyResetOtp(request);
     }
 
-    // RESET PASSWORD
     @PostMapping("/reset-password")
     public String resetPassword(
             @RequestBody ResetPasswordRequest request) {
-
         return authService.resetPassword(request);
     }
 }
+

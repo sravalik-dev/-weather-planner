@@ -1,154 +1,67 @@
-import {
-  API_BASE_URL,
-  getAuthHeaders,
-  readApiError,
-} from '../utils/apiUtils';
+﻿import { apiRequest, clearAuthStorage, getToken, saveToken } from "../utils/apiUtils";
+
+const parseAuthResponse = async (response) => {
+  const text = await response.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = typeof data === "string"
+      ? data
+      : data?.message || data?.error || data?.detail || "Authentication request failed.";
+    const error = new Error(message);
+    error.status = response.status;
+    error.responseData = data;
+    throw error;
+  }
+
+  return data;
+};
 
 export const loginUser = async (email, password) => {
-  const response = await fetch(
-    `${API_BASE_URL}/api/auth/login`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/plain, application/json, */*',
-      },
-      body: JSON.stringify({
-        email: email.trim(),
-        password,
-      }),
-    }
-  );
-
-  const resultText = await response.text();
-
-  if (!response.ok) {
-    let message = resultText || 'Login failed.';
-
-    try {
-      const errorData = JSON.parse(resultText);
-
-      message =
-        errorData?.message ||
-        errorData?.error ||
-        errorData?.detail ||
-        message;
-    } catch {
-      // Keep the backend text response.
-    }
-
-    throw new Error(message);
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email: email.trim(), password }),
+  });
+  const data = await parseAuthResponse(response);
+  const token = typeof data === "string" ? data : data?.token;
+  if (!token || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)) {
+    throw new Error("Login succeeded, but the backend did not return a valid JWT token.");
   }
-
-  let token = '';
-
-  const jwtMatch = resultText.match(
-    /([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/
-  );
-
-  if (jwtMatch) {
-    token = jwtMatch[1];
-  } else {
-    try {
-      const parsedResult = JSON.parse(resultText);
-
-      if (typeof parsedResult === 'string') {
-        token = parsedResult.trim();
-      } else if (
-        parsedResult &&
-        typeof parsedResult === 'object'
-      ) {
-        token =
-          parsedResult.token ||
-          parsedResult.accessToken ||
-          parsedResult.jwt ||
-          parsedResult.jwtToken ||
-          parsedResult.data?.token ||
-          parsedResult.data?.accessToken ||
-          parsedResult.data?.jwt ||
-          parsedResult.data?.jwtToken ||
-          '';
-      }
-    } catch {
-      token = resultText.trim();
-    }
-  }
-
-  token = String(token)
-    .replace(/^Bearer\s+/i, '')
-    .replace(/^"|"$/g, '')
-    .trim();
-
-  const tokenParts = token.split('.');
-
-  if (
-    tokenParts.length !== 3 ||
-    tokenParts.some((part) => !part)
-  ) {
-    throw new Error(
-      'Login succeeded, but the backend response does not contain a valid JWT.'
-    );
-  }
-
-  return token;
+  return saveToken(token);
 };
 
-export const registerUser = async (
-  username,
-  email,
-  password
-) => {
-  const response = await fetch(
-    `${API_BASE_URL}/api/auth/register`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fullName: username,
-        email,
-        password,
-      }),
-    }
-  );
+export const registerUser = async (fullName, email, password) =>
+  apiRequest("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ fullName, email: email.trim(), password }),
+  });
 
-  const result = await response.text();
+export const verifyOtp = async (email, otp) =>
+  apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: email.trim(), otp }) });
 
-  if (!response.ok) {
-    throw new Error(result || 'Registration failed.');
-  }
+export const resendOtp = async (email) =>
+  apiRequest(`/auth/resend-otp?email=${encodeURIComponent(email.trim())}`, { method: "POST" });
 
-  return result;
-};
+export const forgotPassword = async (email) =>
+  apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
 
-export const logoutUser = () => {
-  localStorage.removeItem('itineraryUser');
-  localStorage.removeItem('itineraryToken');
-  localStorage.removeItem('jwtToken');
-  localStorage.removeItem('isLoggedIn');
-};
+export const verifyResetOtp = async (email, otp) =>
+  apiRequest("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: email.trim(), otp }) });
 
-export const isAuthenticated = () => {
-  return Boolean(
-    localStorage.getItem('jwtToken') ||
-      localStorage.getItem('itineraryToken')
-  );
-};
+export const resetPassword = async (email, newPassword) =>
+  apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify({ email: email.trim(), newPassword }) });
 
+export const logoutUser = () => clearAuthStorage();
+export const isAuthenticated = () => Boolean(getToken());
 export const checkAuthentication = async () => {
-  const response = await fetch(
-    `${API_BASE_URL}/api/trips`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }
-  );
-
-  if (!response.ok) {
-    const message = await readApiError(response);
-    throw new Error(message);
-  }
-
+  await apiRequest("/trips");
   return true;
 };
