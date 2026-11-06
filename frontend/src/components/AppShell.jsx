@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import Accommodation from "./Accommodation";
 import BudgetPanel from "./BudgetPanel";
@@ -25,6 +26,8 @@ const NAV = [
   { id: "profile", label: "Profile", icon: "☺" },
 ];
 
+const DEFAULT_BUDGET_TRIP_ID = "56";
+
 function AppShell({ user, weather, onLogout, onUserUpdate }) {
   const [view, setView] = useState("dashboard");
   const [trips, setTrips] = useState([]);
@@ -34,32 +37,67 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
 
   useEffect(() => {
     let active = true;
+
     setTripsLoading(true);
+
     getTrips()
       .then((data) => {
         if (!active) return;
+
         const list = Array.isArray(data) ? data : [];
         setTrips(list);
-        if (list.length && !selectedTripId) {
-          setSelectedTripId(String(list[0].tripId ?? list[0].id));
+
+        setSelectedTripId((currentId) => {
+          const currentStillExists = list.some(
+            (trip) =>
+              String(trip.tripId ?? trip.id) === String(currentId)
+          );
+
+          if (currentId && currentStillExists) {
+            return String(currentId);
+          }
+
+          const preferredTrip = list.find(
+            (trip) =>
+              String(trip.tripId ?? trip.id) ===
+              DEFAULT_BUDGET_TRIP_ID
+          );
+
+          if (preferredTrip) {
+            return DEFAULT_BUDGET_TRIP_ID;
+          }
+
+          return list.length
+            ? String(list[0].tripId ?? list[0].id)
+            : "";
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load trips:", error);
+
+        if (active) {
+          setTrips([]);
+          setSelectedTripId("");
         }
       })
-      .catch(() => {
-        if (active) setTrips([]);
-      })
       .finally(() => {
-        if (active) setTripsLoading(false);
+        if (active) {
+          setTripsLoading(false);
+        }
       });
+
     return () => {
       active = false;
     };
   }, [view]);
 
   const selectedTrip = trips.find(
-    (trip) => String(trip.tripId ?? trip.id) === String(selectedTripId)
+    (trip) =>
+      String(trip.tripId ?? trip.id) === String(selectedTripId)
   );
 
-  const title = NAV.find((item) => item.id === view)?.label || "Dashboard";
+  const title =
+    NAV.find((item) => item.id === view)?.label || "Dashboard";
 
   return (
     <div className="app-shell">
@@ -68,6 +106,7 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
           <span>☁</span>
           <strong>Weather Planner</strong>
         </div>
+
         <nav>
           {NAV.map((item) => (
             <button
@@ -84,39 +123,73 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
             </button>
           ))}
         </nav>
-        <button type="button" className="logout-link" onClick={onLogout}>
+
+        <button
+          type="button"
+          className="logout-link"
+          onClick={onLogout}
+        >
           Logout
         </button>
       </aside>
 
       <div className="shell-main">
         <header className="shell-topbar">
-          <button type="button" className="menu-toggle" onClick={() => setMenuOpen((open) => !open)}>
+          <button
+            type="button"
+            className="menu-toggle"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
             ☰
           </button>
+
           <h2>{title}</h2>
+
           <div className="topbar-weather">
-            <span>{getWeatherIcon(weather.type, weather.isDay)}</span>
+            <span>
+              {getWeatherIcon(weather.type, weather.isDay)}
+            </span>
+
             <div>
               <strong>
-                {weather.temperature != null ? `${Math.round(weather.temperature)}°C` : "--"}
+                {weather.temperature != null
+                  ? `${Math.round(weather.temperature)}°C`
+                  : "--"}
               </strong>
+
               <small>
                 {weather.loading
                   ? "Detecting location..."
-                  : weather.location || weather.error || getWeatherLabel(weather.type)}
+                  : weather.location ||
+                    weather.error ||
+                    getWeatherLabel(weather.type)}
               </small>
             </div>
-            <div className="avatar">{(user?.name || "T").charAt(0).toUpperCase()}</div>
+
+            <div className="avatar">
+              {(user?.name || "T").charAt(0).toUpperCase()}
+            </div>
           </div>
         </header>
 
         <div className="shell-content">
           {view === "dashboard" && (
-            <Dashboard user={user} weather={weather} trips={trips} onNavigate={setView} />
+            <Dashboard
+              user={user}
+              weather={weather}
+              trips={trips}
+              onNavigate={setView}
+            />
           )}
-          {view === "plan" && <Trips key="plan" hideBack startWithCreate />}
-          {view === "trips" && <Trips key="trips" hideBack />}
+
+          {view === "plan" && (
+            <Trips key="plan" hideBack startWithCreate />
+          )}
+
+          {view === "trips" && (
+            <Trips key="trips" hideBack />
+          )}
+
           {view === "routes" && (
             <>
               <TripSelectBar
@@ -126,12 +199,18 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
                 loading={tripsLoading}
                 emptyText="Create a trip before calculating a route."
               />
-              {selectedTrip ? (
-                <RoutePlanner trip={selectedTrip} onBack={() => setView("trips")} />
-              ) : null}
+
+              {selectedTrip && (
+                <RoutePlanner
+                  trip={selectedTrip}
+                  onBack={() => setView("trips")}
+                />
+              )}
             </>
           )}
+
           {view === "weather" && <WeatherMonitoring />}
+
           {view === "recommendations" && (
             <>
               <TripSelectBar
@@ -141,17 +220,40 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
                 loading={tripsLoading}
                 emptyText="Create a trip before generating recommendations."
               />
-              {selectedTripId ? (
-                <RecommendationEngine tripId={selectedTripId} onBack={() => setView("dashboard")} />
-              ) : null}
+
+              {selectedTripId && (
+                <RecommendationEngine
+                  tripId={selectedTripId}
+                  onBack={() => setView("dashboard")}
+                />
+              )}
             </>
           )}
-          {view === "food" && <Food onBack={() => setView("dashboard")} />}
-          {view === "accommodation" && <Accommodation onBack={() => setView("dashboard")} />}
-          {view === "budget" && <BudgetPanel trips={trips} />}
+
+          {view === "food" && (
+            <Food onBack={() => setView("dashboard")} />
+          )}
+
+          {view === "accommodation" && (
+            <Accommodation onBack={() => setView("dashboard")} />
+          )}
+
+          {view === "budget" && (
+            <BudgetPanel
+              trips={trips}
+              selectedTripId={selectedTripId}
+              onTripChange={setSelectedTripId}
+              tripsLoading={tripsLoading}
+            />
+          )}
+
           {view === "profile" && (
             <div className="profile-stack">
-              <ProfilePanel view="profile" user={user} onUserUpdate={onUserUpdate} />
+              <ProfilePanel
+                view="profile"
+                user={user}
+                onUserUpdate={onUserUpdate}
+              />
               <ProfilePanel view="preferences" user={user} />
               <ProfilePanel view="password" user={user} />
             </div>

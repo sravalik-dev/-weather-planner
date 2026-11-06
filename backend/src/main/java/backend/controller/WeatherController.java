@@ -1,7 +1,9 @@
+
 package backend.controller;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,7 @@ public class WeatherController {
     @Autowired
     private LocationService locationService;
 
+    // Weather dashboard
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard(
             @RequestParam Double latitude,
@@ -46,6 +49,7 @@ public class WeatherController {
         );
     }
 
+    // Current weather
     @GetMapping("/current")
     public ResponseEntity<Map<String, Object>> current(
             @RequestParam Double latitude,
@@ -56,6 +60,17 @@ public class WeatherController {
         );
     }
 
+    // Search location by name and retrieve coordinates automatically
+    @GetMapping("/search")
+    public ResponseEntity<List<Map<String, Object>>> searchLocations(
+            @RequestParam String name) {
+
+        return ResponseEntity.ok(
+                locationService.searchLocations(name)
+        );
+    }
+
+    // Reverse geocoding: coordinates to readable location
     @GetMapping("/location")
     public ResponseEntity<Map<String, Object>> location(
             @RequestParam Double latitude,
@@ -66,6 +81,7 @@ public class WeatherController {
         );
     }
 
+    // Hourly forecast
     @GetMapping("/hourly")
     public ResponseEntity<Map<String, Object>> hourly(
             @RequestParam Double latitude,
@@ -76,6 +92,7 @@ public class WeatherController {
         );
     }
 
+    // Daily forecast
     @GetMapping("/daily")
     public ResponseEntity<Map<String, Object>> daily(
             @RequestParam Double latitude,
@@ -86,6 +103,7 @@ public class WeatherController {
         );
     }
 
+    // Rain prediction
     @GetMapping("/rain")
     public ResponseEntity<Map<String, Object>> rain(
             @RequestParam Double latitude,
@@ -96,6 +114,7 @@ public class WeatherController {
         );
     }
 
+    // Temperature
     @GetMapping("/temperature")
     public ResponseEntity<Map<String, Object>> temperature(
             @RequestParam Double latitude,
@@ -106,6 +125,7 @@ public class WeatherController {
         );
     }
 
+    // Humidity
     @GetMapping("/humidity")
     public ResponseEntity<Map<String, Object>> humidity(
             @RequestParam Double latitude,
@@ -116,6 +136,7 @@ public class WeatherController {
         );
     }
 
+    // Wind
     @GetMapping("/wind")
     public ResponseEntity<Map<String, Object>> wind(
             @RequestParam Double latitude,
@@ -126,6 +147,7 @@ public class WeatherController {
         );
     }
 
+    // UV index
     @GetMapping("/uv")
     public ResponseEntity<Map<String, Object>> uv(
             @RequestParam Double latitude,
@@ -136,6 +158,7 @@ public class WeatherController {
         );
     }
 
+    // Air quality
     @GetMapping("/air-quality")
     public ResponseEntity<Map<String, Object>> airQuality(
             @RequestParam Double latitude,
@@ -146,6 +169,7 @@ public class WeatherController {
         );
     }
 
+    // Weather alerts
     @GetMapping("/alerts")
     public ResponseEntity<Map<String, Object>> alerts(
             @RequestParam Double latitude,
@@ -156,24 +180,36 @@ public class WeatherController {
         );
     }
 
+    // Save and retrieve weather history
     @PostMapping("/history")
     public ResponseEntity<Map<String, Object>> history(
             @RequestBody WeatherHistoryRequest request) {
 
         if (request == null) {
-            throw new IllegalArgumentException("Weather history request cannot be null.");
+            throw new IllegalArgumentException(
+                    "Weather history request cannot be null."
+            );
         }
 
-        if (request.getLatitude() == null || request.getLongitude() == null) {
-            throw new IllegalArgumentException("Latitude and longitude are required.");
+        if (request.getLatitude() == null ||
+                request.getLongitude() == null) {
+            throw new IllegalArgumentException(
+                    "Latitude and longitude are required."
+            );
         }
 
-        if (request.getStartDate() == null || request.getStartDate().isBlank()) {
-            throw new IllegalArgumentException("Start date is required.");
+        if (request.getStartDate() == null ||
+                request.getStartDate().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Start date is required."
+            );
         }
 
-        if (request.getEndDate() == null || request.getEndDate().isBlank()) {
-            throw new IllegalArgumentException("End date is required.");
+        if (request.getEndDate() == null ||
+                request.getEndDate().isBlank()) {
+            throw new IllegalArgumentException(
+                    "End date is required."
+            );
         }
 
         final LocalDate startDate;
@@ -183,11 +219,15 @@ public class WeatherController {
             startDate = LocalDate.parse(request.getStartDate().trim());
             endDate = LocalDate.parse(request.getEndDate().trim());
         } catch (DateTimeParseException exception) {
-            throw new IllegalArgumentException("Dates must use YYYY-MM-DD format.");
+            throw new IllegalArgumentException(
+                    "Dates must use YYYY-MM-DD format."
+            );
         }
 
         if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date cannot be after end date.");
+            throw new IllegalArgumentException(
+                    "Start date cannot be after end date."
+            );
         }
 
         return ResponseEntity.ok(

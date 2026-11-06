@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getDestinations,
   addDestination,
+  updateDestination,
   removeDestination,
   reorderDestinations,
   calculateDistance,
@@ -275,6 +276,31 @@ function RoutePlanner({ trip, onBack }) {
   const [addError, setAddError] =
     useState("");
 
+  // MODULE 5: edit destination information
+  const [editingDestinationId, setEditingDestinationId] =
+    useState(null);
+
+  const [destinationEditForm, setDestinationEditForm] =
+    useState({
+      category: "",
+      bestTime: "",
+      openingTime: "",
+      closingTime: "",
+      ticketPrice: "",
+      expectedDuration: "",
+      popularity: "",
+      indoorOutdoor: "",
+      familyFriendly: false,
+      wheelchairFriendly: false,
+      kidsFriendly: false,
+    });
+
+  const [destinationEditSaving, setDestinationEditSaving] =
+    useState(false);
+
+  const [destinationEditError, setDestinationEditError] =
+    useState("");
+
   const [removingId, setRemovingId] =
     useState(null);
 
@@ -410,69 +436,75 @@ function RoutePlanner({ trip, onBack }) {
   // ROUTE SUMMARY
   // =====================================================
 
-  useEffect(() => {
-    let cancelled = false;
+  // =====================================================
+// ROUTE SUMMARY
+// =====================================================
 
-    const loadRouteSummary = async () => {
-      if (
-        !tripId ||
-        destinations.length < 2
-      ) {
-        setDistance(null);
-        setEta(null);
-        setRouteSummaryLoading(false);
-        return;
-      }
+useEffect(() => {
+  let cancelled = false;
 
-      setRouteSummaryLoading(true);
+  const loadRouteSummary = async () => {
+    if (!tripId || destinations.length < 2) {
+      setDistance(null);
+      setEta(null);
+      setRouteSummaryLoading(false);
       setRouteSummaryError("");
+      return;
+    }
 
-      try {
-        const [
-          distanceResponse,
-          etaResponse,
-        ] = await Promise.all([
+    setRouteSummaryLoading(true);
+    setRouteSummaryError("");
+
+    try {
+      const [distanceResponse, etaResponse] =
+        await Promise.all([
           calculateDistance(tripId),
           calculateEta(tripId),
         ]);
 
-        if (cancelled) return;
+      if (cancelled) return;
 
-        setDistance(
-          distanceResponse?.distance ??
-            distanceResponse?.totalDistance ??
-            distanceResponse?.value ??
-            distanceResponse
-        );
+      // Backend returns totalDistanceKm
+      setDistance(
+        distanceResponse?.totalDistanceKm ??
+        distanceResponse?.distance ??
+        null
+      );
 
-        setEta(
-          etaResponse?.eta ??
-            etaResponse?.duration ??
-            etaResponse?.totalDuration ??
-            etaResponse?.value ??
-            etaResponse
+      // Backend returns estimatedTravelTimeHours
+      // Frontend formatter expects minutes
+      const estimatedHours =
+        etaResponse?.estimatedTravelTimeHours;
+
+      setEta(
+        estimatedHours != null
+          ? Number(estimatedHours) * 60
+          : null
+      );
+
+    } catch (error) {
+      if (!cancelled) {
+        setDistance(null);
+        setEta(null);
+
+        setRouteSummaryError(
+          error?.message ||
+          "Unable to calculate route distance and estimated time."
         );
-      } catch (error) {
-        if (!cancelled) {
-          setRouteSummaryError(
-            error?.message ||
-              "Unable to calculate route summary."
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setRouteSummaryLoading(false);
-        }
       }
-    };
+    } finally {
+      if (!cancelled) {
+        setRouteSummaryLoading(false);
+      }
+    }
+  };
 
-    loadRouteSummary();
+  loadRouteSummary();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [tripId, destinations.length]);
-
+  return () => {
+    cancelled = true;
+  };
+}, [tripId, destinations]);
   // =====================================================
   // LOAD ITINERARY
   // =====================================================
@@ -588,15 +620,9 @@ function RoutePlanner({ trip, onBack }) {
       await addDestination(
         tripId,
         {
-          name: result.name,
-          latitude: result.latitude,
-          longitude: result.longitude,
-          country:
-            result.country || "",
-          state:
-            result.admin1 || "",
-          destinationOrder:
-            destinations.length + 1,
+          destinationName: result.name,
+          latitude: Number(result.latitude),
+          longitude: Number(result.longitude),
         }
       );
 
@@ -641,6 +667,151 @@ function RoutePlanner({ trip, onBack }) {
     } finally {
       setGeocoding(false);
       setAdding(false);
+    }
+  };
+
+  // =====================================================
+  // MODULE 5: EDIT DESTINATION INFORMATION
+  // =====================================================
+
+  const handleEditDestination = (destination) => {
+    const destinationId = getDestinationId(destination);
+
+    if (destinationId === null || destinationId === undefined || destinationId === "") {
+      setListError("Cannot edit this destination because its ID is missing.");
+      return;
+    }
+
+    setListError("");
+    setDestinationEditError("");
+    setEditingDestinationId(destinationId);
+    setDestinationEditForm({
+      category: destination?.category ?? "",
+      bestTime: destination?.bestTime ?? destination?.best_time ?? "",
+      openingTime: String(destination?.openingTime ?? destination?.opening_time ?? "").slice(0, 5),
+      closingTime: String(destination?.closingTime ?? destination?.closing_time ?? "").slice(0, 5),
+      ticketPrice: destination?.ticketPrice ?? destination?.ticket_price ?? "",
+      expectedDuration: destination?.expectedDuration ?? destination?.expected_duration ?? "",
+      popularity: destination?.popularity ?? "",
+      indoorOutdoor: destination?.indoorOutdoor ?? destination?.indoor_outdoor ?? "",
+      familyFriendly: Boolean(destination?.familyFriendly ?? destination?.family_friendly),
+      wheelchairFriendly: Boolean(destination?.wheelchairFriendly ?? destination?.wheelchair_friendly),
+      kidsFriendly: Boolean(destination?.kidsFriendly ?? destination?.kids_friendly),
+    });
+  };
+
+  const handleDestinationEditChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setDestinationEditForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleCancelDestinationEdit = () => {
+    setEditingDestinationId(null);
+    setDestinationEditError("");
+  };
+
+  const handleSaveDestinationEdit = async (event) => {
+    event.preventDefault();
+
+    if (!tripId || editingDestinationId === null || editingDestinationId === undefined) {
+      setDestinationEditError("Trip or destination ID is missing.");
+      return;
+    }
+
+    const selectedDestination = destinations.find(
+      (item) => String(getDestinationId(item)) === String(editingDestinationId)
+    );
+
+    if (!selectedDestination) {
+      setDestinationEditError("The selected destination could not be found. Refresh the destination list and try again.");
+      return;
+    }
+
+    const ticketPrice = destinationEditForm.ticketPrice === ""
+      ? null
+      : Number(destinationEditForm.ticketPrice);
+    const expectedDuration = destinationEditForm.expectedDuration === ""
+      ? null
+      : Number(destinationEditForm.expectedDuration);
+    const popularity = destinationEditForm.popularity === ""
+      ? null
+      : Number(destinationEditForm.popularity);
+
+    if (ticketPrice !== null && (!Number.isFinite(ticketPrice) || ticketPrice < 0)) {
+      setDestinationEditError("Ticket price must be zero or greater.");
+      return;
+    }
+
+    if (expectedDuration !== null && (!Number.isInteger(expectedDuration) || expectedDuration <= 0)) {
+      setDestinationEditError("Expected duration must be a whole number greater than zero (minutes).");
+      return;
+    }
+
+    if (popularity !== null && (!Number.isFinite(popularity) || popularity < 0 || popularity > 5)) {
+      setDestinationEditError("Popularity must be between 0 and 5.");
+      return;
+    }
+
+    if (destinationEditForm.openingTime && destinationEditForm.closingTime && destinationEditForm.openingTime >= destinationEditForm.closingTime) {
+      setDestinationEditError("Opening time must be earlier than closing time.");
+      return;
+    }
+
+    const request = {
+      // The backend update service validates these Module 4 fields too.
+      destinationName: getDestinationName(selectedDestination),
+      latitude: Number(selectedDestination.latitude),
+      longitude: Number(selectedDestination.longitude),
+      category: destinationEditForm.category.trim() || null,
+      bestTime: destinationEditForm.bestTime.trim() || null,
+      openingTime: destinationEditForm.openingTime || null,
+      closingTime: destinationEditForm.closingTime || null,
+      ticketPrice,
+      expectedDuration,
+      popularity,
+      indoorOutdoor: destinationEditForm.indoorOutdoor || null,
+      familyFriendly: destinationEditForm.familyFriendly,
+      wheelchairFriendly: destinationEditForm.wheelchairFriendly,
+      kidsFriendly: destinationEditForm.kidsFriendly,
+    };
+
+    if (!Number.isFinite(request.latitude) || !Number.isFinite(request.longitude)) {
+      setDestinationEditError("This destination is missing valid coordinates. Please remove and add it again before editing.");
+      return;
+    }
+
+    setDestinationEditSaving(true);
+    setDestinationEditError("");
+
+    try {
+      await updateDestination(tripId, editingDestinationId, request);
+
+      const refreshed = await getDestinations(tripId);
+      const list = Array.isArray(refreshed)
+        ? refreshed
+        : Array.isArray(refreshed?.destinations)
+        ? refreshed.destinations
+        : Array.isArray(refreshed?.data)
+        ? refreshed.data
+        : [];
+
+      setDestinations(
+        [...list].sort(
+          (a, b) =>
+            Number(a.destinationOrder ?? a.order ?? 0) -
+            Number(b.destinationOrder ?? b.order ?? 0)
+        )
+      );
+      setEditingDestinationId(null);
+    } catch (error) {
+      setDestinationEditError(
+        error?.message || "Unable to update destination information."
+      );
+    } finally {
+      setDestinationEditSaving(false);
     }
   };
 
@@ -745,12 +916,6 @@ function RoutePlanner({ trip, onBack }) {
   // =====================================================
   // ITINERARY HELPERS
   // =====================================================
-
-  const storageKey = useMemo(
-    () =>
-      `${ITINERARY_STORAGE_PREFIX}${tripId}`,
-    [tripId]
-  );
 
   const destinationNames =
     destinations
@@ -1697,6 +1862,14 @@ function RoutePlanner({ trip, onBack }) {
                       <div className="destination-actions">
                         <button
                           type="button"
+                          onClick={() => handleEditDestination(destination)}
+                          title="Edit destination information"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() =>
                             moveDestination(
                               index,
@@ -1830,6 +2003,94 @@ function RoutePlanner({ trip, onBack }) {
               </p>
             </div>
           </div>
+
+          {editingDestinationId !== null && (
+            <form
+              onSubmit={handleSaveDestinationEdit}
+              style={{
+                margin: "18px 0",
+                padding: "20px",
+                border: "1px solid #d9e2ec",
+                borderRadius: "12px",
+                background: "#f8fafc",
+              }}
+            >
+              <h3 style={{ marginTop: 0 }}>Edit destination details</h3>
+              <p style={{ marginTop: 0 }}>
+                Updating: <strong>{getDestinationName(destinations.find((item) => String(getDestinationId(item)) === String(editingDestinationId)))}</strong>
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "14px" }}>
+                <label>
+                  Category
+                  <input name="category" value={destinationEditForm.category} onChange={handleDestinationEditChange} placeholder="e.g. Museum, Park" />
+                </label>
+                <label>
+                  Best time to visit
+                  <input name="bestTime" value={destinationEditForm.bestTime} onChange={handleDestinationEditChange} placeholder="e.g. Morning" />
+                </label>
+                <label>
+                  Opening time
+                  <input type="time" name="openingTime" value={destinationEditForm.openingTime} onChange={handleDestinationEditChange} />
+                </label>
+                <label>
+                  Closing time
+                  <input type="time" name="closingTime" value={destinationEditForm.closingTime} onChange={handleDestinationEditChange} />
+                </label>
+                <label>
+                  Ticket price (₹)
+                  <input type="number" min="0" step="0.01" name="ticketPrice" value={destinationEditForm.ticketPrice} onChange={handleDestinationEditChange} placeholder="0" />
+                </label>
+                <label>
+                  Expected duration (minutes)
+                  <input type="number" min="1" step="1" name="expectedDuration" value={destinationEditForm.expectedDuration} onChange={handleDestinationEditChange} placeholder="e.g. 90" />
+                </label>
+                <label>
+                  Popularity (0–5)
+                  <input type="number" min="0" max="5" step="0.1" name="popularity" value={destinationEditForm.popularity} onChange={handleDestinationEditChange} placeholder="e.g. 4.5" />
+                </label>
+                <label>
+                  Indoor / Outdoor
+                  <select name="indoorOutdoor" value={destinationEditForm.indoorOutdoor} onChange={handleDestinationEditChange}>
+                    <option value="">Not specified</option>
+                    <option value="INDOOR">Indoor</option>
+                    <option value="OUTDOOR">Outdoor</option>
+                    <option value="BOTH">Both</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "18px", margin: "16px 0" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <input type="checkbox" name="familyFriendly" checked={destinationEditForm.familyFriendly} onChange={handleDestinationEditChange} />
+                  Family friendly
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <input type="checkbox" name="wheelchairFriendly" checked={destinationEditForm.wheelchairFriendly} onChange={handleDestinationEditChange} />
+                  Wheelchair friendly
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <input type="checkbox" name="kidsFriendly" checked={destinationEditForm.kidsFriendly} onChange={handleDestinationEditChange} />
+                  Kids friendly
+                </label>
+              </div>
+
+              {destinationEditError && (
+                <p role="alert" style={{ color: "#b42318", margin: "10px 0" }}>
+                  {destinationEditError}
+                </p>
+              )}
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button type="button" onClick={handleCancelDestinationEdit} disabled={destinationEditSaving}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={destinationEditSaving}>
+                  {destinationEditSaving ? "Saving..." : "Save Details"}
+                </button>
+              </div>
+            </form>
+          )}
 
           {destinations.length ===
           0 ? (

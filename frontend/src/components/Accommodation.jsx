@@ -9,6 +9,8 @@ import {
   viewAccommodation,
 } from "../services/accommodationService";
 import { getTrips } from "../services/tripService";
+import { getTripDestinationsForFood } from "../services/foodService";
+import NearbyPlacesPanel from "./NearbyPlacesPanel";
 import "../styles/Accommodation.css";
 
 /*
@@ -239,6 +241,22 @@ function Accommodation({ onBack }) {
   const [selectedTripId, setSelectedTripId] =
     useState("");
 
+  const [destinations, setDestinations] = useState([]);
+  const [selectedDestinationId, setSelectedDestinationId] =
+    useState("");
+  const [destinationsLoading, setDestinationsLoading] =
+    useState(false);
+
+  const selectedDestination = useMemo(
+    () =>
+      destinations.find(
+        (destination) =>
+          String(destination?.destinationId ?? destination?.id ?? "") ===
+          String(selectedDestinationId)
+      ) || null,
+    [destinations, selectedDestinationId]
+  );
+
   const [modalLoading, setModalLoading] =
     useState(false);
 
@@ -317,6 +335,41 @@ function Accommodation({ onBack }) {
   };
 
   /*
+   * Load destinations for the selected trip so nearby accommodation
+   * searches can use the saved destination coordinates automatically.
+   */
+  const loadDestinations = async (tripId) => {
+    if (!tripId) {
+      setDestinations([]);
+      setSelectedDestinationId("");
+      return;
+    }
+
+    try {
+      setDestinationsLoading(true);
+      setSelectedDestinationId("");
+      const data = await getTripDestinationsForFood(tripId);
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.destinations)
+          ? data.destinations
+          : Array.isArray(data?.content)
+            ? data.content
+            : [];
+      setDestinations(list);
+    } catch (err) {
+      console.error("Unable to load trip destinations:", err);
+      setDestinations([]);
+      setSelectedDestinationId("");
+      setFeedbackError(
+        err?.message || "Unable to load destinations for this trip."
+      );
+    } finally {
+      setDestinationsLoading(false);
+    }
+  };
+
+  /*
    * Load global accommodation history.
    */
   const loadHistory = async () => {
@@ -344,6 +397,15 @@ function Accommodation({ onBack }) {
     loadTrips();
     loadHistory();
   }, []);
+
+  useEffect(() => {
+    if (selectedTripId) {
+      loadDestinations(selectedTripId);
+    } else {
+      setDestinations([]);
+      setSelectedDestinationId("");
+    }
+  }, [selectedTripId]);
 
   /*
    * Get only the accommodation types that actually
@@ -916,6 +978,51 @@ function Accommodation({ onBack }) {
           </button>
         )}
       </div>
+
+      <div className="accommodation-trip-picker" style={{ margin: "18px 0" }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 240 }}>
+          <strong>Trip destination for nearby search</strong>
+          <select
+            value={selectedDestinationId}
+            onChange={(event) => setSelectedDestinationId(event.target.value)}
+            disabled={destinationsLoading || destinations.length === 0}
+          >
+            <option value="">
+              {destinationsLoading
+                ? "Loading trip destinations..."
+                : destinations.length === 0
+                  ? "No saved destinations for this trip"
+                  : "Select a trip destination"}
+            </option>
+            {destinations.map((destination) => {
+              const id = destination?.destinationId ?? destination?.id;
+              const name =
+                destination?.destinationName ??
+                destination?.name ??
+                destination?.title ??
+                `Destination ${id}`;
+              return (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+        <small>
+          Choose a saved destination to automatically search nearby stays.
+          You can also use your current GPS location in the panel below.
+        </small>
+      </div>
+
+      {/* =====================================================
+          NEARBY ACCOMMODATION SEARCH
+      ===================================================== */}
+
+      <NearbyPlacesPanel
+        type="accommodation"
+        selectedDestination={selectedDestination}
+      />
 
       {/* =====================================================
           SEARCH AND FILTERS

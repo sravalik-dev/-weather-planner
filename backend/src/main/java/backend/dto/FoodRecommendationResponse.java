@@ -86,6 +86,16 @@ public class FoodRecommendationResponse {
 
     private LocalDateTime createdAt;
 
+    private Boolean externalPlace;
+    private String externalPlaceId;
+    private String address;
+    private String imageUrl;
+    private String website;
+    private String phone;
+    private String openingHoursText;
+    private String source;
+    private String mapUrl;
+
     public FoodRecommendationResponse() {
     }
 
@@ -568,4 +578,23 @@ public class FoodRecommendationResponse {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public Boolean getExternalPlace() { return externalPlace; }
+    public void setExternalPlace(Boolean externalPlace) { this.externalPlace = externalPlace; }
+    public String getExternalPlaceId() { return externalPlaceId; }
+    public void setExternalPlaceId(String externalPlaceId) { this.externalPlaceId = externalPlaceId; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getOpeningHoursText() { return openingHoursText; }
+    public void setOpeningHoursText(String openingHoursText) { this.openingHoursText = openingHoursText; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+    public String getMapUrl() { return mapUrl; }
+    public void setMapUrl(String mapUrl) { this.mapUrl = mapUrl; }
 }

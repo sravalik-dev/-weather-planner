@@ -44,6 +44,7 @@ public class FoodRecommendationService {
     private final TripRepository tripRepository;
     private final TripDestinationRepository tripDestinationRepository;
     private final WeatherService weatherService;
+    private final NearbyPlacesService nearbyPlacesService;
 
     public FoodRecommendationService(
             FoodRepository foodRepository,
@@ -52,7 +53,8 @@ public class FoodRecommendationService {
             FoodHistoryRepository foodHistoryRepository,
             TripRepository tripRepository,
             TripDestinationRepository tripDestinationRepository,
-            WeatherService weatherService) {
+            WeatherService weatherService,
+            NearbyPlacesService nearbyPlacesService) {
 
         this.foodRepository = foodRepository;
         this.foodPlaceRepository = foodPlaceRepository;
@@ -61,6 +63,7 @@ public class FoodRecommendationService {
         this.tripRepository = tripRepository;
         this.tripDestinationRepository = tripDestinationRepository;
         this.weatherService = weatherService;
+        this.nearbyPlacesService = nearbyPlacesService;
     }
 
     /*
@@ -150,9 +153,8 @@ public class FoodRecommendationService {
 
         if (foods.isEmpty()
                 && foodPlaces.isEmpty()) {
-
-            throw new IllegalArgumentException(
-                    "No local food recommendations are currently available for this destination.");
+            return generateExternalFoodRecommendations(
+                    trip, destination, request, plannedTime, weather);
         }
 
         List<Candidate> candidates =
@@ -341,6 +343,88 @@ List<FoodRecommendationResponse> responses =
 
             responses.add(
                     toResponse(saved));
+        }
+
+        return responses;
+    }
+
+    /*
+     * =========================================================
+     * EXTERNAL FOOD FALLBACK (OPENSTREETMAP)
+     * =========================================================
+     * These results are deliberately returned as external DTOs, not saved
+     * as fake Food/FoodPlace database entities. Their actions/history are
+     * therefore disabled in the frontend until an external-place table is
+     * added in a future migration.
+     */
+    private List<FoodRecommendationResponse> generateExternalFoodRecommendations(
+            Trip trip,
+            TripDestination destination,
+            FoodRecommendationRequest request,
+            LocalTime plannedTime,
+            WeatherData weather) {
+
+        if (destination.getLatitude() == null || destination.getLongitude() == null) {
+            throw new IllegalArgumentException(
+                    "The selected destination does not have valid latitude and longitude.");
+        }
+
+        int radiusMeters = 5000;
+        if (request != null && request.getMaxDistanceKm() != null
+                && request.getMaxDistanceKm() > 0) {
+            radiusMeters = (int) Math.min(10000,
+                    Math.max(100, request.getMaxDistanceKm() * 1000));
+        }
+
+        List<NearbyPlacesService.NearbyPlace> places =
+                nearbyPlacesService.findFood(
+                        destination.getLatitude(),
+                        destination.getLongitude(),
+                        radiusMeters,
+                        "all");
+
+        List<FoodRecommendationResponse> responses = new ArrayList<>();
+        for (NearbyPlacesService.NearbyPlace place : places) {
+            double distanceKm = place.getDistanceMeters() / 1000.0;
+            if (request != null && request.getMaxDistanceKm() != null
+                    && request.getMaxDistanceKm() > 0
+                    && distanceKm > request.getMaxDistanceKm()) {
+                continue;
+            }
+
+            FoodRecommendationResponse response = new FoodRecommendationResponse();
+            response.setUserId(trip.getUser() == null ? null : trip.getUser().getUserId());
+            response.setTripId(trip.getTripId());
+            response.setDestinationId(destination.getDestinationId());
+            response.setFoodPlaceName(place.getName());
+            response.setRecommendationType("FOOD_PLACE");
+            response.setCategory(place.getCategory());
+            response.setCuisine(place.getCuisine());
+            response.setLatitude(place.getLatitude());
+            response.setLongitude(place.getLongitude());
+            response.setDistanceKm(decimal(distanceKm));
+            response.setRecommendedTime(plannedTime);
+            response.setWeatherCondition(weather == null ? null : weather.condition);
+            response.setScore(decimal(Math.max(0, 100 - distanceKm * 5)));
+            response.setReason("Nearby place found using OpenStreetMap. Distance is "
+                    + String.format(Locale.ROOT, "%.2f km", distanceKm)
+                    + ". Opening hours and dietary details may not be available.");
+            response.setExternalPlace(true);
+            response.setExternalPlaceId(place.getOsmType() + "/" + place.getOsmId());
+            response.setAddress(place.getAddress());
+            response.setImageUrl(place.getImageUrl());
+            response.setWebsite(place.getWebsite());
+            response.setPhone(place.getPhone());
+            response.setOpeningHoursText(place.getOpeningHours());
+            response.setSource(place.getSource());
+            response.setMapUrl("https://www.google.com/maps/dir/?api=1&destination="
+                    + place.getLatitude() + "," + place.getLongitude());
+            responses.add(response);
+        }
+
+        if (responses.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No nearby food places were found. Try increasing the search radius or choosing another destination.");
         }
 
         return responses;

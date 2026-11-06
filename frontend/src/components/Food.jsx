@@ -11,6 +11,7 @@ import {
   recordFoodRecommendationAction,
 } from "../services/foodService";
 import "../styles/Food.css";
+import NearbyPlacesPanel from "./NearbyPlacesPanel";
 
 const RECOMMENDATION_TYPES = [
   { value: "LOCAL_FOOD", label: "Local Food", icon: "🍛" },
@@ -533,24 +534,6 @@ function Food({ onBack }) {
       return;
     }
 
-    if (type === "LOCAL_FOOD" && !hasFoodCatalogData) {
-      setError(
-        `No local food records are available for ${getDestinationName(
-          selectedDestination
-        )}. Select another destination or use Food Places if establishments are available.`
-      );
-      return;
-    }
-
-    if (type === "FOOD_PLACE" && !hasFoodPlaceData) {
-      setError(
-        `No food-place records are available for ${getDestinationName(
-          selectedDestination
-        )}. Select another destination.`
-      );
-      return;
-    }
-
     if (type === "BAR" && !filters.includeBars) {
       setError("Enable “Include Bars” before requesting bar recommendations.");
       return;
@@ -574,23 +557,29 @@ function Food({ onBack }) {
     setLoadingRecommendations(true);
 
     try {
-      await generateFoodRecommendations(
+      const generatedData = await generateFoodRecommendations(
         selectedTripId,
         buildRequest(type)
       );
 
-      const [recommendationData, historyData] = await Promise.all([
-        getFoodRecommendations(selectedTripId),
-        getFoodRecommendationHistory(selectedTripId),
+      const generatedRecommendations = normalizeArray(generatedData, [
+        "recommendations",
+        "foodRecommendations",
+        "content",
       ]);
 
-      setRecommendations(
-        normalizeArray(recommendationData, [
-          "recommendations",
-          "foodRecommendations",
-          "content",
-        ])
-      );
+      const historyData = await getFoodRecommendationHistory(selectedTripId);
+
+      // The live OpenStreetMap fallback is returned directly and is not stored
+      // as a fake Food/FoodPlace database row. Keep the returned results visible.
+      if (generatedRecommendations.length > 0) {
+        setRecommendations(generatedRecommendations);
+      } else {
+        const recommendationData = await getFoodRecommendations(selectedTripId);
+        setRecommendations(normalizeArray(recommendationData, [
+          "recommendations", "foodRecommendations", "content",
+        ]));
+      }
 
       setHistory(normalizeArray(historyData, ["history", "content"]));
 
@@ -957,8 +946,7 @@ function Food({ onBack }) {
                           disabled={
                             loadingRecommendations ||
                             !selectedTripId ||
-                            !selectedDestinationId ||
-                            (item.value === "LOCAL_FOOD" && !hasFoodCatalogData)
+                            !selectedDestinationId
                           }
                         >
                           <span>{item.icon}</span>
@@ -1299,6 +1287,7 @@ function Food({ onBack }) {
                 )}
 
                 {activeSection === "places" && (
+                  <>
                   <FoodPlacesSection
                     foodPlaces={foodPlaces}
                     foods={foods}
@@ -1315,6 +1304,14 @@ function Food({ onBack }) {
                       loadingRecommendations || !selectedDestinationId
                     }
                   />
+
+                  <div className="food-nearby-places-section">
+                    <NearbyPlacesPanel
+                      type="food"
+                      selectedDestination={selectedDestination}
+                    />
+                  </div>
+                  </>
                 )}
 
                 {activeSection === "history" && (
@@ -1368,9 +1365,15 @@ function FoodRecommendationCard({
     item?.recommendationId ??
     item?.id;
 
+  const isExternalPlace = item?.externalPlace === true;
   const isPlace =
-    item?.foodPlaceId !== null &&
-    item?.foodPlaceId !== undefined;
+    isExternalPlace ||
+    (item?.foodPlaceId !== null && item?.foodPlaceId !== undefined);
+  const googleMapsUrl =
+    item?.mapUrl ||
+    (Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude))
+      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.latitude},${item.longitude}`)}`
+      : null);
 
   return (
     <article className="food-recommendation-card">
@@ -1401,7 +1404,17 @@ function FoodRecommendationCard({
             )}
         </div>
 
+        {isExternalPlace && item?.imageUrl && (
+          <img src={item.imageUrl} alt={title} loading="lazy"
+            style={{ width: "100%", maxHeight: 190, objectFit: "cover", borderRadius: 10, marginBottom: 12 }} />
+        )}
         <h3>{title}</h3>
+        {isExternalPlace && item?.address && (
+          <p className="food-card-subtitle">{item.address}</p>
+        )}
+        {isExternalPlace && item?.openingHoursText && (
+          <p className="food-info-line">Opening hours: {item.openingHoursText}</p>
+        )}
 
         {subtitle && subtitle !== title && (
           <p className="food-card-subtitle">{subtitle}</p>
@@ -1578,7 +1591,15 @@ function FoodRecommendationCard({
             )}
         </div>
 
-        <div className="food-card-actions">
+        {isExternalPlace && (
+          <div className="food-card-actions">
+            {googleMapsUrl && <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">View Route in Google Maps</a>}
+            {item?.website && <a href={item.website} target="_blank" rel="noopener noreferrer">Website</a>}
+            {item?.phone && <a href={`tel:${item.phone}`}>Call</a>}
+            <small>Source: {safeText(item?.source, "OpenStreetMap")}. External listings are not stored in recommendation history.</small>
+          </div>
+        )}
+        {!isExternalPlace && <div className="food-card-actions">
           {ACTIONS.map((action) => {
             const key = `${recommendationId}-${action}`;
 
@@ -1597,7 +1618,7 @@ function FoodRecommendationCard({
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
     </article>
   );

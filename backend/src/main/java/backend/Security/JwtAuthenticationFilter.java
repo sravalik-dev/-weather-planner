@@ -1,5 +1,5 @@
 
-package backend.security;
+package backend.Security;
 
 import java.io.IOException;
 import java.util.Collections;

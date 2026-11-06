@@ -17,7 +17,7 @@ import backend.dto.ResetPasswordRequest;
 import backend.dto.VerifyOtpRequest;
 import backend.entity.User;
 import backend.repository.UserRepository;
-import backend.security.JwtService;
+import backend.Security.JwtService;
 
 @Service
 public class AuthService {
@@ -433,9 +433,12 @@ public class AuthService {
 
     private String generateOtp() {
 
+        int maxValue = (int) Math.pow(10, OTP_LENGTH);
+
         return String.format(
-                "%06d",
-                random.nextInt(1_000_000)
+                Locale.ROOT,
+                "%0" + OTP_LENGTH + "d",
+                random.nextInt(maxValue)
         );
     }
 
@@ -467,6 +470,6 @@ public class AuthService {
 
     private boolean isValidOtp(String otp) {
 
-        return otp != null && otp.matches("\\d{6}");
+        return otp != null && otp.matches("\\d{" + OTP_LENGTH + "}");
     }
 }

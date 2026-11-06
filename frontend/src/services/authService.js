@@ -1,8 +1,18 @@
-﻿import { apiRequest, clearAuthStorage, getToken, saveToken } from "../utils/apiUtils";
+﻿
+import {
+  API_BASE_URL,
+  apiRequest,
+  clearAuthStorage,
+  getToken,
+  saveToken,
+} from "../utils/apiUtils";
 
+// Handle authentication responses
 const parseAuthResponse = async (response) => {
   const text = await response.text();
+
   let data = null;
+
   if (text) {
     try {
       data = JSON.parse(text);
@@ -12,55 +22,150 @@ const parseAuthResponse = async (response) => {
   }
 
   if (!response.ok) {
-    const message = typeof data === "string"
-      ? data
-      : data?.message || data?.error || data?.detail || "Authentication request failed.";
+    const message =
+      typeof data === "string"
+        ? data
+        : data?.message ||
+          data?.detail ||
+          data?.error ||
+          `Authentication failed (${response.status}).`;
+
     const error = new Error(message);
     error.status = response.status;
     error.responseData = data;
+
     throw error;
   }
 
   return data;
 };
 
+// LOGIN
 export const loginUser = async (email, password) => {
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ email: email.trim(), password }),
-  });
-  const data = await parseAuthResponse(response);
-  const token = typeof data === "string" ? data : data?.token;
-  if (!token || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)) {
-    throw new Error("Login succeeded, but the backend did not return a valid JWT token.");
+  if (!email?.trim() || !password) {
+    throw new Error("Please enter your email and password.");
   }
+
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      password,
+    }),
+  });
+
+  const data = await parseAuthResponse(response);
+
+  const token =
+    typeof data === "string"
+      ? data
+      : data?.token ||
+        data?.accessToken ||
+        data?.jwt;
+
+  if (!token) {
+    throw new Error(
+      "Login succeeded, but the backend did not return a JWT token."
+    );
+  }
+
+  // Validate JWT: header.payload.signature
+  const jwtPattern =
+    /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+  if (!jwtPattern.test(token)) {
+    throw new Error("The backend returned an invalid JWT token.");
+  }
+
   return saveToken(token);
 };
 
-export const registerUser = async (fullName, email, password) =>
-  apiRequest("/auth/register", {
+// REGISTER
+export const registerUser = async (fullName, email, password) => {
+  if (!fullName?.trim() || !email?.trim() || !password) {
+    throw new Error("Please fill in all registration fields.");
+  }
+
+  return apiRequest("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ fullName, email: email.trim(), password }),
+    body: JSON.stringify({
+      fullName: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    }),
   });
+};
 
-export const verifyOtp = async (email, otp) =>
-  apiRequest("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: email.trim(), otp }) });
+// VERIFY REGISTRATION OTP
+export const verifyOtp = async (email, otp) => {
+  return apiRequest("/auth/verify-otp", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      otp: String(otp).trim(),
+    }),
+  });
+};
 
-export const resendOtp = async (email) =>
-  apiRequest(`/auth/resend-otp?email=${encodeURIComponent(email.trim())}`, { method: "POST" });
+// RESEND OTP
+export const resendOtp = async (email) => {
+  return apiRequest(
+    `/auth/resend-otp?email=${encodeURIComponent(
+      email.trim().toLowerCase()
+    )}`,
+    {
+      method: "POST",
+    }
+  );
+};
 
-export const forgotPassword = async (email) =>
-  apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
+// FORGOT PASSWORD
+export const forgotPassword = async (email) => {
+  return apiRequest("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+    }),
+  });
+};
 
-export const verifyResetOtp = async (email, otp) =>
-  apiRequest("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: email.trim(), otp }) });
+// VERIFY PASSWORD RESET OTP
+export const verifyResetOtp = async (email, otp) => {
+  return apiRequest("/auth/verify-reset-otp", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      otp: String(otp).trim(),
+    }),
+  });
+};
 
-export const resetPassword = async (email, newPassword) =>
-  apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify({ email: email.trim(), newPassword }) });
+// RESET PASSWORD
+export const resetPassword = async (email, newPassword) => {
+  return apiRequest("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      newPassword,
+    }),
+  });
+};
 
-export const logoutUser = () => clearAuthStorage();
-export const isAuthenticated = () => Boolean(getToken());
+// LOGOUT
+export const logoutUser = () => {
+  clearAuthStorage();
+};
+
+// CHECK LOGIN STATUS
+export const isAuthenticated = () => {
+  return Boolean(getToken());
+};
+
+// VERIFY AUTHENTICATED SESSION
 export const checkAuthentication = async () => {
   await apiRequest("/trips");
   return true;

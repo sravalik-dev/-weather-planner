@@ -1,9 +1,22 @@
+
 package backend.service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import backend.dto.DestinationRequest;
 import backend.dto.DestinationResponse;
@@ -18,20 +31,24 @@ import backend.repository.TripRepository;
 @Service
 public class RouteService {
 
-    /*
-     * Default average road speed.
-     *
-     * This is only an estimate.
-     * A real map API can be connected later.
-     */
-    private static final double DEFAULT_SPEED_KMPH = 50.0;
+    // HTTP client for road routing
+    private static final HttpClient httpClient =
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(15))
+                    .build();
+
+    private final ObjectMapper objectMapper =
+            new ObjectMapper();
 
     @Autowired
     private TripRepository tripRepository;
 
     @Autowired
-    private TripDestinationRepository
-            tripDestinationRepository;
+    private TripDestinationRepository tripDestinationRepository;
+
+    // Used to check dependent itinerary activities
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // ==========================================
     // ADD DESTINATION
@@ -57,7 +74,6 @@ public class RouteService {
 
         destination.setTrip(trip);
 
-        // Module 4
         destination.setDestinationName(
                 request.getDestinationName().trim()
         );
@@ -74,7 +90,6 @@ public class RouteService {
                 destinations.size() + 1
         );
 
-        // Module 5
         setModule5Data(destination, request);
 
         TripDestination saved =
@@ -109,7 +124,6 @@ public class RouteService {
                                 )
                         );
 
-        // Module 4
         destination.setDestinationName(
                 request.getDestinationName().trim()
         );
@@ -122,7 +136,6 @@ public class RouteService {
                 request.getLongitude()
         );
 
-        // Module 5
         setModule5Data(destination, request);
 
         TripDestination updated =
@@ -135,6 +148,7 @@ public class RouteService {
     // REMOVE DESTINATION
     // ==========================================
 
+    @Transactional
     public void removeDestination(
             Integer userId,
             Integer tripId,
@@ -154,6 +168,25 @@ public class RouteService {
                                 )
                         );
 
+        // Check associated itinerary activities
+        Long activityCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM itinerary_activities WHERE destination_id = ?",
+                Long.class,
+                destinationId
+        );
+
+        if (activityCount != null && activityCount > 0) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete this destination because "
+                            + activityCount
+                            + " itinerary activity is associated with it. "
+                            + "Remove or reassign the activity first."
+            );
+        }
+
+        // Delete destination only if no activities are associated
         tripDestinationRepository.delete(destination);
 
         reorderAfterDelete(tripId);
@@ -247,7 +280,7 @@ public class RouteService {
     }
 
     // ==========================================
-    // CALCULATE DISTANCE
+    // CALCULATE ROAD DISTANCE
     // ==========================================
 
     public RouteDistanceResponse calculateDistance(
@@ -256,6 +289,67 @@ public class RouteService {
 
         getUserTrip(tripId, userId);
 
+        RoadRoute route = getRoadRoute(tripId);
+
+        double distanceKm =
+                route.distanceMeters / 1000.0;
+
+        distanceKm =
+                Math.round(distanceKm * 100.0) / 100.0;
+
+        return new RouteDistanceResponse(
+                tripId,
+                distanceKm
+        );
+    }
+
+    // ==========================================
+    // CALCULATE ROAD ETA
+    // ==========================================
+
+    public RouteEtaResponse calculateEta(
+            Integer userId,
+            Integer tripId) {
+
+        getUserTrip(tripId, userId);
+
+        RoadRoute route = getRoadRoute(tripId);
+
+        double distanceKm =
+                route.distanceMeters / 1000.0;
+
+        double estimatedHours =
+                route.durationSeconds / 3600.0;
+
+        double averageSpeed = 0.0;
+
+        if (estimatedHours > 0) {
+            averageSpeed = distanceKm / estimatedHours;
+        }
+
+        distanceKm =
+                Math.round(distanceKm * 100.0) / 100.0;
+
+        estimatedHours =
+                Math.round(estimatedHours * 100.0) / 100.0;
+
+        averageSpeed =
+                Math.round(averageSpeed * 100.0) / 100.0;
+
+        return new RouteEtaResponse(
+                tripId,
+                distanceKm,
+                averageSpeed,
+                estimatedHours
+        );
+    }
+
+    // ==========================================
+    // GET ROAD ROUTE FROM OSRM
+    // ==========================================
+
+    private RoadRoute getRoadRoute(Integer tripId) {
+
         List<TripDestination> destinations =
                 tripDestinationRepository
                         .findByTrip_TripIdOrderByDestinationOrderAsc(
@@ -263,65 +357,119 @@ public class RouteService {
                         );
 
         if (destinations.size() < 2) {
-
             throw new RuntimeException(
                     "At least two destinations are required"
             );
         }
 
-        double totalDistance = 0.0;
+        StringBuilder coordinates =
+                new StringBuilder();
 
-        for (int i = 0;
-             i < destinations.size() - 1;
-             i++) {
+        for (TripDestination destination : destinations) {
 
-            TripDestination current =
-                    destinations.get(i);
+            if (destination.getLatitude() == null ||
+                    destination.getLongitude() == null) {
 
-            TripDestination next =
-                    destinations.get(i + 1);
+                throw new RuntimeException(
+                        "Every destination must have valid coordinates"
+                );
+            }
 
-            totalDistance += calculateHaversineDistance(
-                    current.getLatitude(),
-                    current.getLongitude(),
-                    next.getLatitude(),
-                    next.getLongitude()
-            );
+            if (coordinates.length() > 0) {
+                coordinates.append(";");
+            }
+
+            // OSRM requires longitude first, latitude second
+            coordinates.append(destination.getLongitude())
+                    .append(",")
+                    .append(destination.getLatitude());
         }
 
-        totalDistance =
-                Math.round(totalDistance * 100.0) / 100.0;
+        try {
 
-        return new RouteDistanceResponse(
-                tripId,
-                totalDistance
-        );
-    }
+            String url =
+                    "https://router.project-osrm.org/route/v1/driving/"
+                            + coordinates
+                            + "?overview=false&steps=false";
 
-    // ==========================================
-    // CALCULATE ETA
-    // ==========================================
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(url))
+                            .timeout(Duration.ofSeconds(30))
+                            .GET()
+                            .build();
 
-    public RouteEtaResponse calculateEta(
-            Integer userId,
-            Integer tripId) {
+            HttpResponse<String> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
 
-        RouteDistanceResponse distance =
-                calculateDistance(userId, tripId);
+            if (response.statusCode() != 200) {
+                throw new RuntimeException(
+                        "Road routing service returned HTTP "
+                                + response.statusCode()
+                );
+            }
 
-        double estimatedHours =
-                distance.getTotalDistanceKm()
-                        / DEFAULT_SPEED_KMPH;
+            JsonNode root =
+                    objectMapper.readTree(response.body());
 
-        estimatedHours =
-                Math.round(estimatedHours * 100.0) / 100.0;
+            if (!"Ok".equals(root.path("code").asText())) {
+                throw new RuntimeException(
+                        "Unable to calculate road route: "
+                                + root.path("message").asText()
+                );
+            }
 
-        return new RouteEtaResponse(
-                tripId,
-                distance.getTotalDistanceKm(),
-                DEFAULT_SPEED_KMPH,
-                estimatedHours
-        );
+            JsonNode routes = root.path("routes");
+
+            if (!routes.isArray() || routes.isEmpty()) {
+                throw new RuntimeException(
+                        "No driving route found for these destinations"
+                );
+            }
+
+            JsonNode firstRoute = routes.get(0);
+
+            double distanceMeters =
+                    firstRoute.path("distance").asDouble();
+
+            double durationSeconds =
+                    firstRoute.path("duration").asDouble();
+
+            if (distanceMeters <= 0 || durationSeconds <= 0) {
+                throw new RuntimeException(
+                        "Invalid distance or duration returned by routing service"
+                );
+            }
+
+            return new RoadRoute(
+                    distanceMeters,
+                    durationSeconds
+            );
+
+        } catch (InterruptedException e) {
+
+            Thread.currentThread().interrupt();
+
+            throw new RuntimeException(
+                    "Road route calculation was interrupted",
+                    e
+            );
+
+        } catch (Exception e) {
+
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+
+            throw new RuntimeException(
+                    "Unable to calculate road distance and travel time: "
+                            + e.getMessage(),
+                    e
+            );
+        }
     }
 
     // ==========================================
@@ -378,42 +526,6 @@ public class RouteService {
     }
 
     // ==========================================
-    // HAVERSINE DISTANCE
-    // ==========================================
-
-    private double calculateHaversineDistance(
-            double latitude1,
-            double longitude1,
-            double latitude2,
-            double longitude2) {
-
-        final double EARTH_RADIUS_KM = 6371.0;
-
-        double latDistance =
-                Math.toRadians(latitude2 - latitude1);
-
-        double lonDistance =
-                Math.toRadians(longitude2 - longitude1);
-
-        double a =
-                Math.sin(latDistance / 2)
-                        * Math.sin(latDistance / 2)
-                +
-                Math.cos(Math.toRadians(latitude1))
-                        * Math.cos(Math.toRadians(latitude2))
-                        * Math.sin(lonDistance / 2)
-                        * Math.sin(lonDistance / 2);
-
-        double c =
-                2 * Math.atan2(
-                        Math.sqrt(a),
-                        Math.sqrt(1 - a)
-                );
-
-        return EARTH_RADIUS_KM * c;
-    }
-
-    // ==========================================
     // REORDER AFTER DELETE
     // ==========================================
 
@@ -448,7 +560,6 @@ public class RouteService {
         DestinationResponse response =
                 new DestinationResponse();
 
-        // Module 4
         response.setDestinationId(
                 destination.getDestinationId()
         );
@@ -469,7 +580,6 @@ public class RouteService {
                 destination.getDestinationOrder()
         );
 
-        // Module 5
         response.setCategory(
                 destination.getCategory()
         );
@@ -590,10 +700,6 @@ public class RouteService {
             );
         }
 
-        // ==========================================
-        // MODULE 5 VALIDATION
-        // ==========================================
-
         if (request.getTicketPrice() != null &&
                 request.getTicketPrice().signum() < 0) {
 
@@ -627,6 +733,24 @@ public class RouteService {
             throw new RuntimeException(
                     "Opening time must be before closing time"
             );
+        }
+    }
+
+    // ==========================================
+    // ROAD ROUTE DATA
+    // ==========================================
+
+    private static class RoadRoute {
+
+        private final double distanceMeters;
+        private final double durationSeconds;
+
+        public RoadRoute(
+                double distanceMeters,
+                double durationSeconds) {
+
+            this.distanceMeters = distanceMeters;
+            this.durationSeconds = durationSeconds;
         }
     }
 }

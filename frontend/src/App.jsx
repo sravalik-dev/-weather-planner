@@ -144,14 +144,23 @@ function App() {
         loadWeather(position.coords.latitude, position.coords.longitude);
       },
       (error) => {
-        console.error("Location permission error:", error);
-        setWeather((previous) => ({
-          ...previous,
-          loading: false,
-          location: "",
-          error: "Please allow location access for live weather.",
-        }));
-      },
+  let message = "Unable to detect your current location.";
+
+  if (error.code === 1) {
+    message = "Location permission denied. Please allow location access or enter a location manually.";
+  } else if (error.code === 2) {
+    message = "Your current location is unavailable. Please try again.";
+  } else if (error.code === 3) {
+    message = "Location request timed out. Please try again.";
+  }
+
+  setWeather((previous) => ({
+    ...previous,
+    loading: false,
+    location: "",
+    error: message,
+  }));
+},
       {
         enableHighAccuracy: true,
         timeout: 10000,
