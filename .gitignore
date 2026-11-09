@@ -4,3 +4,16 @@
 node_modules/
 .env
 backend/node_modules/
+# ZIP archives
+*.zip
+
+# VS Code local settings
+.vscode/
+
+# Frontend generated build
+frontend/dist/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/target/

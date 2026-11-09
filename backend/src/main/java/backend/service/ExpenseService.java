@@ -413,7 +413,7 @@ public class ExpenseService {
                         requestedSplits);
 
         BigDecimal totalShares = shares.values().stream()
-                .reduce(ZERO, BigDecimal::add);
+                .reduce(ZERO, (total, share) -> total.add(share));
 
         if (totalShares.compareTo(expense.getAmount()) != 0) {
             throw new IllegalArgumentException(
@@ -693,8 +693,8 @@ public class ExpenseService {
             List<ExpenseSplit> splits) {
 
         BigDecimal oldTotal = splits.stream()
-                .map(ExpenseSplit::getShareAmount)
-                .reduce(ZERO, BigDecimal::add);
+                .map(split -> split.getShareAmount())
+                .reduce(ZERO, (total, share) -> total.add(share));
 
         if (oldTotal.compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException(
@@ -797,12 +797,12 @@ public class ExpenseService {
                 totalShares.merge(
                         memberId,
                         split.getShareAmount(),
-                        BigDecimal::add);
+                        (total, share) -> total.add(share));
 
                 totalPaid.merge(
                         memberId,
                         split.getAmountPaid(),
-                        BigDecimal::add);
+                        (total, amount) -> total.add(amount));
             }
         }
 

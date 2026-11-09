@@ -181,8 +181,14 @@ public class SettlementService {
                     .findByExpense_ExpenseId(expense.getExpenseId());
             for (ExpenseSplit split : splits) {
                 Integer memberId = split.getMember().getMemberId();
-                shares.merge(memberId, split.getShareAmount(), BigDecimal::add);
-                paid.merge(memberId, split.getAmountPaid(), BigDecimal::add);
+                shares.merge(
+                        memberId,
+                        split.getShareAmount(),
+                        (total, share) -> total.add(share));
+                paid.merge(
+                        memberId,
+                        split.getAmountPaid(),
+                        (total, amount) -> total.add(amount));
             }
         }
 

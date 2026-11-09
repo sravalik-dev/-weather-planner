@@ -1,0 +1,433 @@
+/* =========================================================
+   TRAVEL DESIGN SYSTEM  (authenticated app shell only)
+   ---------------------------------------------------------
+   - Loaded after AppTheme.css, only overrides, never edits it.
+   - Everything is scoped to  .app-shell:not(.view-budget)
+     so the Budget Planner view keeps its exact original frame.
+   - Login / signup / forgot-password live outside .app-shell and
+     are therefore not affected by anything in this file.
+========================================================= */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+.app-shell {
+  --tt-ink: #12303a;
+  --tt-ink-soft: #4a6670;
+  --tt-line: #e2e8e4;
+  --tt-sand: #f6f3ec;
+  --tt-paper: #ffffff;
+  --tt-forest: #0f3d3e;
+  --tt-forest-2: #165456;
+  --tt-sky: #2b7a9b;
+  --tt-sky-soft: #e3f1f7;
+  --tt-sun: #e07a3f;
+  --tt-sun-soft: #fdeee3;
+  --tt-radius: 16px;
+  --tt-radius-sm: 10px;
+  --tt-shadow: 0 1px 2px rgba(18, 48, 58, .05), 0 8px 24px rgba(18, 48, 58, .06);
+}
+
+/* ---------- Chrome: sidebar + topbar (all views) ---------- */
+.app-shell .shell-sidebar {
+  background: linear-gradient(180deg, #0f3d3e 0%, #0b2d33 100%);
+}
+.app-shell .shell-brand strong {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: .2px;
+}
+.app-shell .shell-sidebar nav button { border-radius: 12px; }
+.app-shell .shell-sidebar nav button.active,
+.app-shell .shell-sidebar nav button:hover {
+  background: rgba(255, 255, 255, .12);
+}
+.app-shell .shell-sidebar nav button:focus-visible,
+.app-shell .logout-link:focus-visible,
+.app-shell .menu-toggle:focus-visible {
+  outline: 2px solid #8fd3e8;
+  outline-offset: 2px;
+}
+
+/* ---------- Page canvas (not Budget) ---------- */
+.app-shell:not(.view-budget) {
+  background: var(--tt-sand);
+  color: var(--tt-ink);
+  font-family: Manrope, "Segoe UI", sans-serif;
+}
+.app-shell:not(.view-budget) .shell-topbar {
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--tt-line);
+  box-shadow: none;
+}
+.app-shell:not(.view-budget) .shell-topbar h2 {
+  font-family: "Fraunces", Georgia, serif;
+  color: var(--tt-forest);
+}
+.app-shell:not(.view-budget) .avatar {
+  background: var(--tt-forest);
+  color: #fff;
+}
+.app-shell:not(.view-budget) .shell-main { min-width: 0; }
+.app-shell:not(.view-budget) .shell-content {
+  max-width: 1400px;
+  overflow-x: hidden;
+}
+
+/* ---------- Cards ---------- */
+.app-shell:not(.view-budget) .glass-card,
+.app-shell:not(.view-budget) .glass-toolbar,
+.app-shell:not(.view-budget) .quick-action,
+.app-shell:not(.view-budget) .modern-trip-card,
+.app-shell:not(.view-budget) .modern-trip-form,
+.app-shell:not(.view-budget) .wm-section-card,
+.app-shell:not(.view-budget) .wm-metric-card {
+  background: var(--tt-paper);
+  border: 1px solid var(--tt-line);
+  border-radius: var(--tt-radius);
+  box-shadow: var(--tt-shadow);
+  backdrop-filter: none;
+}
+
+/* ---------- Dashboard hero: landscape photo with safe fallback ---------- */
+.app-shell:not(.view-budget) .glass-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  display: flex;
+  align-items: flex-end;
+  padding: 32px;
+  border: 0;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    linear-gradient(100deg, rgba(11, 45, 51, .88) 0%, rgba(11, 45, 51, .45) 60%, rgba(11, 45, 51, .15) 100%),
+    url("https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=70") center / cover,
+    linear-gradient(135deg, #165456, #2b7a9b);
+  box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .glass-hero h1 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(26px, 3.2vw, 38px);
+  margin: 0 0 6px;
+  color: #fff;
+}
+.app-shell:not(.view-budget) .glass-hero p { color: rgba(255,255,255,.88); margin: 0 0 16px; }
+.app-shell:not(.view-budget) .hero-search {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.app-shell:not(.view-budget) .hero-search input { color: var(--tt-ink); }
+
+/* ---------- Buttons ---------- */
+.app-shell:not(.view-budget) .hero-search button,
+.app-shell:not(.view-budget) .primary-pill,
+.app-shell:not(.view-budget) .primary-trip-button,
+.app-shell:not(.view-budget) .wm-primary-button,
+.app-shell:not(.view-budget) .module6-primary-button {
+  background: var(--tt-forest);
+  color: #fff;
+  border-radius: 12px;
+  border: 0;
+  font-weight: 700;
+  transition: background .18s ease, transform .18s ease;
+}
+.app-shell:not(.view-budget) .hero-search button:hover,
+.app-shell:not(.view-budget) .primary-pill:hover,
+.app-shell:not(.view-budget) .primary-trip-button:hover,
+.app-shell:not(.view-budget) .wm-primary-button:hover,
+.app-shell:not(.view-budget) .module6-primary-button:hover {
+  background: var(--tt-forest-2);
+  transform: translateY(-1px);
+}
+.app-shell:not(.view-budget) button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.app-shell:not(.view-budget) .quick-action:hover {
+  border-color: var(--tt-sky);
+  transform: translateY(-2px);
+}
+.app-shell:not(.view-budget) .text-link { color: var(--tt-sky); font-weight: 700; }
+
+/* ---------- Chips, steps, status ---------- */
+.app-shell:not(.view-budget) .status-chip {
+  background: var(--tt-sky-soft);
+  color: var(--tt-sky);
+  border-radius: 999px;
+  font-weight: 700;
+}
+.app-shell:not(.view-budget) .step.active { background: var(--tt-forest); color: #fff; }
+.app-shell:not(.view-budget) .choice-button.selected {
+  background: var(--tt-forest);
+  border-color: var(--tt-forest);
+}
+.app-shell:not(.view-budget) .hourly-chip { background: var(--tt-sky-soft); }
+
+/* ---------- Forms: consistent focus + 16px inputs (no iOS zoom) ---------- */
+.app-shell:not(.view-budget) input,
+.app-shell:not(.view-budget) select,
+.app-shell:not(.view-budget) textarea { max-width: 100%; }
+.app-shell:not(.view-budget) input:focus,
+.app-shell:not(.view-budget) select:focus,
+.app-shell:not(.view-budget) textarea:focus {
+  outline: none;
+  border-color: var(--tt-sky);
+  box-shadow: 0 0 0 3px rgba(43, 122, 155, .18);
+}
+
+/* ---------- Alerts ---------- */
+.app-shell:not(.view-budget) .shell-alert { border-radius: var(--tt-radius-sm); font-weight: 600; }
+
+/* ---------- Maps + media always fit their container ---------- */
+.app-shell:not(.view-budget) .leaflet-container { max-width: 100%; border-radius: var(--tt-radius-sm); z-index: 0; }
+.app-shell:not(.view-budget) img { max-width: 100%; }
+.app-shell:not(.view-budget) table { max-width: 100%; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  .app-shell:not(.view-budget) .glass-hero { padding: 22px; min-height: 180px; }
+  .app-shell:not(.view-budget) .shell-content { padding-left: 14px; padding-right: 14px; }
+  .app-shell .shell-sidebar nav button,
+  .app-shell .logout-link,
+  .app-shell .menu-toggle { min-height: 44px; }
+}
+@media (max-width: 560px) {
+  .app-shell:not(.view-budget) input,
+  .app-shell:not(.view-budget) select,
+  .app-shell:not(.view-budget) textarea { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell * { transition: none !important; animation: none !important; }
+}
+
+/* ---------- Signup OTP additions (new classes only; login untouched) ---------- */
+.otp-notice {
+  margin: 8px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(70, 200, 140, .14);
+  color: #7be0b0;
+  font-size: .82rem;
+  line-height: 1.4;
+}
+.resend-otp-button:disabled { opacity: .55; cursor: not-allowed; }
+
+
+/* =========================================================
+   MODULE DESIGNS
+   Each module gets its own accent so users always know where
+   they are, while sharing radius, shadow, spacing and type.
+   Only visual properties are overridden - no layout that the
+   components' logic depends on (maps, drag handles, grids).
+========================================================= */
+.app-shell:not(.view-budget) {
+  --m-profile: #0f3d3e;   /* forest  */
+  --m-trips:   #2b7a9b;   /* sky     */
+  --m-dest:    #6a8f3a;   /* meadow  */
+  --m-itin:    #7a5ea8;   /* dusk    */
+  --m-route:   #1f6f8b;   /* ocean   */
+  --m-weather: #2d8fd5;   /* clear sky */
+  --m-reco:    #e07a3f;   /* sunset  */
+  --m-stay:    #a1645a;   /* terracotta */
+  --m-food:    #c2553b;   /* chilli  */
+}
+
+/* ---- shared page headings across modules ---- */
+.app-shell:not(.view-budget) :is(.wm-eyebrow,.recommendation-eyebrow,.food-eyebrow,.module6-eyebrow,.route-eyebrow,.page-eyebrow,.profile-eyebrow) {
+  font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+}
+.app-shell:not(.view-budget) :is(.weather-monitoring-header h1,.recommendation-header h1,.module6-header h1,.profile-page h1,.preferences-page h1,.accommodation-header h1,.food-topbar h1,.route-planner-page h1,.trip-page-top h1) {
+  font-family: "Fraunces", Georgia, serif; letter-spacing: -.01em; color: var(--tt-forest);
+}
+.app-shell:not(.view-budget) :is(.weather-monitoring-header,.recommendation-header,.module6-header,.accommodation-header,.food-topbar,.trip-page-top) {
+  padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--tt-line);
+}
+
+/* ---- 2. PROFILE + PREFERENCES : forest ---- */
+.app-shell:not(.view-budget) :is(.profile-card,.preferences-card,.preference-card,.profile-panel) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius);
+  box-shadow: var(--tt-shadow); border-top: 3px solid var(--m-profile);
+}
+.app-shell:not(.view-budget) .profile-picture {
+  border: 3px solid #fff; box-shadow: 0 0 0 2px var(--m-profile), var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .preferences-hero {
+  background: linear-gradient(120deg, var(--tt-forest), var(--tt-forest-2)); color: #fff;
+  border-radius: 20px; box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .preferences-hero * { color: inherit; }
+.app-shell:not(.view-budget) :is(.modern-choice,.choice-button) {
+  border-radius: 999px; transition: all .15s ease;
+}
+.app-shell:not(.view-budget) :is(.modern-choice,.choice-button):hover { border-color: var(--m-profile); }
+.app-shell:not(.view-budget) :is(.modern-choice.selected,.modern-choice.active) {
+  background: var(--tt-forest); color: #fff; border-color: var(--tt-forest);
+}
+.app-shell:not(.view-budget) .preference-section-heading,
+.app-shell:not(.view-budget) .preference-title { color: var(--tt-forest); font-weight: 800; }
+
+/* ---- 3. TRIPS : sky ---- */
+.app-shell:not(.view-budget) .modern-trip-card {
+  position: relative; overflow: hidden; transition: transform .18s ease, box-shadow .18s ease;
+}
+.app-shell:not(.view-budget) .modern-trip-card::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--m-trips);
+}
+.app-shell:not(.view-budget) .modern-trip-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(18,48,58,.12); }
+.app-shell:not(.view-budget) .modern-trip-grid,
+.app-shell:not(.view-budget) .modern-trip-list { gap: 16px; }
+.app-shell:not(.view-budget) .modern-form-group label { font-weight: 700; color: var(--tt-ink-soft); font-size: 13px; }
+.app-shell:not(.view-budget) .modern-form-group :is(input,select,textarea) {
+  border: 1px solid #d5dfe0; border-radius: var(--tt-radius-sm); background: #fbfcfc;
+}
+.app-shell:not(.view-budget) .modern-trip-error { background: #fdeceb; color: #a33a2f; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .modern-empty-trips { border: 2px dashed var(--tt-line); border-radius: var(--tt-radius); background: #fff; }
+
+/* ---- 4. DESTINATIONS : meadow ---- */
+.app-shell:not(.view-budget) :is(.destination-module-card,.destination-information-card,.destination-intelligence-card,.destination-history-card) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .destination-item {
+  background: #fbfcfa; border: 1px solid var(--tt-line); border-radius: 14px; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.app-shell:not(.view-budget) .destination-item:hover { border-color: var(--m-dest); box-shadow: 0 6px 18px rgba(106,143,58,.14); }
+.app-shell:not(.view-budget) :is(.destination-number,.destination-intelligence-number) {
+  background: var(--m-dest); color: #fff; border-radius: 50%; font-weight: 800;
+}
+.app-shell:not(.view-budget) .destination-dragging { box-shadow: 0 14px 34px rgba(18,48,58,.22); border-color: var(--m-dest); }
+.app-shell:not(.view-budget) .destination-delete { color: #b3443a; border-radius: 10px; }
+.app-shell:not(.view-budget) .destination-information-table th {
+  background: #f1f5ec; color: var(--tt-ink-soft); font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+}
+.app-shell:not(.view-budget) .destination-table-wrapper { overflow-x: auto; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .destination-status-dot { box-shadow: 0 0 0 4px rgba(106,143,58,.16); }
+
+/* ---- 5. ITINERARY (module6) : dusk timeline ---- */
+.app-shell:not(.view-budget) :is(.module6-itinerary-card,.module6-day-card,.module6-info-strip) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .module6-day-header {
+  background: linear-gradient(90deg, rgba(122,94,168,.12), transparent); border-bottom: 1px solid var(--tt-line);
+  border-radius: var(--tt-radius) var(--tt-radius) 0 0;
+}
+.app-shell:not(.view-budget) .module6-timeline,
+.app-shell:not(.view-budget) .module6-activity-list { position: relative; }
+.app-shell:not(.view-budget) .module6-activity {
+  position: relative; background: #fbfaff; border: 1px solid #e6e1f1; border-left: 4px solid var(--m-itin);
+  border-radius: 12px; transition: box-shadow .15s ease, transform .15s ease;
+}
+.app-shell:not(.view-budget) .module6-activity:hover { box-shadow: 0 8px 22px rgba(122,94,168,.16); transform: translateX(2px); }
+.app-shell:not(.view-budget) .module6-activity-locked { border-left-color: var(--tt-sun); background: var(--tt-sun-soft); }
+.app-shell:not(.view-budget) .module6-time-column { color: var(--m-itin); font-weight: 800; font-variant-numeric: tabular-nums; }
+.app-shell:not(.view-budget) .module6-lock-badge { background: var(--tt-sun-soft); color: #b4561f; border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .module6-drag-handle { color: #a79bc2; cursor: grab; }
+.app-shell:not(.view-budget) .module6-empty-day { border: 2px dashed #ddd5ee; border-radius: 12px; background: #fcfbff; }
+.app-shell:not(.view-budget) .module6-save-button { background: var(--m-itin); color: #fff; border: 0; border-radius: 12px; font-weight: 700; }
+.app-shell:not(.view-budget) .module6-secondary-button,
+.app-shell:not(.view-budget) .module6-cancel-button { border: 1px solid var(--tt-line); border-radius: 12px; background: #fff; font-weight: 700; }
+.app-shell:not(.view-budget) .module6-delete-button { color: #b3443a; border-radius: 12px; }
+.app-shell:not(.view-budget) .module6-modal-overlay { backdrop-filter: blur(6px); background: rgba(11,32,40,.5); }
+.app-shell:not(.view-budget) .module6-modal { border-radius: 20px; box-shadow: 0 30px 80px rgba(11,32,40,.35); max-width: 100%; }
+
+/* ---- 5b. ROUTES : ocean ---- */
+.app-shell:not(.view-budget) :is(.route-metric-card,.route-control-card,.route-canvas-card,.route-list-panel,.route-insight-card,.route-actions-card,.route-history-section) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .route-metric-card { border-top: 3px solid var(--m-route); }
+.app-shell:not(.view-budget) .route-metric-icon { background: #e1f0f5; color: var(--m-route); border-radius: 12px; }
+.app-shell:not(.view-budget) .route-destination { border-radius: 12px; border: 1px solid var(--tt-line); background: #fbfdfd; }
+.app-shell:not(.view-budget) .route-destination-number { background: var(--m-route); color: #fff; border-radius: 50%; font-weight: 800; }
+.app-shell:not(.view-budget) .route-live-badge { background: #e1f0f5; color: var(--m-route); border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .route-alert-error { background: #fdeceb; color: #a33a2f; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .route-alert-success { background: #e8f6ee; color: #1c7a43; border-radius: var(--tt-radius-sm); }
+
+/* ---- 6. WEATHER : clear sky ---- */
+.app-shell:not(.view-budget) .wm-current-card {
+  color: #fff; border: 0; border-radius: 22px;
+  background: linear-gradient(135deg, #1d6fb8 0%, #2d8fd5 55%, #6cc0ec 100%); box-shadow: 0 14px 36px rgba(29,111,184,.28);
+}
+.app-shell:not(.view-budget) .wm-current-card :is(.wm-current-label,.wm-current-location,.wm-current-condition) { color: rgba(255,255,255,.9); }
+.app-shell:not(.view-budget) .wm-current-temperature { color: #fff; font-weight: 800; letter-spacing: -.03em; }
+.app-shell:not(.view-budget) .wm-metric-card { border-top: 3px solid var(--m-weather); }
+.app-shell:not(.view-budget) .wm-metric-icon { background: var(--tt-sky-soft); border-radius: 12px; }
+.app-shell:not(.view-budget) .wm-metric-value { color: var(--tt-forest); font-weight: 800; font-variant-numeric: tabular-nums; }
+.app-shell:not(.view-budget) .wm-metric-label { color: var(--tt-ink-soft); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.app-shell:not(.view-budget) :is(.wm-forecast-card,.wm-daily-card) {
+  background: #f4f9fc; border: 1px solid #dcebf4; border-radius: 14px;
+}
+.app-shell:not(.view-budget) .wm-horizontal-scroll { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.app-shell:not(.view-budget) .wm-horizontal-scroll > * { scroll-snap-align: start; }
+.app-shell:not(.view-budget) .wm-alert-card { background: var(--tt-sun-soft); border: 1px solid #f3cfb4; border-radius: 14px; color: #8a3f12; }
+.app-shell:not(.view-budget) .wm-error { background: #fdeceb; color: #a33a2f; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .wm-success { background: #e8f6ee; color: #1c7a43; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .wm-section-icon { background: var(--tt-sky-soft); color: var(--m-weather); border-radius: 12px; }
+
+/* ---- 7. RECOMMENDATIONS : sunset ---- */
+.app-shell:not(.view-budget) :is(.recommendation-card,.recommendation-summary-card,.recommendation-control-card,.recommendation-filter-card,.recommendation-section-card,.recommendation-history-card) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .recommendation-card { transition: transform .18s ease, box-shadow .18s ease; border-top: 3px solid var(--m-reco); }
+.app-shell:not(.view-budget) .recommendation-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(224,122,63,.2); }
+.app-shell:not(.view-budget) .recommendation-type-tabs { gap: 8px; flex-wrap: wrap; }
+.app-shell:not(.view-budget) .recommendation-type-tab { border-radius: 999px; border: 1px solid var(--tt-line); background: #fff; font-weight: 700; }
+.app-shell:not(.view-budget) .recommendation-type-tab:hover { border-color: var(--m-reco); }
+.app-shell:not(.view-budget) .recommendation-type-tab.active { background: var(--m-reco); border-color: var(--m-reco); color: #fff; }
+.app-shell:not(.view-budget) :is(.recommendation-generate-button,.recommendation-use) {
+  background: var(--m-reco); color: #fff; border: 0; border-radius: 12px; font-weight: 700;
+}
+.app-shell:not(.view-budget) :is(.recommendation-generate-button,.recommendation-use):hover { background: #c9672d; }
+.app-shell:not(.view-budget) .recommendation-accept { background: #e8f6ee; color: #1c7a43; border-radius: 12px; }
+.app-shell:not(.view-budget) .recommendation-reject { background: #fdeceb; color: #a33a2f; border-radius: 12px; }
+.app-shell:not(.view-budget) :is(.recommendation-score-high) { background: #e8f6ee; color: #1c7a43; }
+.app-shell:not(.view-budget) :is(.recommendation-score-medium) { background: var(--tt-sun-soft); color: #b4561f; }
+.app-shell:not(.view-budget) :is(.recommendation-score-low) { background: #fdeceb; color: #a33a2f; }
+.app-shell:not(.view-budget) :is(.recommendation-score) { border-radius: 999px; font-weight: 800; }
+.app-shell:not(.view-budget) .recommendation-modal-overlay { backdrop-filter: blur(6px); }
+.app-shell:not(.view-budget) .recommendation-modal { border-radius: 20px; max-width: 100%; }
+
+/* ---- 8. ACCOMMODATION : terracotta ---- */
+.app-shell:not(.view-budget) :is(.accommodation-card,.accommodation-category-card,.accommodation-toolbar,.accommodation-history) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) .accommodation-card { overflow: hidden; transition: transform .18s ease, box-shadow .18s ease; }
+.app-shell:not(.view-budget) .accommodation-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(161,100,90,.2); }
+.app-shell:not(.view-budget) .accommodation-card img { width: 100%; object-fit: cover; }
+.app-shell:not(.view-budget) .accommodation-type { background: #f7ebe8; color: var(--m-stay); border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .accommodation-price { color: var(--tt-forest); font-weight: 800; font-variant-numeric: tabular-nums; }
+.app-shell:not(.view-budget) .accommodation-rating { color: #b98a16; font-weight: 700; }
+.app-shell:not(.view-budget) .accommodation-button { border-radius: 12px; font-weight: 700; }
+.app-shell:not(.view-budget) .accommodation-category-card { border-left: 4px solid var(--m-stay); }
+.app-shell:not(.view-budget) .accommodation-overlay { backdrop-filter: blur(6px); }
+.app-shell:not(.view-budget) .accommodation-modal { border-radius: 20px; max-width: 100%; }
+.app-shell:not(.view-budget) .accommodation-message { border-radius: var(--tt-radius-sm); font-weight: 600; }
+
+/* ---- 9. FOOD : chilli ---- */
+.app-shell:not(.view-budget) :is(.food-recommendation-card,.food-place-card,.food-dish-card,.food-quick-card,.food-filter-panel,.food-trip-panel,.food-state-card,.food-empty-card,.food-history-item) {
+  background: var(--tt-paper); border: 1px solid var(--tt-line); border-radius: var(--tt-radius); box-shadow: var(--tt-shadow);
+}
+.app-shell:not(.view-budget) :is(.food-recommendation-card,.food-place-card,.food-dish-card) { transition: transform .18s ease, box-shadow .18s ease; }
+.app-shell:not(.view-budget) :is(.food-recommendation-card,.food-place-card,.food-dish-card):hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(194,85,59,.2); }
+.app-shell:not(.view-budget) .food-card-accent { background: var(--m-food); }
+.app-shell:not(.view-budget) .food-type-badge { background: #fbeae5; color: var(--m-food); border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .food-open-badge { background: #e8f6ee; color: #1c7a43; border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .food-closed-badge { background: #fdeceb; color: #a33a2f; border-radius: 999px; font-weight: 700; }
+.app-shell:not(.view-budget) .food-primary-button { background: var(--m-food); color: #fff; border: 0; border-radius: 12px; font-weight: 700; }
+.app-shell:not(.view-budget) .food-primary-button:hover { background: #a9442d; }
+.app-shell:not(.view-budget) .food-secondary-button { border: 1px solid var(--tt-line); border-radius: 12px; background: #fff; font-weight: 700; }
+.app-shell:not(.view-budget) .food-alert-error { background: #fdeceb; color: #a33a2f; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .food-alert-success { background: #e8f6ee; color: #1c7a43; border-radius: var(--tt-radius-sm); }
+.app-shell:not(.view-budget) .food-spinner,
+.app-shell:not(.view-budget) .recommendation-spinner,
+.app-shell:not(.view-budget) .module6-spinner { border-top-color: var(--m-food); }
+
+/* ---- Tablet + phone refinements for module layouts ---- */
+@media (max-width: 1100px) {
+  .app-shell:not(.view-budget) :is(.food-layout,.route-main-grid,.wm-grid) { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .app-shell:not(.view-budget) :is(.recommendation-type-tabs,.module6-header-actions,.food-card-actions,.accommodation-actions,.recommendation-action-buttons) { flex-wrap: wrap; }
+  .app-shell:not(.view-budget) :is(.recommendation-action-button,.accommodation-button,.food-primary-button,.food-secondary-button,.module6-save-button,.module6-secondary-button,.primary-trip-button) { min-height: 44px; }
+  .app-shell:not(.view-budget) :is(.accommodation-grid,.food-recommendation-grid,.food-place-grid,.recommendation-list,.recommendation-summary-grid,.modern-trip-grid) { grid-template-columns: 1fr; }
+  .app-shell:not(.view-budget) .wm-current-card { border-radius: 18px; }
+  .app-shell:not(.view-budget) .module6-modal,
+  .app-shell:not(.view-budget) .recommendation-modal,
+  .app-shell:not(.view-budget) .accommodation-modal { width: calc(100vw - 24px); max-height: 90vh; overflow-y: auto; }
+}

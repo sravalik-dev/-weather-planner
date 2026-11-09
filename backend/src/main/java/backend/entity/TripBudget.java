@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
-import backend.entity.Trip;
 
 @Entity
 @Table(

@@ -424,9 +424,8 @@ public class NearbyPlacesService {
                     );
 
                     places.sort(
-                            Comparator.comparingLong(
-                                    NearbyPlace::getDistanceMeters
-                            )
+                            Comparator.<NearbyPlace>comparingLong(
+                                    place -> place.getDistanceMeters())
                     );
 
                     log.info(

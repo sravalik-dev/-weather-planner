@@ -40,6 +40,24 @@ const parseAuthResponse = async (response) => {
   return data;
 };
 
+
+// The backend auth endpoints answer with HTTP 200 and a plain-text message
+// for BOTH success and failure ("Invalid OTP!", "Email already exists!"...).
+// This guard turns a failure message into a thrown Error so the UI can
+// show it instead of treating it as success.
+const expectSuccess = (result, successPattern, fallback) => {
+  const message =
+    typeof result === "string"
+      ? result.trim()
+      : String(result?.message || "").trim();
+
+  if (!successPattern.test(message)) {
+    throw new Error(message || fallback);
+  }
+
+  return message;
+};
+
 // LOGIN
 export const loginUser = async (email, password) => {
   if (!email?.trim() || !password) {
@@ -90,7 +108,7 @@ export const registerUser = async (fullName, email, password) => {
     throw new Error("Please fill in all registration fields.");
   }
 
-  return apiRequest("/auth/register", {
+  const result = await apiRequest("/auth/register", {
     method: "POST",
     body: JSON.stringify({
       fullName: fullName.trim(),
@@ -98,22 +116,30 @@ export const registerUser = async (fullName, email, password) => {
       password,
     }),
   });
+
+  return expectSuccess(result, /otp sent/i, "Registration failed.");
 };
 
 // VERIFY REGISTRATION OTP
 export const verifyOtp = async (email, otp) => {
-  return apiRequest("/auth/verify-otp", {
+  const result = await apiRequest("/auth/verify-otp", {
     method: "POST",
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       otp: String(otp).trim(),
     }),
   });
+
+  return expectSuccess(
+    result,
+    /verified successfully/i,
+    "Unable to verify your account."
+  );
 };
 
 // RESEND OTP
 export const resendOtp = async (email) => {
-  return apiRequest(
+  const result = await apiRequest(
     `/auth/resend-otp?email=${encodeURIComponent(
       email.trim().toLowerCase()
     )}`,
@@ -121,38 +147,54 @@ export const resendOtp = async (email) => {
       method: "POST",
     }
   );
+
+  return expectSuccess(result, /otp sent/i, "Unable to resend the OTP.");
 };
 
 // FORGOT PASSWORD
 export const forgotPassword = async (email) => {
-  return apiRequest("/auth/forgot-password", {
+  const result = await apiRequest("/auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
     }),
   });
+
+  return expectSuccess(result, /otp sent/i, "Unable to send the reset OTP.");
 };
 
 // VERIFY PASSWORD RESET OTP
 export const verifyResetOtp = async (email, otp) => {
-  return apiRequest("/auth/verify-reset-otp", {
+  const result = await apiRequest("/auth/verify-reset-otp", {
     method: "POST",
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       otp: String(otp).trim(),
     }),
   });
+
+  return expectSuccess(
+    result,
+    /verified successfully/i,
+    "Unable to verify the reset OTP."
+  );
 };
 
 // RESET PASSWORD
 export const resetPassword = async (email, newPassword) => {
-  return apiRequest("/auth/reset-password", {
+  const result = await apiRequest("/auth/reset-password", {
     method: "POST",
     body: JSON.stringify({
       email: email.trim().toLowerCase(),
       newPassword,
     }),
   });
+
+  return expectSuccess(
+    result,
+    /reset successfully/i,
+    "Unable to reset the password."
+  );
 };
 
 // LOGOUT

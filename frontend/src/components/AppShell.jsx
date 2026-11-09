@@ -100,7 +100,7 @@ function AppShell({ user, weather, onLogout, onUserUpdate }) {
     NAV.find((item) => item.id === view)?.label || "Dashboard";
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell view-${view}`}>
       <aside className={`shell-sidebar ${menuOpen ? "open" : ""}`}>
         <div className="shell-brand">
           <span>☁</span>

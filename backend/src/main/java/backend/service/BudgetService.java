@@ -75,8 +75,9 @@ public class BudgetService {
             CreateBudgetRequest request,
             Integer userId) {
 
-        if (request == null || request.tripId() == null) {
-            throw new IllegalArgumentException("Trip ID is required");
+        if (request == null || request.tripId() == null || userId == null) {
+            throw new IllegalArgumentException(
+                    "Budget request, trip ID, and user ID are required");
         }
 
         validatePositiveAmount(request.totalBudget(), "Total budget");
@@ -126,6 +127,11 @@ public class BudgetService {
             Integer tripId,
             UpdateBudgetRequest request,
             Integer userId) {
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Budget update request is required");
+        }
 
         TripBudget budget = getOwnedBudget(tripId, userId);
 
@@ -180,6 +186,11 @@ public class BudgetService {
             CategoryBudgetRequest request,
             Integer userId) {
 
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Category budget request is required");
+        }
+
         TripBudget budget = getOwnedBudget(tripId, userId);
 
         if (request.category() == null) {
@@ -224,6 +235,11 @@ public class BudgetService {
             Integer tripId,
             DailyBudgetRequest request,
             Integer userId) {
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Daily budget request is required");
+        }
 
         TripBudget budget = getOwnedBudget(tripId, userId);
 
@@ -280,9 +296,9 @@ public class BudgetService {
         List<Expense> expenses = getExpenses(budget);
 
         BigDecimal totalSpent = expenses.stream()
-                .map(Expense::getAmount)
+                .map(expense -> expense.getAmount())
                 .filter(amount -> amount != null)
-                .reduce(ZERO, BigDecimal::add);
+                .reduce(ZERO, (total, amount) -> total.add(amount));
 
         BigDecimal remaining = budget.getTotalBudget()
                 .subtract(totalSpent);
@@ -348,9 +364,9 @@ public class BudgetService {
                 .filter(expense ->
                         expense.getCategory() ==
                                 categoryBudget.getCategory())
-                .map(Expense::getAmount)
+                .map(expense -> expense.getAmount())
                 .filter(amount -> amount != null)
-                .reduce(ZERO, BigDecimal::add);
+                .reduce(ZERO, (total, amount) -> total.add(amount));
 
         BigDecimal allocated =
                 categoryBudget.getAllocatedAmount();
@@ -379,9 +395,9 @@ public class BudgetService {
                 .filter(expense ->
                         dailyBudget.getBudgetDate().equals(
                                 expense.getExpenseDate()))
-                .map(Expense::getAmount)
+                .map(expense -> expense.getAmount())
                 .filter(amount -> amount != null)
-                .reduce(ZERO, BigDecimal::add);
+                .reduce(ZERO, (total, amount) -> total.add(amount));
 
         BigDecimal remaining =
                 dailyBudget.getDailyLimit().subtract(spent);
@@ -402,6 +418,11 @@ public class BudgetService {
     private TripBudget getOwnedBudget(
             Integer tripId,
             Integer userId) {
+
+        if (tripId == null || userId == null) {
+            throw new IllegalArgumentException(
+                    "Trip ID and user ID are required");
+        }
 
         return tripBudgetRepository
                 .findByTrip_TripIdAndTrip_User_UserId(

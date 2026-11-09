@@ -81,10 +81,19 @@ export const apiRequest = async (endpoint, options = {}) => {
     ? endpoint
     : `/${endpoint}`;
 
+  // Public auth endpoints (register, OTP, reset) must not carry a stale
+  // JWT, and a failure there must not wipe an existing session.
+  const isPublicAuthCall = /^\/auth\//.test(path);
+
+  const headers = getAuthHeaders();
+  if (isPublicAuthCall) {
+    delete headers.Authorization;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      ...getAuthHeaders(),
+      ...headers,
       ...(options.headers || {}),
     },
   });
@@ -110,7 +119,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     error.endpoint = endpoint;
     error.responseData = data;
 
-    if (response.status === 401 || response.status === 403) {
+    if (!isPublicAuthCall && (response.status === 401 || response.status === 403)) {
       clearAuthStorage();
     }
 

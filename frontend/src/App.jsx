@@ -40,6 +40,9 @@ function App() {
   const [accountCreated, setAccountCreated] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [otpNotice, setOtpNotice] = useState("");
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [signupError, setSignupError] = useState("");
 
@@ -169,6 +172,12 @@ function App() {
     );
   }, []);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const timer = setTimeout(() => setResendCooldown((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -212,7 +221,25 @@ function App() {
     setAccountCreated(false);
     setOtp("");
     setOtpError("");
+    setOtpNotice("");
+    setResendCooldown(0);
     setSignupError("");
+  };
+
+  const handleResendOtp = async () => {
+    if (resendingOtp || resendCooldown > 0) return;
+    setOtpError("");
+    setOtpNotice("");
+    setResendingOtp(true);
+    try {
+      const message = await resendOtp(registerEmail);
+      setOtpNotice(message || "A new code has been sent.");
+      setResendCooldown(30);
+    } catch (error) {
+      setOtpError(error.message || "Unable to resend OTP.");
+    } finally {
+      setResendingOtp(false);
+    }
   };
 
   const closeSignup = () => {
@@ -242,6 +269,8 @@ function App() {
       setAccountCreated(true);
       setOtp("");
       setOtpError("");
+      setOtpNotice(`We sent a 6-digit code to ${registerEmail.trim().toLowerCase()}.`);
+      setResendCooldown(30);
       setSignupError("");
     } catch (error) {
       setAccountCreated(false);
@@ -260,11 +289,10 @@ function App() {
 
     setVerifyingOtp(true);
     try {
-      const result = await verifyOtp(registerEmail, otp.trim());
-      if (result !== "OTP verified successfully") {
-        throw new Error(result || "Unable to verify your account.");
-      }
+      // verifyOtp throws when the backend reports a failure message.
+      await verifyOtp(registerEmail, otp.trim());
       setAccountCreated(false);
+      setOtpNotice("");
       setOtp("");
       setShowSignup(false);
       setEmail(registerEmail);
@@ -702,6 +730,7 @@ function App() {
                     disabled={verifyingOtp}
                     required
                   />
+                  {otpNotice && !otpError && <div className="otp-notice">{otpNotice}</div>}
                   {otpError && <div className="signup-error">⚠️ {otpError}</div>}
                   <button type="submit" className="create-account-button" disabled={verifyingOtp}>
                     {verifyingOtp ? "Verifying..." : "Verify OTP"}
@@ -709,13 +738,14 @@ function App() {
                   <button
                     type="button"
                     className="resend-otp-button"
-                    onClick={() =>
-                      resendOtp(registerEmail).catch((error) =>
-                        setOtpError(error.message || "Unable to resend OTP.")
-                      )
-                    }
+                    onClick={handleResendOtp}
+                    disabled={resendingOtp || verifyingOtp || resendCooldown > 0}
                   >
-                    Resend OTP
+                    {resendingOtp
+                      ? "Sending..."
+                      : resendCooldown > 0
+                      ? `Resend OTP in ${resendCooldown}s`
+                      : "Resend OTP"}
                   </button>
                 </form>
               </div>
