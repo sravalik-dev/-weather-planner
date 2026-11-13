@@ -17,3 +17,6 @@ frontend/dist/
 node_modules/
 frontend/node_modules/
 backend/target/
+
+# Temporary backup files
+*.java.backup

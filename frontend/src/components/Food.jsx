@@ -10,47 +10,50 @@ import {
   getFoodRecommendationHistory,
   recordFoodRecommendationAction,
 } from "../services/foodService";
+import {
+  BUDGET_OPTIONS,
+  CATEGORY_OPTIONS,
+  DEFAULT_FILTERS,
+  DIETARY_OPTIONS,
+  FOOD_TYPE_OPTIONS,
+  MEAL_PERIOD_OPTIONS,
+  RECOMMENDATION_TYPES,
+  SPICE_LEVEL_OPTIONS,
+  applyExternalFilters,
+  buildFoodRequest,
+  getActiveFilters,
+  getApplicability,
+  getPlaceTypeOptions,
+  getTypeKind,
+  getTypeLabel,
+  isExternalResult,
+  reconcile,
+  validateFilters,
+} from "../utils/foodFilters";
+import Toast from "./Toast";
 import "../styles/Food.css";
+import "../styles/FoodFilters.css";
 import NearbyPlacesPanel from "./NearbyPlacesPanel";
 
-const RECOMMENDATION_TYPES = [
-  { value: "LOCAL_FOOD", label: "Local Food", icon: "🍛" },
-  { value: "TRADITIONAL_DISH", label: "Traditional Dishes", icon: "🥘" },
-  { value: "NEARBY_FOOD", label: "Nearby Food", icon: "📍" },
-  { value: "MEAL_TIME", label: "Meal Time", icon: "🕒" },
-  { value: "FOOD_PREFERENCE", label: "Food Preference", icon: "❤️" },
-  { value: "DIETARY", label: "Dietary", icon: "🥗" },
-  { value: "BUDGET", label: "Budget", icon: "💰" },
-  { value: "POPULAR_LOCAL_FOOD", label: "Popular Local Food", icon: "⭐" },
-  { value: "FOOD_PLACE", label: "Food Places", icon: "🏪" },
-  { value: "BAR", label: "Bars", icon: "🍹" },
-  { value: "RESTROBAR", label: "Restrobars", icon: "🍸" },
-  { value: "FOOD_AND_BEVERAGE", label: "Food + Beverage", icon: "🍽️" },
-];
+/* Filters are kept in sessionStorage so they survive leaving and returning
+   to this page, until the user changes or clears them. */
+const FILTER_STORAGE_KEY = "weatherPlanner.foodFilters.v1";
 
-const FOOD_TYPES = [
-  "Vegetarian",
-  "Non-vegetarian",
-  "Vegan",
-  "Egg-free",
-  "Dairy-free",
-  "Gluten-free",
-  "Other",
-];
-
-const CATEGORIES = [
-  "Breakfast",
-  "Lunch",
-  "Dinner",
-  "Snack",
-  "Dessert",
-  "Street Food",
-  "Traditional Specialty",
-  "Beverage",
-];
-
-const MEAL_PERIODS = ["Morning", "Afternoon", "Evening", "Night"];
-const SPICE_LEVELS = ["Mild", "Medium", "Spicy"];
+const loadSavedFilters = () => {
+  try {
+    const raw = window.sessionStorage.getItem(FILTER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      filters: { ...DEFAULT_FILTERS, ...(parsed.filters || {}) },
+      type: RECOMMENDATION_TYPES.some((t) => t.value === parsed.type)
+        ? parsed.type
+        : "LOCAL_FOOD",
+    };
+  } catch {
+    return null;
+  }
+};
 
 const ACTIONS = [
   "Food Recommendation Viewed",
@@ -184,7 +187,10 @@ const getRecommendationSubtitle = (item) =>
     ""
   );
 
+
 function Food({ onBack }) {
+  const savedFilters = useMemo(() => loadSavedFilters(), []);
+
   const [trips, setTrips] = useState([]);
   const [destinations, setDestinations] = useState([]);
 
@@ -197,27 +203,24 @@ function Food({ onBack }) {
   const [history, setHistory] = useState([]);
 
   const [activeSection, setActiveSection] = useState("recommendations");
-  const [selectedType, setSelectedType] = useState("LOCAL_FOOD");
+  const [selectedType, setSelectedType] = useState(
+    savedFilters?.type || "LOCAL_FOOD"
+  );
 
   const [plannedDate, setPlannedDate] = useState("");
   const [plannedTime, setPlannedTime] = useState("");
 
-  const [filters, setFilters] = useState({
-    foodType: "",
-    category: "",
-    mealPeriod: "",
-    cuisine: "",
-    spiceLevel: "",
-    dietaryPreference: "",
-    foodPreference: "",
-    budgetRange: "",
-    maxDistanceKm: "",
-    placeType: "",
-    includeBars: false,
-    includeRestrobars: false,
-    includeLocalDrinks: false,
-    includeFoodAndBeverage: false,
-  });
+  const [filters, setFilters] = useState(
+    savedFilters?.filters || { ...DEFAULT_FILTERS }
+  );
+
+  /* What was actually sent with the last successful "Generate". */
+  const [applied, setApplied] = useState(null);
+  /* "generated" = response of the last Generate; "saved" = stored results. */
+  const [resultsSource, setResultsSource] = useState("generated");
+  const [viewingSaved, setViewingSaved] = useState("");
+  const [noMatch, setNoMatch] = useState(false);
+  const [filterNotices, setFilterNotices] = useState([]);
 
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [loadingDestinations, setLoadingDestinations] = useState(false);
@@ -228,6 +231,18 @@ function Food({ onBack }) {
 
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  /* Persist the filter choices (not the results). */
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({ filters, type: selectedType })
+      );
+    } catch {
+      /* storage may be unavailable (private mode); the page still works */
+    }
+  }, [filters, selectedType]);
 
   const selectedTrip = useMemo(
     () =>
@@ -432,6 +447,7 @@ function Food({ onBack }) {
     loadFoodData(selectedDestinationId);
   }, [selectedDestinationId]);
 
+
   const handleDestinationChange = (event) => {
     const destinationId = event.target.value;
 
@@ -443,65 +459,76 @@ function Food({ onBack }) {
     setMessage("");
   };
 
+
+  /* ---------------- Filter handling ---------------- */
+
+  const applicability = useMemo(
+    () => getApplicability(selectedType),
+    [selectedType]
+  );
+
+  const activeFilters = useMemo(
+    () => getActiveFilters(filters, selectedType),
+    [filters, selectedType]
+  );
+
+  const issues = useMemo(
+    () => validateFilters(filters, selectedType),
+    [filters, selectedType]
+  );
+  const blockingIssues = issues.filter((issue) => issue.level === "error");
+
+  const placeTypeOptions = useMemo(
+    () => getPlaceTypeOptions(selectedType),
+    [selectedType]
+  );
+
+  /* Every control goes through here so related controls stay consistent. */
   const updateFilter = (name, value) => {
-    setFilters((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    const result = reconcile({ ...filters, [name]: value }, selectedType, name);
+    setFilters(result.filters);
+    setSelectedType(result.type);
+    setFilterNotices(result.notices);
   };
 
-  const buildRequest = (overrideType = selectedType) => {
-    const recommendationType =
-      filters.includeFoodAndBeverage && overrideType === "FOOD_PLACE"
-        ? "FOOD_AND_BEVERAGE"
-        : overrideType;
-
-    const request = {
-      destinationId: Number(selectedDestinationId),
-      plannedDate,
-      plannedTime,
-      recommendationType,
-      includeBars: Boolean(filters.includeBars),
-      includeRestrobars: Boolean(filters.includeRestrobars),
-      includeLocalDrinks: Boolean(filters.includeLocalDrinks),
-      includeFoodAndBeverage: Boolean(filters.includeFoodAndBeverage),
-    };
-
-    const optionalTextFields = [
-      ["foodType", filters.foodType],
-      ["category", filters.category],
-      ["mealPeriod", filters.mealPeriod],
-      ["cuisine", filters.cuisine],
-      ["spiceLevel", filters.spiceLevel],
-      ["dietaryPreference", filters.dietaryPreference],
-      ["foodPreference", filters.foodPreference],
-      ["budgetRange", filters.budgetRange],
-      ["placeType", filters.placeType],
-    ];
-
-    optionalTextFields.forEach(([key, value]) => {
-      const normalized = String(value ?? "").trim();
-      if (normalized) {
-        request[key] = normalized;
-      }
-    });
-
-    if (String(filters.maxDistanceKm ?? "").trim()) {
-      const distance = Number(filters.maxDistanceKm);
-      if (Number.isFinite(distance) && distance > 0) {
-        request.maxDistanceKm = distance;
-      }
-    }
-
-    return request;
+  const chooseType = (type) => {
+    const result = reconcile(filters, type, "type");
+    setFilters(result.filters);
+    setSelectedType(result.type);
+    setFilterNotices(result.notices);
   };
+
+  const clearFilter = (key) => {
+    const empty =
+      typeof DEFAULT_FILTERS[key] === "boolean" ? false : DEFAULT_FILTERS[key];
+    updateFilter(key, empty);
+  };
+
+  const clearAllFilters = () => {
+    setFilters({ ...DEFAULT_FILTERS });
+    setFilterNotices([]);
+    setError("");
+    setMessage("Filters cleared. Choose a result type and generate again.");
+  };
+
+  /* Has the user changed anything since the results on screen were made? */
+  const filtersChanged = useMemo(() => {
+    if (!applied || resultsSource !== "generated") return false;
+    return (
+      JSON.stringify([selectedType, activeFilters]) !==
+      JSON.stringify([applied.type, applied.active])
+    );
+  }, [applied, resultsSource, selectedType, activeFilters]);
 
   const hasFoodCatalogData = foods.length > 0;
   const hasFoodPlaceData = foodPlaces.length > 0;
 
-  const handleGenerate = async (type = selectedType) => {
+  /* ---------------- Generate (Apply filters) ---------------- */
+
+  const handleGenerate = async (typeOverride) => {
     setError("");
     setMessage("");
+    setNoMatch(false);
 
     if (!selectedTrip) {
       setError("Select a trip before generating food recommendations.");
@@ -534,32 +561,47 @@ function Food({ onBack }) {
       return;
     }
 
-    if (type === "BAR" && !filters.includeBars) {
-      setError("Enable “Include Bars” before requesting bar recommendations.");
+    /* A type chosen from outside the filter panel (e.g. the Food Places
+       tab) still goes through the same consistency rules. */
+    let useFilters = filters;
+    let useType = selectedType;
+    if (typeof typeOverride === "string" && typeOverride !== selectedType) {
+      const result = reconcile(filters, typeOverride, "type");
+      useFilters = result.filters;
+      useType = result.type;
+      setFilters(result.filters);
+      setSelectedType(result.type);
+      setFilterNotices(result.notices);
+    }
+
+    const problems = validateFilters(useFilters, useType).filter(
+      (issue) => issue.level === "error"
+    );
+    if (problems.length > 0) {
+      setError(problems[0].message);
       return;
     }
 
-    if (type === "RESTROBAR" && !filters.includeRestrobars) {
-      setError(
-        "Enable “Include Restrobars” before requesting restrobar recommendations."
-      );
-      return;
-    }
+    const request = buildFoodRequest({
+      filters: useFilters,
+      type: useType,
+      destinationId: selectedDestinationId,
+      plannedDate,
+      plannedTime,
+    });
 
-    if (type === "FOOD_AND_BEVERAGE" && !filters.includeFoodAndBeverage) {
-      setError(
-        "Enable “Include Food + Beverage” before requesting this option."
-      );
-      return;
-    }
+    const snapshot = {
+      type: useType,
+      filters: { ...useFilters },
+      active: getActiveFilters(useFilters, useType),
+    };
 
-    setSelectedType(type);
     setLoadingRecommendations(true);
 
     try {
       const generatedData = await generateFoodRecommendations(
         selectedTripId,
-        buildRequest(type)
+        request
       );
 
       const generatedRecommendations = normalizeArray(generatedData, [
@@ -581,27 +623,31 @@ function Food({ onBack }) {
         ]));
       }
 
+      setApplied(snapshot);
+      setResultsSource("generated");
+      setViewingSaved("");
       setHistory(normalizeArray(historyData, ["history", "content"]));
-
-      setMessage(
-        `${RECOMMENDATION_TYPES.find((item) => item.value === type)?.label || "Food"} recommendations generated successfully.`
-      );
+      setMessage(`${getTypeLabel(useType)} recommendations updated.`);
       setActiveSection("recommendations");
     } catch (requestError) {
-      console.error("Food recommendation generation error:", requestError);
-      const message = String(requestError?.message || "");
+      const text = String(requestError?.message || "");
 
       if (
-        message.includes("No local food recommendations") ||
-        message.includes("No food options match")
+        text.includes("No local food recommendations") ||
+        text.includes("No food options match") ||
+        text.includes("No food recommendations")
       ) {
-        setError(
-          "The backend has no matching food recommendations for this destination and these filters. Clear optional filters or choose another destination and try again."
-        );
+        /* A valid search with zero matches is not an application error. */
+        setRecommendations([]);
+        setApplied(snapshot);
+        setResultsSource("generated");
+        setViewingSaved("");
+        setNoMatch(true);
+        setActiveSection("recommendations");
       } else {
+        console.error("Food recommendation generation error:", requestError);
         setError(
-          message ||
-            "Unable to generate food recommendations. Please try again."
+          text || "Unable to generate food recommendations. Please try again."
         );
       }
     } finally {
@@ -609,8 +655,23 @@ function Food({ onBack }) {
     }
   };
 
+  /* Results shown on screen. For live OpenStreetMap results the server only
+     applies the distance limit, so we apply what the data supports and say
+     plainly what could not be checked. */
+  const external = useMemo(() => {
+    if (resultsSource !== "generated" || !applied) return null;
+    if (!isExternalResult(recommendations)) return null;
+    return applyExternalFilters(recommendations, applied.filters, applied.type);
+  }, [recommendations, applied, resultsSource]);
+
+  const displayedRecommendations = external
+    ? external.items
+    : recommendations;
+
   const handleTypeFilter = async (type) => {
-    setSelectedType(type);
+    setResultsSource("saved");
+    setViewingSaved(type === "ALL" ? "" : type);
+    setNoMatch(false);
     setError("");
     setMessage("");
 
@@ -691,19 +752,6 @@ function Food({ onBack }) {
     }
   };
 
-  const quickRecommendations = RECOMMENDATION_TYPES.filter(
-    (item) =>
-      item.value !== "BAR" &&
-      item.value !== "RESTROBAR" &&
-      item.value !== "FOOD_AND_BEVERAGE"
-  );
-
-  const placeRecommendations = recommendations.filter(
-    (item) =>
-      item?.foodPlaceId !== null &&
-      item?.foodPlaceId !== undefined
-  );
-
   return (
     <section className="food-module">
       <div className="food-shell">
@@ -739,12 +787,7 @@ function Food({ onBack }) {
           </div>
         )}
 
-        {message && (
-          <div className="food-alert food-alert-success" role="status">
-            <span>✓</span>
-            <p>{message}</p>
-          </div>
-        )}
+        <Toast message={message} onClose={() => setMessage("")} />
 
         {loadingTrips ? (
           <div className="food-state-card">
@@ -924,352 +967,434 @@ function Food({ onBack }) {
                     <div className="food-section-heading">
                       <div>
                         <span className="food-eyebrow">DISCOVER</span>
-                        <h2>Recommendation types</h2>
+                        <h2>What are you in the mood for?</h2>
                         <p>
-                          Generate recommendations using the selected trip,
-                          destination, date, time and preferences.
+                          Pick a result type, set any filters, then press
+                          “Generate recommendations”. Nothing is requested until
+                          you do.
                         </p>
                       </div>
                     </div>
 
-                    <div className="food-quick-grid">
-                      {quickRecommendations.map((item) => (
+                    {/* ---------- Step 1: result type ---------- */}
+                    <div
+                      className="fd-type-grid"
+                      role="radiogroup"
+                      aria-label="Recommendation type"
+                    >
+                      {RECOMMENDATION_TYPES.map((item) => (
                         <button
                           type="button"
                           key={item.value}
-                          className={
-                            selectedType === item.value
-                              ? "food-quick-card active"
-                              : "food-quick-card"
-                          }
-                          onClick={() => handleGenerate(item.value)}
-                          disabled={
-                            loadingRecommendations ||
-                            !selectedTripId ||
-                            !selectedDestinationId
-                          }
+                          role="radio"
+                          aria-checked={selectedType === item.value}
+                          className={`fd-type ${
+                            selectedType === item.value ? "is-selected" : ""
+                          }`}
+                          onClick={() => chooseType(item.value)}
                         >
-                          <span>{item.icon}</span>
+                          <span aria-hidden="true">{item.icon}</span>
                           <strong>{item.label}</strong>
-                          <small>Generate now</small>
+                          <small>
+                            {item.kind === "dish"
+                              ? "Dishes"
+                              : item.kind === "place"
+                                ? "Places"
+                                : "Dishes + places"}
+                          </small>
                         </button>
                       ))}
                     </div>
 
-                    <div className="food-filter-panel">
-                      <div className="food-filter-heading">
+                    {/* ---------- Step 2: filters ---------- */}
+                    <div className="fd-panel">
+                      <div className="fd-panel-head">
                         <div>
                           <span className="food-eyebrow">PERSONALIZE</span>
-                          <h3>Food preferences & filters</h3>
+                          <h3>Food preferences &amp; filters</h3>
                         </div>
-                        <span className="food-filter-icon">⚙️</span>
-                      </div>
-
-                      <div className="food-filter-grid">
-                        <label>
-                          Food type
-                          <select
-                            value={filters.foodType}
-                            onChange={(event) =>
-                              updateFilter("foodType", event.target.value)
-                            }
-                          >
-                            <option value="">Any</option>
-                            {FOOD_TYPES.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label>
-                          Category
-                          <select
-                            value={filters.category}
-                            onChange={(event) =>
-                              updateFilter("category", event.target.value)
-                            }
-                          >
-                            <option value="">Any</option>
-                            {CATEGORIES.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label>
-                          Meal period
-                          <select
-                            value={filters.mealPeriod}
-                            onChange={(event) =>
-                              updateFilter("mealPeriod", event.target.value)
-                            }
-                          >
-                            <option value="">Any</option>
-                            {MEAL_PERIODS.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label>
-                          Spice level
-                          <select
-                            value={filters.spiceLevel}
-                            onChange={(event) =>
-                              updateFilter("spiceLevel", event.target.value)
-                            }
-                          >
-                            <option value="">Any</option>
-                            {SPICE_LEVELS.map((value) => (
-                              <option key={value} value={value}>
-                                {value}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label>
-                          Cuisine
-                          <input
-                            type="text"
-                            value={filters.cuisine}
-                            onChange={(event) =>
-                              updateFilter("cuisine", event.target.value)
-                            }
-                            placeholder="e.g. Andhra"
-                          />
-                        </label>
-
-                        <label>
-                          Dietary preference
-                          <input
-                            type="text"
-                            value={filters.dietaryPreference}
-                            onChange={(event) =>
-                              updateFilter(
-                                "dietaryPreference",
-                                event.target.value
-                              )
-                            }
-                            placeholder="e.g. vegetarian"
-                          />
-                        </label>
-
-                        <label>
-                          Food preference
-                          <input
-                            type="text"
-                            value={filters.foodPreference}
-                            onChange={(event) =>
-                              updateFilter(
-                                "foodPreference",
-                                event.target.value
-                              )
-                            }
-                            placeholder="e.g. spicy food"
-                          />
-                        </label>
-
-                        <label>
-                          Budget range
-                          <input
-                            type="text"
-                            value={filters.budgetRange}
-                            onChange={(event) =>
-                              updateFilter("budgetRange", event.target.value)
-                            }
-                            placeholder="Backend-supported value"
-                          />
-                        </label>
-
-                        <label>
-                          Max distance (km)
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={filters.maxDistanceKm}
-                            onChange={(event) =>
-                              updateFilter(
-                                "maxDistanceKm",
-                                event.target.value
-                              )
-                            }
-                            placeholder="e.g. 5"
-                          />
-                        </label>
-
-                        <label>
-                          Place type
-                          <input
-                            type="text"
-                            value={filters.placeType}
-                            onChange={(event) =>
-                              updateFilter("placeType", event.target.value)
-                            }
-                            placeholder="Restaurant / Cafe..."
-                          />
-                        </label>
-                      </div>
-
-                      <div className="food-opt-in-row">
-                        <label className="food-check">
-                          <input
-                            type="checkbox"
-                            checked={filters.includeBars}
-                            onChange={(event) =>
-                              updateFilter(
-                                "includeBars",
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>Include Bars</span>
-                        </label>
-
-                        <label className="food-check">
-                          <input
-                            type="checkbox"
-                            checked={filters.includeRestrobars}
-                            onChange={(event) =>
-                              updateFilter(
-                                "includeRestrobars",
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>Include Restrobars</span>
-                        </label>
-
-                        <label className="food-check">
-                          <input
-                            type="checkbox"
-                            checked={filters.includeLocalDrinks}
-                            onChange={(event) =>
-                              updateFilter(
-                                "includeLocalDrinks",
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>Include Local Drinks</span>
-                        </label>
-
-                        <label className="food-check">
-                          <input
-                            type="checkbox"
-                            checked={filters.includeFoodAndBeverage}
-                            onChange={(event) =>
-                              updateFilter(
-                                "includeFoodAndBeverage",
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>Include Food + Beverage</span>
-                        </label>
-                      </div>
-
-                      <div className="food-optional-actions">
                         <button
                           type="button"
-                          onClick={() => handleGenerate("BAR")}
+                          className="fd-btn fd-btn-outline"
+                          onClick={clearAllFilters}
                           disabled={
-                            loadingRecommendations ||
-                            !filters.includeBars ||
-                            !selectedDestinationId
+                            activeFilters.length === 0 &&
+                            !filters.includeFoodAndBeverage
                           }
                         >
-                          🍹 Generate Bars
+                          Clear all filters
                         </button>
+                      </div>
 
+                      <div className="fd-groups">
+                        <fieldset className="fd-group">
+                          <legend>🥗 Food &amp; diet</legend>
+                          <div className="fd-fields">
+                            <FilterSelect
+                              id="fd-foodType"
+                              label="Food type"
+                              value={filters.foodType}
+                              options={FOOD_TYPE_OPTIONS}
+                              state={applicability.foodType}
+                              onChange={(v) => updateFilter("foodType", v)}
+                            />
+                            <FilterSelect
+                              id="fd-category"
+                              label="Food category"
+                              value={filters.category}
+                              options={CATEGORY_OPTIONS}
+                              state={applicability.category}
+                              onChange={(v) => updateFilter("category", v)}
+                            />
+                            <FilterSelect
+                              id="fd-dietary"
+                              label="Dietary preference"
+                              value={filters.dietaryPreference}
+                              options={DIETARY_OPTIONS}
+                              state={applicability.dietaryPreference}
+                              onChange={(v) =>
+                                updateFilter("dietaryPreference", v)
+                              }
+                            />
+                            <FilterSelect
+                              id="fd-spice"
+                              label="Spice level"
+                              value={filters.spiceLevel}
+                              options={SPICE_LEVEL_OPTIONS}
+                              state={applicability.spiceLevel}
+                              onChange={(v) => updateFilter("spiceLevel", v)}
+                            />
+                            <FilterText
+                              id="fd-cuisine"
+                              label="Cuisine"
+                              placeholder="e.g. Goan, South Indian"
+                              value={filters.cuisine}
+                              state={applicability.cuisine}
+                              onChange={(v) => updateFilter("cuisine", v)}
+                            />
+                            <FilterText
+                              id="fd-pref"
+                              label="Food preference"
+                              placeholder="e.g. seafood, sweets"
+                              value={filters.foodPreference}
+                              state={applicability.foodPreference}
+                              onChange={(v) =>
+                                updateFilter("foodPreference", v)
+                              }
+                            />
+                          </div>
+                        </fieldset>
+
+                        <fieldset className="fd-group">
+                          <legend>🕒 Timing &amp; budget</legend>
+                          <div className="fd-fields">
+                            <FilterSelect
+                              id="fd-meal"
+                              label="Meal period"
+                              value={filters.mealPeriod}
+                              options={MEAL_PERIOD_OPTIONS}
+                              state={applicability.mealPeriod}
+                              onChange={(v) => updateFilter("mealPeriod", v)}
+                            />
+                            <FilterSelect
+                              id="fd-budget"
+                              label="Budget range"
+                              value={filters.budgetRange}
+                              options={BUDGET_OPTIONS}
+                              state={applicability.budgetRange}
+                              onChange={(v) => updateFilter("budgetRange", v)}
+                            />
+                          </div>
+                        </fieldset>
+
+                        <fieldset className="fd-group">
+                          <legend>📍 Places &amp; distance</legend>
+                          <div className="fd-fields">
+                            <FilterSelect
+                              id="fd-place"
+                              label="Restaurant / place type"
+                              value={filters.placeType}
+                              options={placeTypeOptions}
+                              state={applicability.placeType}
+                              onChange={(v) => updateFilter("placeType", v)}
+                            />
+                            <FilterText
+                              id="fd-distance"
+                              label="Maximum distance (km)"
+                              placeholder="e.g. 5"
+                              type="number"
+                              min="0.1"
+                              max="50"
+                              step="0.5"
+                              value={filters.maxDistanceKm}
+                              state={applicability.maxDistanceKm}
+                              onChange={(v) =>
+                                updateFilter("maxDistanceKm", v)
+                              }
+                            />
+                          </div>
+                        </fieldset>
+
+                        <fieldset className="fd-group">
+                          <legend>🍹 Drinks &amp; nightlife (optional)</legend>
+                          <div className="fd-toggles">
+                            <FilterToggle
+                              id="fd-bars"
+                              label="Include Bars"
+                              checked={filters.includeBars}
+                              state={applicability.includeBars}
+                              onChange={(v) => updateFilter("includeBars", v)}
+                            />
+                            <FilterToggle
+                              id="fd-restrobars"
+                              label="Include Restrobars"
+                              checked={filters.includeRestrobars}
+                              state={applicability.includeRestrobars}
+                              onChange={(v) =>
+                                updateFilter("includeRestrobars", v)
+                              }
+                            />
+                            <FilterToggle
+                              id="fd-fnb"
+                              label="Include Food + Beverage"
+                              checked={filters.includeFoodAndBeverage}
+                              state={applicability.includeFoodAndBeverage}
+                              onChange={(v) =>
+                                updateFilter("includeFoodAndBeverage", v)
+                              }
+                            />
+                            <FilterToggle
+                              id="fd-drinks"
+                              label="Include Local Drinks"
+                              checked={filters.includeLocalDrinks}
+                              state={applicability.includeLocalDrinks}
+                              onChange={(v) =>
+                                updateFilter("includeLocalDrinks", v)
+                              }
+                            />
+                          </div>
+                        </fieldset>
+                      </div>
+
+                      {filterNotices.length > 0 && (
+                        <ul className="fd-notices" role="status">
+                          {filterNotices.map((notice) => (
+                            <li key={notice}>ℹ️ {notice}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {issues.length > 0 && (
+                        <ul className="fd-issues">
+                          {issues.map((issue) => (
+                            <li
+                              key={issue.message}
+                              className={`fd-issue-${issue.level}`}
+                              role={issue.level === "error" ? "alert" : undefined}
+                            >
+                              {issue.level === "error" ? "⛔" : "⚠️"}{" "}
+                              {issue.message}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="fd-apply-bar">
+                        <p>
+                          {!selectedDestinationId
+                            ? "Select a destination above to continue."
+                            : `${getTypeLabel(selectedType)} · ${
+                                activeFilters.length
+                              } filter${activeFilters.length === 1 ? "" : "s"} selected`}
+                        </p>
                         <button
                           type="button"
-                          onClick={() => handleGenerate("RESTROBAR")}
+                          className="fd-btn fd-btn-primary"
+                          onClick={() => handleGenerate()}
                           disabled={
                             loadingRecommendations ||
-                            !filters.includeRestrobars ||
-                            !selectedDestinationId
+                            !selectedTripId ||
+                            !selectedDestinationId ||
+                            blockingIssues.length > 0
                           }
                         >
-                          🍸 Generate Restrobars
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleGenerate("FOOD_AND_BEVERAGE")}
-                          disabled={
-                            loadingRecommendations ||
-                            !filters.includeFoodAndBeverage ||
-                            !selectedDestinationId
-                          }
-                        >
-                          🍽️ Food + Beverage
+                          {loadingRecommendations
+                            ? "Searching…"
+                            : applied
+                              ? "Apply filters & refresh"
+                              : "Generate recommendations"}
                         </button>
                       </div>
                     </div>
 
-                    <div className="food-results-toolbar">
+                    {/* ---------- Results ---------- */}
+                    <div className="fd-results-head">
                       <div>
                         <span className="food-eyebrow">RESULTS</span>
-                        <h3>Recommendations</h3>
+                        <h3>
+                          {loadingRecommendations
+                            ? "Searching…"
+                            : `${displayedRecommendations.length} result${
+                                displayedRecommendations.length === 1 ? "" : "s"
+                              }`}
+                          {resultsSource === "saved" && viewingSaved && (
+                            <small>
+                              {" "}
+                              · saved “{getTypeLabel(viewingSaved)}”
+                            </small>
+                          )}
+                        </h3>
                       </div>
 
-                      <div className="food-result-filters">
-                        <button
-                          type="button"
-                          className={!selectedType ? "active" : ""}
-                          onClick={() => handleTypeFilter("ALL")}
+                      <label className="fd-saved-view">
+                        <span>View saved results</span>
+                        <select
+                          value={viewingSaved}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setViewingSaved(value);
+                            setResultsSource("saved");
+                            setNoMatch(false);
+                            handleTypeFilter(value || "ALL");
+                          }}
+                          disabled={!selectedTripId}
                         >
-                          All
-                        </button>
+                          <option value="">All saved</option>
+                          {RECOMMENDATION_TYPES.filter(
+                            (item) => item.value !== "ALL"
+                          ).map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
 
-                        {RECOMMENDATION_TYPES.map((item) => (
+                    {resultsSource === "generated" && applied && (
+                      <div className="fd-active" aria-label="Filters used for these results">
+                        <span className="fd-active-label">
+                          {getTypeLabel(applied.type)}
+                        </span>
+                        {applied.active.length === 0 ? (
+                          <span className="fd-chip fd-chip-muted">No filters</span>
+                        ) : (
+                          applied.active.map((chip) => (
+                            <span className="fd-chip" key={chip.key}>
+                              {chip.label}: <b>{chip.value}</b>
+                            </span>
+                          ))
+                        )}
+                        {applied.active.length > 0 && (
                           <button
                             type="button"
-                            key={item.value}
-                            className={
-                              selectedType === item.value ? "active" : ""
-                            }
-                            onClick={() => handleTypeFilter(item.value)}
+                            className="fd-link"
+                            onClick={clearAllFilters}
                           >
-                            {item.label}
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {resultsSource === "generated" && activeFilters.length > 0 && (
+                      <div className="fd-active fd-active-editable" aria-label="Current filter selection">
+                        <span className="fd-active-label">Current selection</span>
+                        {activeFilters.map((chip) => (
+                          <button
+                            type="button"
+                            key={chip.key}
+                            className="fd-chip fd-chip-remove"
+                            onClick={() => clearFilter(chip.key)}
+                            aria-label={`Remove filter ${chip.label}: ${chip.value}`}
+                          >
+                            {chip.label}: <b>{chip.value}</b> ✕
                           </button>
                         ))}
                       </div>
-                    </div>
+                    )}
+
+                    {filtersChanged && (
+                      <div className="fd-banner fd-banner-info" role="status">
+                        Your filters changed after these results were made.
+                        Press “Apply filters &amp; refresh” to update them.
+                      </div>
+                    )}
+
+                    {external && (
+                      <div className="fd-banner fd-banner-warn" role="note">
+                        <strong>Live OpenStreetMap results.</strong> No stored
+                        food data exists for this destination, so these places
+                        come from OpenStreetMap. It does not provide spice
+                        level, dietary details or prices, and these cannot be
+                        verified.
+                        {external.applied.length > 0 && (
+                          <p>
+                            Applied:{" "}
+                            {external.applied
+                              .map((a) => `${a.label} (${a.how})`)
+                              .join("; ")}
+                            .
+                          </p>
+                        )}
+                        {external.notVerified.length > 0 && (
+                          <p>
+                            Not applied (no data to check):{" "}
+                            {external.notVerified
+                              .map((a) => `${a.label}: ${a.value}`)
+                              .join(", ")}
+                            .
+                          </p>
+                        )}
+                        {external.hiddenForMissingData > 0 && (
+                          <p>
+                            {external.hiddenForMissingData} place
+                            {external.hiddenForMissingData === 1 ? " was" : "s were"}{" "}
+                            hidden because OpenStreetMap lists no matching
+                            cuisine or type for {external.hiddenForMissingData === 1 ? "it" : "them"}.
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {loadingRecommendations ? (
-                      <div className="food-state-card compact">
+                      <div className="food-state-card compact" role="status">
                         <div className="food-spinner" />
                         <h3>Finding the best food options...</h3>
                         <p>
-                          Using your trip, destination, date and preferences.
+                          Using your trip, destination, date and filters.
                         </p>
                       </div>
-                    ) : recommendations.length === 0 ? (
+                    ) : displayedRecommendations.length === 0 ? (
                       <div className="food-empty-card">
                         <div>🍽️</div>
                         <h3>
                           {!selectedDestinationId
                             ? "Select a destination first"
-                            : "No food recommendations yet"}
+                            : noMatch || external
+                              ? "No results match these filters"
+                              : "No food recommendations yet"}
                         </h3>
                         <p>
                           {!selectedDestinationId
                             ? "Choose a destination from the trip above. Its food availability will be loaded before you generate recommendations."
-                            : "Generate a recommendation above to see dishes and food places for your selected destination."}
+                            : noMatch || external
+                              ? "Try removing a filter, widening the distance, or choosing a different result type."
+                              : "Choose a result type, set any filters, then press “Generate recommendations”."}
                         </p>
+                        {(noMatch || external) && activeFilters.length > 0 && (
+                          <button
+                            type="button"
+                            className="fd-btn fd-btn-outline"
+                            onClick={clearAllFilters}
+                          >
+                            Clear all filters
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="food-recommendation-grid">
-                        {recommendations.map((item, index) => (
+                        {displayedRecommendations.map((item, index) => (
                           <FoodRecommendationCard
                             key={
                               item?.foodRecommendationId ??
@@ -1336,6 +1461,77 @@ function Food({ onBack }) {
         )}
       </div>
     </section>
+  );
+}
+
+
+/* ---------------- Small filter controls ---------------- */
+
+function FilterSelect({ id, label, value, options, state, onChange }) {
+  const disabled = !state?.enabled;
+  return (
+    <div className={`fd-field ${disabled ? "is-disabled" : ""}`}>
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">Any</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {disabled && <small>{state.reason}</small>}
+    </div>
+  );
+}
+
+function FilterText({
+  id,
+  label,
+  value,
+  state,
+  onChange,
+  placeholder,
+  type = "text",
+  ...rest
+}) {
+  const disabled = !state?.enabled;
+  return (
+    <div className={`fd-field ${disabled ? "is-disabled" : ""}`}>
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        {...rest}
+      />
+      {disabled && <small>{state.reason}</small>}
+    </div>
+  );
+}
+
+function FilterToggle({ id, label, checked, state, onChange }) {
+  const disabled = !state?.enabled;
+  return (
+    <div className={`fd-toggle ${disabled ? "is-disabled" : ""}`}>
+      <input
+        id={id}
+        type="checkbox"
+        checked={Boolean(checked)}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <label htmlFor={id}>{label}</label>
+      {disabled && <small>{state.reason}</small>}
+    </div>
   );
 }
 
@@ -1624,6 +1820,7 @@ function FoodRecommendationCard({
   );
 }
 
+
 function FoodPlacesSection({
   foodPlaces,
   foods,
@@ -1864,5 +2061,6 @@ function FoodHistorySection({ history, loading, onRetry }) {
     </>
   );
 }
+
 
 export default Food;

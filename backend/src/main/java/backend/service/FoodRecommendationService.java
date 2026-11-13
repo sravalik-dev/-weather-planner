@@ -2036,19 +2036,31 @@ List<FoodRecommendationResponse> responses =
         FoodType type =
                 food.getFoodType();
 
+        // NOTE: "vegan" contains the text "veg", so vegan and
+        // non-vegetarian must be checked BEFORE the vegetarian
+        // check; otherwise a Vegan filter returned Vegetarian dishes.
+        if (containsAny(
+                normalized,
+                "vegan")) {
+
+            return type == FoodType.VEGAN;
+        }
+
+        if (containsAny(
+                normalized,
+                "non-veg",
+                "non veg",
+                "nonveg")) {
+
+            return type == FoodType.NON_VEGETARIAN;
+        }
+
         if (containsAny(
                 normalized,
                 "vegetarian",
                 "veg")) {
 
             return type == FoodType.VEGETARIAN;
-        }
-
-        if (containsAny(
-                normalized,
-                "vegan")) {
-
-            return type == FoodType.VEGAN;
         }
 
         if (containsAny(

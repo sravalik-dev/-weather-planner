@@ -1,0 +1,208 @@
+/* =========================================================
+   ACCOMMODATION - filter sidebar, results header, skeletons (prefix af-)
+   Loaded after Accommodation.css. Explicit colours so text stays readable:
+   ink #10303a, muted #46616b on white.
+========================================================= */
+
+.accommodation-page {
+  --af-ink: #10303a;
+  --af-muted: #46616b;
+  --af-line: #c9d8da;
+  --af-border: #7f9aa2;
+  --af-forest: #0f3d3e;
+  --af-emerald: #0e8f6e;
+  --af-soft: #e3f5ee;
+  --af-sky: #1d78a6;
+  --af-danger: #a32121;
+  color: var(--af-ink);
+}
+
+.accommodation-page :is(button, a, input, select):focus-visible {
+  outline: 3px solid var(--af-sky);
+  outline-offset: 2px;
+}
+
+.accommodation-page .accommodation-header h1 { color: #10303a; }
+.accommodation-page .accommodation-header p { color: #46616b; }
+
+.app-shell:not(.view-budget) .accommodation-category-card.active {
+  border-color: var(--af-emerald);
+  border-left-color: var(--af-emerald);
+  background: var(--af-soft);
+  box-shadow: 0 0 0 2px rgba(14, 143, 110, 0.35);
+}
+.accommodation-category-card:disabled { opacity: 0.6; cursor: progress; }
+
+/* ---------- trip / destination row ---------- */
+.af-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--af-line);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+/* ---------- fields ---------- */
+.af-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin-bottom: 12px; }
+.af-context .af-field { margin-bottom: 0; }
+.af-label { font-size: 13px; font-weight: 700; color: var(--af-ink); }
+.af-hint { font-size: 12px; color: var(--af-muted); }
+.af-error { font-size: 12px; font-weight: 600; color: var(--af-danger); }
+
+.af-field :is(input, select) {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1.5px solid var(--af-border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--af-ink);
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.af-field input::placeholder { color: #5f777f; opacity: 1; }
+.af-field.has-error :is(input, select) { border-color: var(--af-danger); background: #fff6f6; }
+.af-field :is(input, select):disabled { background: #eef3f4; color: #5d7279; cursor: not-allowed; }
+
+.af-check {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 34px; margin-bottom: 8px;
+  font-size: 14px; color: var(--af-ink); cursor: pointer;
+}
+.af-check input { width: 18px; height: 18px; accent-color: var(--af-emerald); }
+.af-check input:disabled + * , .af-check:has(input:disabled) { color: #5d7279; cursor: not-allowed; }
+
+.af-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+.af-facilities {
+  margin: 0 0 12px; padding: 10px 12px;
+  border: 1px solid var(--af-line); border-radius: 12px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px;
+}
+.af-facilities legend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--af-ink); }
+
+.af-warning {
+  margin: 0 0 10px; padding: 8px 10px; border-radius: 8px;
+  background: #fff7e0; color: #6b4a00; border: 1px solid #ecd48a; font-size: 13px;
+}
+.af-error-summary {
+  margin: 0 0 10px; padding: 8px 10px; border-radius: 8px;
+  background: #fdeaea; color: #7d1616; border: 1px solid #e3a3a3; font-size: 13px; font-weight: 600;
+}
+
+/* ---------- layout ---------- */
+.af-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-top: 18px;
+}
+.af-drawer-toggle { display: none; }
+
+.af-sidebar {
+  position: sticky; top: 12px;
+  padding: 18px;
+  border: 1px solid var(--af-line);
+  border-radius: 18px;
+  background: #ffffff;
+}
+.af-side-title { margin: 0 0 14px; font-size: 18px; color: var(--af-ink); }
+
+.af-actions {
+  display: flex; gap: 10px;
+  margin-top: 6px; padding-top: 12px;
+  border-top: 1px solid var(--af-line);
+}
+.af-apply, .af-clear {
+  min-height: 44px; padding: 10px 16px; border-radius: 11px;
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.af-apply { flex: 1; border: 0; background: var(--af-forest); color: #ffffff; }
+.af-apply:hover:not(:disabled) { background: #165456; }
+.af-clear { border: 1.5px solid var(--af-border); background: #ffffff; color: var(--af-ink); }
+.af-apply:disabled, .af-clear:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ---------- results ---------- */
+.af-results { min-width: 0; }
+.af-result-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.af-count { margin: 0; margin-right: auto; font-weight: 700; color: var(--af-ink); font-size: 15px; }
+.af-sort { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--af-muted); }
+.af-sort select {
+  min-height: 40px; padding: 6px 10px; border: 1.5px solid var(--af-border);
+  border-radius: 10px; background: #ffffff; color: var(--af-ink); font: inherit; font-size: 14px;
+}
+.af-note { margin: 0 0 10px; font-size: 12.5px; color: var(--af-muted); }
+
+.af-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.af-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid #9fd3c0; background: var(--af-soft); color: #0b4a3a;
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.af-chip b { font-weight: 700; }
+.af-chip:hover { background: #d3efe4; }
+.af-chip-clear { background: #ffffff; border-color: var(--af-border); color: var(--af-ink); font-weight: 700; }
+
+.af-banner {
+  margin: 0 0 12px; padding: 9px 12px; border-radius: 10px;
+  background: #e6f2fa; border: 1px solid #a9cfe6; color: #0d4766; font-size: 13.5px;
+}
+
+.af-card-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px; margin: -2px 0 12px; padding: 0 14px; border-radius: 12px;
+  background: linear-gradient(120deg, #dff1ec, #dcecf6);
+  font-size: 30px;
+}
+.af-card-banner em {
+  font-style: normal; font-size: 12px; font-weight: 700;
+  padding: 4px 9px; border-radius: 999px; background: #ffffff; color: #0b4a3a;
+}
+
+.accommodation-card .accommodation-description { color: #46616b; }
+.accommodation-card .accommodation-meta span { color: #2f4a54; }
+.accommodation-page .accommodation-message { color: #10303a; }
+.accommodation-page .accommodation-message.error { color: #7d1616; background: #fdeaea; border: 1px solid #e3a3a3; }
+.accommodation-page .accommodation-empty { background: #ffffff; color: #10303a; border: 1px dashed var(--af-border); border-radius: 16px; padding: 28px; text-align: center; }
+.accommodation-page .accommodation-empty p { color: #46616b; }
+.accommodation-page .accommodation-empty .af-apply { margin-top: 10px; }
+
+/* ---------- skeletons ---------- */
+.af-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.af-skeleton { padding: 16px; border: 1px solid var(--af-line); border-radius: 16px; background: #ffffff; display: grid; gap: 10px; }
+.af-skeleton i {
+  display: block; height: 14px; border-radius: 7px;
+  background: linear-gradient(90deg, #e6eef0 25%, #f3f7f8 50%, #e6eef0 75%);
+  background-size: 200% 100%; animation: af-shimmer 1.3s linear infinite;
+}
+.af-skeleton i:first-child { height: 60px; border-radius: 12px; }
+.af-skeleton i:nth-child(2) { width: 70%; }
+.af-skeleton i:nth-child(4) { width: 45%; }
+@keyframes af-shimmer { to { background-position: -200% 0; } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 960px) {
+  .af-layout { grid-template-columns: 1fr; }
+  .af-drawer-toggle {
+    display: block; width: 100%; min-height: 46px; border-radius: 12px;
+    border: 1.5px solid var(--af-border); background: #ffffff; color: var(--af-ink);
+    font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .af-sidebar { display: none; position: static; max-height: none; }
+  .af-sidebar.open { display: block; }
+}
+@media (max-width: 600px) {
+  .af-context { grid-template-columns: 1fr; }
+  .af-row, .af-facilities { grid-template-columns: 1fr; }
+  .af-sort { width: 100%; }
+  .af-sort select { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-skeleton i { animation: none; }
+}

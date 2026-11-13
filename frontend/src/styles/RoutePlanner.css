@@ -1,0 +1,531 @@
+/* =========================================================
+   SMART ROUTE PLANNER (prefix rp-)
+   Light, high-contrast layout. Loaded with RoutePlanner.jsx, so it comes
+   after App.css / AppTheme.css / TravelTheme.css, and every selector is
+   prefixed with `.app-shell:not(.view-budget) .rp-page` so it outranks
+   the older dark-theme rules.
+   Colours: ink #10303a, muted #46616b on white, forest #0f3d3e,
+   emerald #0e8f6e, sky #1d78a6.
+========================================================= */
+
+.app-shell:not(.view-budget) .rp-page {
+  --rp-ink: #10303a;
+  --rp-muted: #46616b;
+  --rp-line: #c9d8da;
+  --rp-border: #7f9aa2;
+  --rp-forest: #0f3d3e;
+  --rp-forest-2: #165456;
+  --rp-emerald: #0e8f6e;
+  --rp-soft: #e3f5ee;
+  --rp-sky: #1d78a6;
+  --rp-sky-soft: #e4f1f8;
+  --rp-amber-bg: #fff7e0;
+  --rp-amber-line: #ecd48a;
+  --rp-amber-ink: #6b4a00;
+  --rp-danger: #a32121;
+  --rp-danger-bg: #fdeaea;
+
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--rp-ink);
+}
+
+.app-shell:not(.view-budget) .rp-page .rp-shell {
+  width: min(1180px, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: 4px 0 40px;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  display: block;
+}
+
+.app-shell:not(.view-budget) .rp-page :is(button, a, input, select, summary):focus-visible {
+  outline: 3px solid var(--rp-sky);
+  outline-offset: 2px;
+}
+
+.app-shell:not(.view-budget) .rp-page .rp-sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- back button ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px; margin: 0 0 12px; padding: 8px 14px;
+  border: 1.5px solid var(--rp-border); border-radius: 11px;
+  background: #ffffff; color: var(--rp-ink);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.app-shell:not(.view-budget) .rp-page .rp-back:hover { background: var(--rp-soft); }
+
+/* ---------- hero ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 26px 28px;
+  border-radius: 22px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(125, 211, 232, 0.3), transparent 46%),
+    linear-gradient(120deg, #0b3b3c, #0f5a57 60%, #1d78a6 150%);
+  text-align: left;
+}
+.app-shell:not(.view-budget) .rp-page .rp-eyebrow {
+  display: block; margin: 0 0 6px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #9fe3cf;
+}
+.app-shell:not(.view-budget) .rp-page .rp-hero h1 {
+  margin: 0 0 8px; color: #ffffff; text-shadow: none;
+  font-size: clamp(26px, 4vw, 36px); line-height: 1.1; text-align: left;
+}
+.app-shell:not(.view-budget) .rp-page .rp-hero p {
+  margin: 0; max-width: 56ch; color: #e3f3f1; font-size: 15px; line-height: 1.55; text-align: left;
+}
+.app-shell:not(.view-budget) .rp-page .rp-trip-facts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0;
+}
+.app-shell:not(.view-budget) .rp-page .rp-trip-facts > div {
+  padding: 10px 12px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.13); border: 1px solid rgba(255, 255, 255, 0.25);
+  min-width: 0;
+}
+.app-shell:not(.view-budget) .rp-page .rp-trip-facts dt {
+  margin: 0 0 2px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #bfeadd;
+}
+.app-shell:not(.view-budget) .rp-page .rp-trip-facts dd {
+  margin: 0; font-size: 15px; font-weight: 700; color: #ffffff; overflow-wrap: anywhere;
+}
+
+/* ---------- metrics ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-metrics {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-metric {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 16px;
+  background: #ffffff; border: 1px solid var(--rp-line);
+  box-shadow: 0 2px 8px rgba(16, 48, 58, 0.05);
+}
+.app-shell:not(.view-budget) .rp-page .rp-metric-icon {
+  display: grid; place-items: center; flex: none;
+  width: 42px; height: 42px; border-radius: 12px; background: var(--rp-soft); font-size: 20px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-metric strong {
+  display: block; font-size: 22px; line-height: 1.15; color: var(--rp-ink);
+}
+.app-shell:not(.view-budget) .rp-page .rp-metric span:not(.rp-metric-icon) {
+  display: block; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--rp-muted);
+}
+
+.app-shell:not(.view-budget) .rp-page .rp-skel {
+  display: inline-block; width: 70px; height: 20px; border-radius: 6px; vertical-align: middle;
+  background: linear-gradient(90deg, #e1ebed 25%, #f1f6f7 50%, #e1ebed 75%);
+  background-size: 200% 100%; animation: rp-shimmer 1.3s linear infinite;
+}
+@keyframes rp-shimmer { to { background-position: -200% 0; } }
+
+/* ---------- alerts ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-alert {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 0 14px; padding: 11px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45;
+}
+.app-shell:not(.view-budget) .rp-page .rp-alert-error {
+  background: var(--rp-danger-bg); border: 1px solid #e3a3a3; color: #7d1616;
+}
+.app-shell:not(.view-budget) .rp-page .rp-alert button {
+  flex: none; min-width: 32px; min-height: 32px; padding: 4px 10px;
+  border: 1px solid #c98a8a; border-radius: 8px; background: #ffffff; color: #7d1616;
+  font: inherit; font-weight: 700; cursor: pointer;
+}
+
+/* ---------- layout ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-workspace {
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+  gap: 16px; align-items: start; margin-bottom: 20px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-card {
+  padding: 20px; border-radius: 18px; min-width: 0;
+  background: #ffffff; border: 1px solid var(--rp-line); color: var(--rp-ink);
+  box-shadow: 0 2px 10px rgba(16, 48, 58, 0.05);
+}
+.app-shell:not(.view-budget) .rp-page .rp-overview { position: sticky; top: 12px; }
+.app-shell:not(.view-budget) .rp-page .rp-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-card-head h2 {
+  margin: 0 0 3px; font-size: 20px; color: var(--rp-ink);
+}
+.app-shell:not(.view-budget) .rp-page .rp-card-head p {
+  margin: 0; font-size: 13.5px; color: var(--rp-muted); line-height: 1.45;
+}
+.app-shell:not(.view-budget) .rp-page .rp-badge {
+  flex: none; padding: 5px 11px; border-radius: 999px;
+  background: var(--rp-soft); color: #0b4a3a; border: 1px solid #9fd3c0;
+  font-size: 13px; font-weight: 700;
+}
+
+/* ---------- add form ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-add-form { display: flex; gap: 10px; margin-bottom: 14px; }
+.app-shell:not(.view-budget) .rp-page .rp-add-form input {
+  flex: 1; min-width: 0; min-height: 46px; padding: 10px 14px;
+  border: 1.5px solid var(--rp-border); border-radius: 12px;
+  background: #ffffff; color: var(--rp-ink); font: inherit; font-size: 15px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-add-form input::placeholder { color: #5f777f; opacity: 1; }
+.app-shell:not(.view-budget) .rp-page .rp-add-form input:disabled { background: #eef3f4; }
+.app-shell:not(.view-budget) .rp-page .rp-add-form button {
+  flex: none; min-height: 46px; padding: 10px 18px; border: 0; border-radius: 12px;
+  background: var(--rp-forest); color: #ffffff; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer;
+}
+.app-shell:not(.view-budget) .rp-page .rp-add-form button:hover:not(:disabled) { background: var(--rp-forest-2); }
+.app-shell:not(.view-budget) .rp-page .rp-add-form button:disabled { background: #8aa4a6; color: #ffffff; cursor: not-allowed; }
+
+.app-shell:not(.view-budget) .rp-page .rp-inline-error {
+  margin: -4px 0 12px; padding: 9px 12px; border-radius: 10px;
+  background: var(--rp-danger-bg); border: 1px solid #e3a3a3; color: #7d1616; font-size: 13.5px;
+}
+
+/* ---------- empty + skeleton ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-empty {
+  padding: 28px 18px; text-align: center; border: 1.5px dashed var(--rp-border); border-radius: 16px;
+  background: #f7fbfb; color: var(--rp-ink);
+}
+.app-shell:not(.view-budget) .rp-page .rp-empty > span { font-size: 34px; display: block; margin-bottom: 6px; }
+.app-shell:not(.view-budget) .rp-page .rp-empty h3 { margin: 0 0 4px; font-size: 18px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .rp-empty p { margin: 0 auto; max-width: 44ch; font-size: 14px; color: var(--rp-muted); line-height: 1.5; }
+.app-shell:not(.view-budget) .rp-page .rp-empty-small { padding: 20px 14px; }
+.app-shell:not(.view-budget) .rp-page .rp-skeleton-list { display: grid; gap: 10px; }
+.app-shell:not(.view-budget) .rp-page .rp-skeleton-list i {
+  display: block; height: 58px; border-radius: 14px;
+  background: linear-gradient(90deg, #e1ebed 25%, #f1f6f7 50%, #e1ebed 75%);
+  background-size: 200% 100%; animation: rp-shimmer 1.3s linear infinite;
+}
+
+/* ---------- timeline ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-timeline { list-style: none; margin: 0; padding: 0; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-wrap { position: relative; margin: 0; padding: 0; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-wrap.is-dragging { opacity: 0.45; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-wrap.is-drop-target .rp-stop {
+  border-color: var(--rp-sky); box-shadow: 0 0 0 3px rgba(29, 120, 166, 0.25);
+}
+
+.app-shell:not(.view-budget) .rp-page .rp-leg {
+  display: flex; align-items: center; gap: 10px; padding: 4px 0 4px 36px; min-height: 36px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-leg-line {
+  width: 0; height: 28px; border-left: 3px dotted #7fb5a5; margin-left: 4px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-leg-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 11px; border-radius: 999px;
+  background: var(--rp-sky-soft); border: 1px solid #a9cfe6; color: #0d4766;
+  font-size: 13px; font-weight: 700;
+}
+.app-shell:not(.view-budget) .rp-page .rp-leg-chip em { font-style: normal; color: var(--rp-amber-ink); }
+.app-shell:not(.view-budget) .rp-page .rp-leg-muted { background: #eef3f4; border-color: var(--rp-line); color: var(--rp-muted); font-weight: 600; }
+
+.app-shell:not(.view-budget) .rp-page .rp-stop {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  background: #ffffff; border: 1.5px solid var(--rp-line);
+}
+.app-shell:not(.view-budget) .rp-page .rp-stop:hover { border-color: var(--rp-border); }
+.app-shell:not(.view-budget) .rp-page .rp-handle {
+  flex: none; cursor: grab; color: #5d7a82; font-size: 20px; line-height: 1; user-select: none; padding: 4px 2px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-handle:active { cursor: grabbing; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-number {
+  flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--rp-forest); color: #ffffff; font-weight: 800; font-size: 15px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-stop-body { flex: 1; min-width: 0; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-body strong {
+  display: block; font-size: 16px; color: var(--rp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-shell:not(.view-budget) .rp-page .rp-stop-body span {
+  display: block; margin-top: 2px; font-size: 13px; color: var(--rp-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions { flex: none; display: flex; align-items: center; gap: 6px; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions button {
+  min-width: 38px; min-height: 38px; padding: 6px 10px;
+  border: 1.5px solid var(--rp-border); border-radius: 10px;
+  background: #ffffff; color: var(--rp-ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions button:hover:not(:disabled) { background: var(--rp-soft); }
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions .rp-icon-danger { color: var(--rp-danger); border-color: #d9a3a3; }
+.app-shell:not(.view-budget) .rp-page .rp-stop-actions .rp-icon-danger:hover:not(:disabled) { background: var(--rp-danger-bg); }
+.app-shell:not(.view-budget) .rp-page .rp-confirm { flex-wrap: wrap; justify-content: flex-end; }
+.app-shell:not(.view-budget) .rp-page .rp-confirm > span { font-size: 13px; font-weight: 700; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .rp-confirm .rp-danger { background: var(--rp-danger); border-color: var(--rp-danger); color: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .rp-confirm .rp-danger:hover { background: #861a1a; }
+
+/* ---------- overview ---------- */
+.app-shell:not(.view-budget) .rp-page .rp-source {
+  margin-bottom: 14px; padding: 11px 13px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+}
+.app-shell:not(.view-budget) .rp-page .rp-source strong { display: block; font-size: 14px; margin-bottom: 2px; }
+.app-shell:not(.view-budget) .rp-page .rp-source.is-live { background: var(--rp-soft); border: 1px solid #9fd3c0; color: #0b4a3a; }
+.app-shell:not(.view-budget) .rp-page .rp-source.is-estimate { background: var(--rp-amber-bg); border: 1px solid var(--rp-amber-line); color: var(--rp-amber-ink); }
+
+.app-shell:not(.view-budget) .rp-page .rp-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.app-shell:not(.view-budget) .rp-page .rp-totals > div { padding: 10px 12px; border-radius: 12px; background: #f3f8f8; border: 1px solid var(--rp-line); }
+.app-shell:not(.view-budget) .rp-page .rp-totals span { display: block; font-size: 12px; font-weight: 700; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .rp-totals strong { display: block; margin-top: 2px; font-size: 19px; color: var(--rp-ink); }
+
+.app-shell:not(.view-budget) .rp-page .rp-legs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.app-shell:not(.view-budget) .rp-page .rp-leg-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.app-shell:not(.view-budget) .rp-page .rp-leg-names { color: var(--rp-ink); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.app-shell:not(.view-budget) .rp-page .rp-leg-names b {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 4px;
+  border-radius: 50%; background: var(--rp-sky); color: #ffffff; font-size: 11px;
+}
+.app-shell:not(.view-budget) .rp-page .rp-leg-values { flex: none; color: var(--rp-muted); font-weight: 600; text-align: right; }
+.app-shell:not(.view-budget) .rp-page .rp-leg-bar { height: 8px; margin-top: 6px; border-radius: 99px; background: #e1ebed; overflow: hidden; }
+.app-shell:not(.view-budget) .rp-page .rp-leg-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--rp-emerald), var(--rp-sky)); }
+.app-shell:not(.view-budget) .rp-page .rp-retry { white-space: nowrap; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .app-shell:not(.view-budget) .rp-page .rp-workspace { grid-template-columns: 1fr; }
+  .app-shell:not(.view-budget) .rp-page .rp-overview { position: static; }
+  .app-shell:not(.view-budget) .rp-page .rp-hero { grid-template-columns: 1fr; }
+  .app-shell:not(.view-budget) .rp-page .rp-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .app-shell:not(.view-budget) .rp-page .rp-hero { padding: 20px 18px; }
+  .app-shell:not(.view-budget) .rp-page .rp-add-form { flex-direction: column; }
+  .app-shell:not(.view-budget) .rp-page .rp-stop { flex-wrap: wrap; }
+  .app-shell:not(.view-budget) .rp-page .rp-stop-body { flex-basis: calc(100% - 100px); }
+  .app-shell:not(.view-budget) .rp-page .rp-stop-actions { width: 100%; justify-content: flex-end; }
+  .app-shell:not(.view-budget) .rp-page .rp-leg { padding-left: 28px; }
+  .app-shell:not(.view-budget) .rp-page .rp-card { padding: 16px; }
+  .app-shell:not(.view-budget) .rp-page .rp-leg-row { flex-direction: column; gap: 2px; }
+  .app-shell:not(.view-budget) .rp-page .rp-leg-values { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell:not(.view-budget) .rp-page .rp-skel,
+  .app-shell:not(.view-budget) .rp-page .rp-skeleton-list i { animation: none; }
+}
+
+
+/* =========================================================
+   LOWER SECTIONS (destination details, route sequence, itinerary, popup)
+   Same content and behaviour as before, re-skinned to the light theme
+   because the old rules gave dark panels with dark text.
+========================================================= */
+
+/* ---------- destination information (table) ---------- */
+.app-shell:not(.view-budget) .rp-page .destination-information-card {
+  margin: 0 0 16px; padding: 20px; border-radius: 18px;
+  background: #ffffff; border: 1px solid var(--rp-line); color: var(--rp-ink);
+  box-shadow: 0 2px 10px rgba(16, 48, 58, 0.05);
+}
+.app-shell:not(.view-budget) .rp-page .destination-information-header { background: transparent; padding: 0; margin: 0 0 14px; border: 0; }
+.app-shell:not(.view-budget) .rp-page .destination-information-header span { color: var(--rp-emerald); font-size: 12px; font-weight: 800; letter-spacing: 0.1em; }
+.app-shell:not(.view-budget) .rp-page .destination-information-header h2 { margin: 4px 0; font-size: 20px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .destination-information-header p { margin: 0; font-size: 13.5px; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .destination-information-empty { color: var(--rp-muted); padding: 14px 0; }
+.app-shell:not(.view-budget) .rp-page .destination-table-wrapper { overflow-x: auto; border: 1px solid var(--rp-line); border-radius: 12px; background: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .destination-table { width: 100%; min-width: 860px; border-collapse: collapse; background: #ffffff; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .destination-table th {
+  padding: 10px 12px; text-align: left; white-space: nowrap;
+  background: #eef5f5; color: #1d424b; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--rp-line);
+}
+.app-shell:not(.view-budget) .rp-page .destination-table td { padding: 11px 12px; color: var(--rp-ink); font-size: 14px; border-bottom: 1px solid #e3ecec; vertical-align: top; background: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .destination-table tr:last-child td { border-bottom: 0; }
+.app-shell:not(.view-budget) .rp-page .destination-table td strong { color: var(--rp-ink); display: block; }
+.app-shell:not(.view-budget) .rp-page .destination-table td small, .app-shell:not(.view-budget) .rp-page .destination-table td span:not(.destination-order-pill) { color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .destination-order-pill {
+  display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%;
+  background: var(--rp-forest); color: #ffffff; font-weight: 800; font-size: 13px;
+}
+
+/* edit form inside the details card (uses inline styles in the JSX) */
+.app-shell:not(.view-budget) .rp-page .destination-information-card form { background: #f6fafa !important; border-color: var(--rp-line) !important; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .destination-information-card form h3, .app-shell:not(.view-budget) .rp-page .destination-information-card form p { color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .destination-information-card form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .destination-information-card form :is(input:not([type="checkbox"]), select) {
+  min-height: 42px; padding: 8px 11px; border: 1.5px solid var(--rp-border); border-radius: 10px;
+  background: #ffffff; color: var(--rp-ink); font: inherit; font-size: 14px; font-weight: 400;
+}
+.app-shell:not(.view-budget) .rp-page .destination-information-card form :is(input, select)::placeholder { color: #5f777f; opacity: 1; }
+.app-shell:not(.view-budget) .rp-page .destination-information-card form button {
+  min-height: 42px; padding: 8px 16px; border-radius: 10px; border: 1.5px solid var(--rp-border);
+  background: #ffffff; color: var(--rp-ink); font: inherit; font-weight: 700; cursor: pointer;
+}
+.app-shell:not(.view-budget) .rp-page .destination-information-card form button[type="submit"] { background: var(--rp-forest); border-color: var(--rp-forest); color: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .destination-information-card form button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ---------- route sequence ---------- */
+.app-shell:not(.view-budget) .rp-page .route-insight-card {
+  margin: 0 0 16px; padding: 20px; border-radius: 18px;
+  background: #ffffff; border: 1px solid var(--rp-line); color: var(--rp-ink);
+  box-shadow: 0 2px 10px rgba(16, 48, 58, 0.05);
+}
+.app-shell:not(.view-budget) .rp-page .route-insight-card > span { color: var(--rp-emerald); font-size: 12px; font-weight: 800; letter-spacing: 0.1em; }
+.app-shell:not(.view-budget) .rp-page .route-insight-card h2 { margin: 4px 0 12px; font-size: 20px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .route-sequence { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.app-shell:not(.view-budget) .rp-page .route-sequence-item { display: inline-flex; align-items: center; gap: 8px; padding: 0; background: transparent; border: 0; }
+.app-shell:not(.view-budget) .rp-page .route-sequence-item > span {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--rp-forest); color: #ffffff; font-size: 13px; font-weight: 800;
+}
+.app-shell:not(.view-budget) .rp-page .route-sequence-item > strong {
+  padding: 6px 12px; border-radius: 999px; background: var(--rp-soft); border: 1px solid #9fd3c0; color: #0b4a3a; font-size: 14px;
+}
+.app-shell:not(.view-budget) .rp-page .route-sequence-item > b { color: var(--rp-muted); }
+
+/* ---------- itinerary ---------- */
+.app-shell:not(.view-budget) .rp-page .module6-itinerary-card {
+  margin: 0 0 16px; padding: 20px; border-radius: 18px;
+  background: #ffffff; border: 1px solid var(--rp-line); color: var(--rp-ink); box-shadow: 0 2px 10px rgba(16, 48, 58, 0.05);
+}
+.app-shell:not(.view-budget) .rp-page .module6-header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 0 0 14px; padding: 16px 18px; border-radius: 14px;
+  background: linear-gradient(120deg, #0b3b3c, #0f5a57 65%, #1d78a6 150%); color: #ffffff; border: 0;
+}
+.app-shell:not(.view-budget) .rp-page .module6-header-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.app-shell:not(.view-budget) .rp-page .module6-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.18); font-size: 24px; }
+.app-shell:not(.view-budget) .rp-page .module6-eyebrow { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em; color: #9fe3cf; }
+.app-shell:not(.view-budget) .rp-page .module6-header h2 { margin: 2px 0; font-size: 21px; color: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .module6-header p { margin: 0; font-size: 13.5px; color: #e3f3f1; }
+.app-shell:not(.view-budget) .rp-page .module6-header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.app-shell:not(.view-budget) .rp-page :is(.module6-secondary-button, .module6-primary-button, .module6-save-button, .module6-cancel-button, .module6-day-add) {
+  min-height: 40px; padding: 8px 14px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.app-shell:not(.view-budget) .rp-page .module6-header-actions .module6-secondary-button { background: #ffffff; color: var(--rp-forest); border-color: #ffffff; }
+.app-shell:not(.view-budget) .rp-page .module6-header-actions .module6-primary-button { background: #0e8f6e; color: #ffffff; border-color: #0e8f6e; }
+.app-shell:not(.view-budget) .rp-page .module6-header-actions .module6-save-button { background: transparent; color: #ffffff; border-color: rgba(255,255,255,0.7); }
+.app-shell:not(.view-budget) .rp-page .module6-header-actions button:hover:not(:disabled) { filter: brightness(1.08); }
+.app-shell:not(.view-budget) .rp-page :is(.module6-secondary-button, .module6-primary-button, .module6-save-button, .module6-day-add):disabled { opacity: 0.55; cursor: not-allowed; }
+.app-shell:not(.view-budget) .rp-page .module6-day-add { background: #ffffff; color: var(--rp-forest); border-color: var(--rp-border); }
+.app-shell:not(.view-budget) .rp-page .module6-day-add:hover { background: var(--rp-soft); }
+
+.app-shell:not(.view-budget) .rp-page .module6-info-strip { display: grid; grid-template-columns: repeat(3, minmax(110px, 1fr)) minmax(0, 2fr); gap: 10px; margin: 0 0 16px; padding: 0; background: transparent; border: 0; }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip > div { padding: 12px 14px; border-radius: 12px; background: #f3f8f8; border: 1px solid var(--rp-line); }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip span { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip strong { display: block; margin-top: 2px; font-size: 22px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-info-note { background: var(--rp-sky-soft) !important; border-color: #a9cfe6 !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-note span { color: #0d4766; letter-spacing: 0.07em; }
+.app-shell:not(.view-budget) .rp-page .module6-info-note p, .app-shell:not(.view-budget) .rp-page .module6-info-note small { color: #0d4766; }
+
+.app-shell:not(.view-budget) .rp-page .module6-alert { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+.app-shell:not(.view-budget) .rp-page .module6-success { background: var(--rp-soft); border: 1px solid #9fd3c0; color: #0b4a3a; }
+.app-shell:not(.view-budget) .rp-page .module6-error { background: var(--rp-danger-bg); border: 1px solid #e3a3a3; color: #7d1616; }
+.app-shell:not(.view-budget) .rp-page .module6-loading { padding: 20px; text-align: center; color: var(--rp-muted); }
+
+.app-shell:not(.view-budget) .rp-page .module6-days { display: grid; gap: 14px; padding: 0; background: transparent; }
+.app-shell:not(.view-budget) .rp-page .module6-day-card { border-radius: 14px; background: #ffffff; border: 1px solid var(--rp-line); overflow: hidden; box-shadow: none; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px; background: #eaf4f1; border-bottom: 1px solid var(--rp-line); color: var(--rp-ink);
+}
+.app-shell:not(.view-budget) .rp-page .module6-day-header * { color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-day-header span:first-child, .app-shell:not(.view-budget) .rp-page .module6-day-header small { color: #0b6a52; font-weight: 800; letter-spacing: 0.08em; font-size: 12px; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header h3 { margin: 0; font-size: 17px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-day-header .module6-day-add { color: var(--rp-forest); }
+
+.app-shell:not(.view-budget) .rp-page .module6-empty-day {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 12px; padding: 18px; border: 1.5px dashed var(--rp-border); border-radius: 12px; background: #f9fcfc; color: var(--rp-muted);
+}
+.app-shell:not(.view-budget) .rp-page .module6-empty-day * { color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day strong { color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day button { color: var(--rp-forest); background: #ffffff; border: 1.5px solid var(--rp-border); font-weight: 700; min-height: 38px; padding: 6px 12px; border-radius: 10px; cursor: pointer; font: inherit; }
+
+.app-shell:not(.view-budget) .rp-page .module6-activity-list { display: grid; gap: 10px; padding: 12px; }
+.app-shell:not(.view-budget) .rp-page .module6-activity {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px;
+  padding: 14px; border-radius: 12px; background: #ffffff; border: 1.5px solid var(--rp-line); color: var(--rp-ink);
+}
+.app-shell:not(.view-budget) .rp-page .module6-activity[draggable="true"] { cursor: grab; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-locked { background: #fff9e8; border-color: var(--rp-amber-line); }
+.app-shell:not(.view-budget) .rp-page .module6-time-column strong { display: block; font-size: 17px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-time-column span { font-size: 12.5px; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .module6-activity-top { display: flex; justify-content: space-between; gap: 10px; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-title-row { display: flex; align-items: center; gap: 8px; }
+.app-shell:not(.view-budget) .rp-page .module6-activity h4 { margin: 0; font-size: 16px; color: var(--rp-ink); }
+.app-shell:not(.view-budget) .rp-page .module6-location { display: block; margin-top: 2px; font-size: 13px; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .module6-drag-handle { color: #5d7a82; font-size: 18px; cursor: grab; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-notes { margin: 8px 0 0; font-size: 13.5px; color: var(--rp-muted); line-height: 1.5; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-actions button {
+  min-height: 34px; padding: 4px 11px; border: 1.5px solid var(--rp-border); border-radius: 9px;
+  background: #ffffff; color: var(--rp-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.app-shell:not(.view-budget) .rp-page .module6-activity-actions button:hover:not(:disabled) { background: var(--rp-soft); }
+.app-shell:not(.view-budget) .rp-page .module6-activity-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.app-shell:not(.view-budget) .rp-page .module6-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin: 14px 0 0; padding: 12px; border-radius: 12px; background: #f3f8f8; border: 1px solid var(--rp-line); }
+.app-shell:not(.view-budget) .rp-page .module6-footer span { font-size: 13px; color: var(--rp-muted); }
+.app-shell:not(.view-budget) .rp-page .route-planner-footer { margin: 0; padding: 6px 0 0; text-align: center; color: var(--rp-muted); font-size: 13px; background: transparent; }
+
+/* ---------- activity popup ---------- */
+.app-shell .module6-modal-overlay { background: rgba(10, 30, 36, 0.6); }
+.app-shell .module6-modal {
+  background: #ffffff; color: #10303a; border: 1px solid #c9d8da; border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(10, 30, 36, 0.35);
+}
+.app-shell .module6-modal-header { background: transparent; border-bottom: 1px solid #c9d8da; color: #10303a; }
+.app-shell .module6-modal-header h2, .app-shell .module6-modal-header h3 { color: #10303a; }
+.app-shell .module6-modal-header .module6-eyebrow { color: #0b6a52; }
+.app-shell .module6-modal-close { background: #ffffff; color: #10303a; border: 1.5px solid #7f9aa2; border-radius: 10px; min-width: 38px; min-height: 38px; cursor: pointer; font-size: 18px; }
+.app-shell .module6-form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: #10303a; }
+.app-shell .module6-form :is(input, select, textarea) {
+  min-height: 42px; padding: 8px 11px; border: 1.5px solid #7f9aa2; border-radius: 10px;
+  background: #ffffff; color: #10303a; font: inherit; font-size: 14px; font-weight: 400;
+}
+.app-shell .module6-form :is(input, select, textarea)::placeholder { color: #5f777f; opacity: 1; }
+.app-shell .module6-form :is(input, select, textarea):focus-visible { outline: 3px solid #1d78a6; outline-offset: 1px; }
+.app-shell .module6-modal-actions .module6-cancel-button { background: #ffffff; color: #10303a; border: 1.5px solid #7f9aa2; min-height: 42px; padding: 8px 16px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.app-shell .module6-modal-actions .module6-primary-button { background: #0f3d3e; color: #ffffff; border: 0; min-height: 42px; padding: 8px 18px; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.app-shell .module6-modal-actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+  .app-shell:not(.view-budget) .rp-page .module6-info-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-shell:not(.view-budget) .rp-page .module6-info-note { grid-column: 1 / -1; }
+  .app-shell:not(.view-budget) .rp-page .module6-activity { grid-template-columns: 1fr; gap: 6px; }
+  .app-shell:not(.view-budget) .rp-page .module6-header { padding: 14px; }
+  .app-shell:not(.view-budget) .rp-page .module6-empty-day { flex-direction: column; align-items: flex-start; }
+}
+
+
+/* The legacy itinerary rules use !important, so the light-theme colours
+   for its containers need it too. */
+.app-shell:not(.view-budget) .rp-page .module6-itinerary-card { background: #ffffff !important; border: 1px solid #c9d8da !important; box-shadow: 0 2px 10px rgba(16, 48, 58, 0.05) !important; border-radius: 18px !important; }
+.app-shell:not(.view-budget) .rp-page .module6-days { background: transparent !important; }
+.app-shell:not(.view-budget) .rp-page .module6-day-card { background: #ffffff !important; border: 1px solid #c9d8da !important; box-shadow: none !important; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header { background: #eaf4f1 !important; border-bottom: 1px solid #c9d8da !important; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header :is(h3, strong, p) { color: #10303a !important; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header :is(span, small) { color: #0b6a52 !important; }
+.app-shell:not(.view-budget) .rp-page .module6-day-header .module6-day-add { color: #0f3d3e !important; background: #ffffff !important; border: 1.5px solid #7f9aa2 !important; }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day { background: #f9fcfc !important; border: 1.5px dashed #7f9aa2 !important; }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day :is(strong, h4, p) { color: #10303a !important; }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day :is(span, small) { color: #46616b !important; }
+.app-shell:not(.view-budget) .rp-page .module6-empty-day button { color: #0f3d3e !important; background: #ffffff !important; border: 1.5px solid #7f9aa2 !important; min-height: 38px !important; padding: 6px 12px !important; border-radius: 10px !important; font-size: 13.5px !important; }
+.app-shell:not(.view-budget) .rp-page .module6-activity { background: #ffffff !important; border: 1.5px solid #c9d8da !important; }
+.app-shell:not(.view-budget) .rp-page .module6-activity-locked { background: #fff9e8 !important; border-color: #ecd48a !important; }
+.app-shell:not(.view-budget) .rp-page .module6-activity :is(h4, strong) { color: #10303a !important; }
+.app-shell:not(.view-budget) .rp-page .module6-activity :is(p, .module6-location, .module6-time-column span) { color: #46616b !important; }
+.app-shell:not(.view-budget) .rp-page .module6-footer { background: #f3f8f8 !important; border: 1px solid #c9d8da !important; }
+.app-shell:not(.view-budget) .rp-page .module6-footer span { color: #46616b !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip > div { background: #f3f8f8 !important; border: 1px solid #c9d8da !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip strong { color: #10303a !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-strip span { color: #46616b !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-note { background: #e4f1f8 !important; border-color: #a9cfe6 !important; }
+.app-shell:not(.view-budget) .rp-page .module6-info-note :is(span, p, small) { color: #0d4766 !important; }

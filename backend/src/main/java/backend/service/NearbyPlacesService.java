@@ -9,9 +9,13 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,39 +32,26 @@ public class NearbyPlacesService {
     private static final Logger log =
             LoggerFactory.getLogger(NearbyPlacesService.class);
 
-    /*
-     * Primary endpoint: previously tested successfully
-     * using PowerShell and returned HTTP 200.
-     *
-     * Remaining endpoints are fallbacks.
-     */
-    private static final List<String> OVERPASS_ENDPOINTS = List.of(
-            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-            "https://overpass-api.de/api/interpreter",
-            "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass.nchc.org.tw/api/interpreter"
-    );
+    private static final String PHOTON_ENDPOINT =
+            "https://photon.komoot.io/reverse";
 
-    private static final int MAX_RETRIES_PER_ENDPOINT = 2;
-
-    private static final int MAX_RADIUS_METERS = 50000;
+    private static final int PHOTON_LIMIT = 50;
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
     public NearbyPlacesService(ObjectMapper objectMapper) {
-
         this.objectMapper = objectMapper;
 
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(20))
+                .connectTimeout(Duration.ofSeconds(10))
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
     }
 
-    // ==================================================
-    // PUBLIC FOOD SEARCH
-    // ==================================================
+    // ---------------------------------------------------------
+    // PUBLIC METHODS
+    // ---------------------------------------------------------
 
     public List<NearbyPlace> findFood(
             double latitude,
@@ -69,26 +60,12 @@ public class NearbyPlacesService {
             String category) {
 
         validateCoordinates(latitude, longitude);
-        validateRadius(radius);
 
-        String query = buildFoodQuery(
-                latitude,
-                longitude,
-                radius,
-                category
-        );
+        List<String> tags = foodTags(category);
 
         return search(
-                query,
-                latitude,
-                longitude,
-                "food"
-        );
+                latitude, longitude, radius, tags, "food");
     }
-
-    // ==================================================
-    // PUBLIC ACCOMMODATION SEARCH
-    // ==================================================
 
     public List<NearbyPlace> findAccommodation(
             double latitude,
@@ -97,483 +74,324 @@ public class NearbyPlacesService {
             String category) {
 
         validateCoordinates(latitude, longitude);
-        validateRadius(radius);
 
-        String query = buildAccommodationQuery(
-                latitude,
-                longitude,
-                radius,
-                category
-        );
+        List<String> tags = accommodationTags(category);
 
         return search(
-                query,
-                latitude,
-                longitude,
-                "accommodation"
-        );
+                latitude, longitude, radius, tags, "accommodation");
     }
 
-    // ==================================================
-    // VALIDATION
-    // ==================================================
+    // ---------------------------------------------------------
+    // CATEGORY TAGS
+    // ---------------------------------------------------------
 
-    private void validateCoordinates(
-            double latitude,
-            double longitude) {
+    private List<String> foodTags(String category) {
 
-        if (!Double.isFinite(latitude)
-                || !Double.isFinite(longitude)
-                || latitude < -90
-                || latitude > 90
-                || longitude < -180
-                || longitude > 180) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid latitude or longitude."
-            );
-        }
-    }
-
-    private void validateRadius(int radius) {
-
-        if (radius <= 0 || radius > MAX_RADIUS_METERS) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Radius must be between 1 and 50000 meters."
-            );
-        }
-    }
-
-    // ==================================================
-    // FOOD QUERY
-    // ==================================================
-
-    private String buildFoodQuery(
-            double lat,
-            double lon,
-            int radius,
-            String category) {
-
-        String filter;
-
-        switch (safe(category)) {
-
+        return switch (safe(category)) {
             case "restaurant" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "amenity", "restaurant"
-                    );
+                    List.of("amenity:restaurant");
 
             case "cafe" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "amenity", "cafe"
-                    );
+                    List.of("amenity:cafe");
 
             case "bakery" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "shop", "bakery"
-                    );
+                    List.of("shop:bakery");
 
             case "fast_food" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "amenity", "fast_food"
-                    );
+                    List.of("amenity:fast_food");
 
-            default -> filter = String.format(
-                    Locale.ROOT,
-                    """
-                    nwr(around:%d,%.7f,%.7f)["amenity"~"restaurant|cafe|fast_food|food_court|ice_cream"];
-                    nwr(around:%d,%.7f,%.7f)["shop"="bakery"];
-                    """,
-                    radius, lat, lon,
-                    radius, lat, lon
+            case "food_court" ->
+                    List.of("amenity:food_court");
+
+            case "ice_cream" ->
+                    List.of("amenity:ice_cream");
+
+            default -> List.of(
+                    "amenity:restaurant",
+                    "amenity:cafe",
+                    "amenity:fast_food",
+                    "amenity:food_court",
+                    "amenity:ice_cream",
+                    "shop:bakery"
             );
-        }
-
-        return "[out:json][timeout:25];("
-                + filter
-                + ");out center tags;";
+        };
     }
 
-    // ==================================================
-    // ACCOMMODATION QUERY
-    // ==================================================
+    private List<String> accommodationTags(String category) {
 
-    private String buildAccommodationQuery(
-            double lat,
-            double lon,
-            int radius,
-            String category) {
-
-        String filter;
-
-        switch (safe(category)) {
-
+        return switch (safe(category)) {
             case "hotel" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "tourism", "hotel"
-                    );
+                    List.of("tourism:hotel");
 
             case "resort" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "tourism", "resort"
-                    );
+                    List.of("tourism:resort");
 
             case "hostel" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "tourism", "hostel"
-                    );
+                    List.of("tourism:hostel");
 
             case "guest_house" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "tourism", "guest_house"
-                    );
+                    List.of("tourism:guest_house");
 
             case "apartment" ->
-                    filter = nodeWayRelation(
-                            radius, lat, lon,
-                            "tourism", "apartment"
-                    );
+                    List.of("tourism:apartment");
 
-            default -> filter = String.format(
-                    Locale.ROOT,
-                    """
-                    nwr(around:%d,%.7f,%.7f)["tourism"~"hotel|resort|hostel|guest_house|motel|apartment|chalet|camp_site"];
-                    """,
-                    radius, lat, lon
+            case "motel" ->
+                    List.of("tourism:motel");
+
+            case "chalet" ->
+                    List.of("tourism:chalet");
+
+            case "camp_site" ->
+                    List.of("tourism:camp_site");
+
+            default -> List.of(
+                    "tourism:hotel",
+                    "tourism:resort",
+                    "tourism:hostel",
+                    "tourism:guest_house",
+                    "tourism:motel",
+                    "tourism:apartment",
+                    "tourism:chalet",
+                    "tourism:camp_site"
             );
-        }
-
-        return "[out:json][timeout:25];("
-                + filter
-                + ");out center tags;";
-    }
-
-    // ==================================================
-    // QUERY HELPERS
-    // ==================================================
-
-    private String nodeWayRelation(
-            int radius,
-            double lat,
-            double lon,
-            String key,
-            String value) {
-
-        return String.format(
-                Locale.ROOT,
-                "nwr(around:%d,%.7f,%.7f)[\"%s\"=\"%s\"];",
-                radius,
-                lat,
-                lon,
-                key,
-                value
-        );
+        };
     }
 
     private String safe(String value) {
-
-        return value == null
+        return value == null || value.isBlank()
                 ? "all"
                 : value.trim().toLowerCase(Locale.ROOT);
     }
 
-    // ==================================================
-    // OVERPASS SEARCH WITH RETRIES AND FALLBACKS
-    // ==================================================
+    // ---------------------------------------------------------
+    // PHOTON SEARCH
+    // ---------------------------------------------------------
 
     private List<NearbyPlace> search(
-            String query,
             double userLat,
             double userLon,
+            int radius,
+            List<String> tags,
             String type) {
 
-        Exception lastError = null;
-
-        for (String endpoint : OVERPASS_ENDPOINTS) {
-
-            for (int attempt = 1;
-                    attempt <= MAX_RETRIES_PER_ENDPOINT;
-                    attempt++) {
-
-                try {
-
-                    log.info(
-                            "Searching nearby {} using {} (attempt {}/{})",
-                            type,
-                            endpoint,
-                            attempt,
-                            MAX_RETRIES_PER_ENDPOINT
-                    );
-
-                    String form = "data=" + URLEncoder.encode(
-                            query,
-                            StandardCharsets.UTF_8
-                    );
-
-                    HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create(endpoint))
-                            .timeout(Duration.ofSeconds(45))
-                            .header(
-                                    "Content-Type",
-                                    "application/x-www-form-urlencoded; charset=UTF-8"
-                            )
-                            .header(
-                                    "Accept",
-                                    "application/json"
-                            )
-                            .header(
-                                    "User-Agent",
-                                    "WeatherPlannerCapstone/1.0 (local development)"
-                            )
-                            .POST(
-                                    HttpRequest.BodyPublishers.ofString(
-                                            form,
-                                            StandardCharsets.UTF_8
-                                    )
-                            )
-                            .build();
-
-                    HttpResponse<String> response =
-                            httpClient.send(
-                                    request,
-                                    HttpResponse.BodyHandlers.ofString()
-                            );
-
-                    int status = response.statusCode();
-
-                    if (status != 200) {
-
-                        lastError = new IllegalStateException(
-                                "Overpass HTTP " + status
-                                        + " from " + endpoint
-                        );
-
-                        log.warn(
-                                "Overpass returned HTTP {} from {}",
-                                status,
-                                endpoint
-                        );
-
-                        if (isTemporaryError(status)
-                                && attempt < MAX_RETRIES_PER_ENDPOINT) {
-
-                            waitBeforeRetry(attempt);
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    JsonNode root = objectMapper.readTree(
-                            response.body()
-                    );
-
-                    /*
-                     * Some Overpass servers return an error
-                     * message inside an otherwise valid JSON body.
-                     */
-                    if (root.has("remark")) {
-
-                        lastError = new IllegalStateException(
-                                root.path("remark").asText(
-                                        "Overpass returned an error."
-                                )
-                        );
-
-                        log.warn(
-                                "Overpass returned a remark from {}: {}",
-                                endpoint,
-                                lastError.getMessage()
-                        );
-
-                        break;
-                    }
-
-                    JsonNode elements = root.path("elements");
-
-                    if (!elements.isArray()) {
-
-                        lastError = new IllegalStateException(
-                                "Invalid Overpass response: elements is not an array."
-                        );
-
-                        log.warn(
-                                "Invalid JSON response from {}",
-                                endpoint
-                        );
-
-                        break;
-                    }
-
-                    List<NearbyPlace> places = parsePlaces(
-                            elements,
-                            userLat,
-                            userLon,
-                            type
-                    );
-
-                    places.sort(
-                            Comparator.<NearbyPlace>comparingLong(
-                                    place -> place.getDistanceMeters())
-                    );
-
-                    log.info(
-                            "Nearby {} search returned {} places from {}",
-                            type,
-                            places.size(),
-                            endpoint
-                    );
-
-                    /*
-                     * An empty result is still a successful
-                     * API response. Do not retry every server
-                     * just because a location has no mapped places.
-                     */
-                    return places;
-
-                } catch (InterruptedException ex) {
-
-                    Thread.currentThread().interrupt();
-
-                    throw new ResponseStatusException(
-                            HttpStatus.SERVICE_UNAVAILABLE,
-                            "Nearby search was interrupted. Please try again.",
-                            ex
-                    );
-
-                } catch (Exception ex) {
-
-                    lastError = ex;
-
-                    log.warn(
-                            "Nearby search failed using {} (attempt {}): {}",
-                            endpoint,
-                            attempt,
-                            ex.toString()
-                    );
-
-                    if (attempt < MAX_RETRIES_PER_ENDPOINT) {
-                        waitBeforeRetry(attempt);
-                    }
-                }
-            }
+        if (radius < 100 || radius > 10000) {
+            throw new IllegalArgumentException(
+                    "Radius must be between 100 and 10000 meters.");
         }
 
-        log.error(
-                "All Overpass endpoints failed for nearby {} search.",
-                type,
-                lastError
-        );
+        Map<String, NearbyPlace> uniquePlaces =
+                new LinkedHashMap<>();
 
-        throw new ResponseStatusException(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Nearby places are temporarily unavailable from OpenStreetMap. Please try again in a moment.",
-                lastError
-        );
-    }
+        AtomicInteger successfulRequests = new AtomicInteger(0);
 
-    private boolean isTemporaryError(int status) {
+        List<CompletableFuture<List<NearbyPlace>>> futures =
+                new ArrayList<>();
 
-        return status == 408
-                || status == 425
-                || status == 429
-                || status == 500
-                || status == 502
-                || status == 503
-                || status == 504;
-    }
+        for (String tag : tags) {
 
-    // ==================================================
-    // RETRY DELAY
-    // ==================================================
+            CompletableFuture<List<NearbyPlace>> future =
+                    CompletableFuture.supplyAsync(() -> {
+                        try {
+                            List<NearbyPlace> result = fetchTag(
+                                    userLat, userLon, radius, tag, type);
 
-    private void waitBeforeRetry(int attempt) {
+                            successfulRequests.incrementAndGet();
+                            return result;
 
-        long delayMillis = attempt == 1 ? 1500 : 3000;
+                        } catch (Exception ex) {
+                            log.warn(
+                                    "Photon search failed for {}: {}",
+                                    tag, ex.toString());
+
+                            return List.of();
+                        }
+                    });
+
+            futures.add(future);
+        }
+
+        CompletableFuture<Void> allRequests =
+                CompletableFuture.allOf(
+                        futures.toArray(new CompletableFuture[0]));
 
         try {
+            allRequests.get(18, TimeUnit.SECONDS);
 
-            Thread.sleep(delayMillis);
+        } catch (java.util.concurrent.TimeoutException ex) {
+            log.warn("Photon search reached its time limit for {}.", type);
 
         } catch (InterruptedException ex) {
-
             Thread.currentThread().interrupt();
 
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Nearby search retry was interrupted.",
-                    ex
-            );
+                    "Nearby search was interrupted. Please try again.",
+                    ex);
+
+        } catch (Exception ex) {
+            log.warn("Photon search completed with errors: {}", ex.toString());
         }
+
+        // Collect successful responses, including partial results.
+        for (CompletableFuture<List<NearbyPlace>> future : futures) {
+
+            if (!future.isDone() || future.isCompletedExceptionally()) {
+                continue;
+            }
+
+            try {
+                List<NearbyPlace> results = future.getNow(List.of());
+
+                for (NearbyPlace place : results) {
+                    String key = place.getOsmType()
+                            + ":" + place.getOsmId();
+
+                    uniquePlaces.putIfAbsent(key, place);
+                }
+
+            } catch (Exception ex) {
+                log.warn("Could not collect Photon results: {}", ex.toString());
+            }
+        }
+
+        // If every Photon request failed, report temporary unavailability.
+        if (successfulRequests.get() == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Nearby places are temporarily unavailable. "
+                            + "Please try again later.");
+        }
+
+        List<NearbyPlace> places =
+                new ArrayList<>(uniquePlaces.values());
+
+        places.sort((NearbyPlace first, NearbyPlace second) ->
+        Long.compare(
+                first.getDistanceMeters(),
+                second.getDistanceMeters()
+        )
+);
+
+        log.info(
+                "Photon returned {} nearby {} places within {} meters.",
+                places.size(), type, radius);
+
+        return places;
     }
 
-    // ==================================================
-    // PARSE OVERPASS RESULTS
-    // ==================================================
+    // ---------------------------------------------------------
+    // SINGLE PHOTON CATEGORY REQUEST
+    // ---------------------------------------------------------
 
-    private List<NearbyPlace> parsePlaces(
-            JsonNode elements,
+    private List<NearbyPlace> fetchTag(
+            double latitude,
+            double longitude,
+            int radius,
+            String osmTag,
+            String type) throws Exception {
+
+        String encodedTag = URLEncoder.encode(
+                osmTag, StandardCharsets.UTF_8);
+
+        String url = PHOTON_ENDPOINT
+                + "?lon=" + longitude
+                + "&lat=" + latitude
+                + "&osm_tag=" + encodedTag
+                + "&limit=" + PHOTON_LIMIT
+                + "&lang=en";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(12))
+                .header("Accept", "application/json")
+                .header(
+                        "User-Agent",
+                        "WeatherPlannerStudentProject/1.0")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                    "Photon returned HTTP " + response.statusCode()
+                            + " for " + osmTag);
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode features = root.path("features");
+
+        if (!features.isArray()) {
+            throw new IllegalStateException(
+                    "Photon returned an invalid GeoJSON response.");
+        }
+
+        return parseFeatures(
+                features, latitude, longitude, radius, type);
+    }
+
+    // ---------------------------------------------------------
+    // PARSE PHOTON GEOJSON
+    // ---------------------------------------------------------
+
+    private List<NearbyPlace> parseFeatures(
+            JsonNode features,
             double userLat,
             double userLon,
+            int radius,
             String type) {
 
         List<NearbyPlace> places = new ArrayList<>();
 
-        for (JsonNode element : elements) {
+        for (JsonNode feature : features) {
 
-            JsonNode tags = element.path("tags");
+            JsonNode properties = feature.path("properties");
+            JsonNode coordinates =
+                    feature.path("geometry").path("coordinates");
 
-            double placeLat;
-            double placeLon;
-
-            if (element.hasNonNull("lat")
-                    && element.hasNonNull("lon")) {
-
-                placeLat = element.path("lat").asDouble(Double.NaN);
-                placeLon = element.path("lon").asDouble(Double.NaN);
-
-            } else if (element.path("center").hasNonNull("lat")
-                    && element.path("center").hasNonNull("lon")) {
-
-                placeLat = element.path("center")
-                        .path("lat").asDouble(Double.NaN);
-
-                placeLon = element.path("center")
-                        .path("lon").asDouble(Double.NaN);
-
-            } else {
-
+            if (!coordinates.isArray() || coordinates.size() < 2) {
                 continue;
             }
+
+            // GeoJSON coordinates are [longitude, latitude].
+            double placeLon = coordinates.get(0).asDouble(Double.NaN);
+            double placeLat = coordinates.get(1).asDouble(Double.NaN);
 
             if (!Double.isFinite(placeLat)
                     || !Double.isFinite(placeLon)) {
                 continue;
             }
 
-            String name = tag(tags, "name");
+            long distance = Math.round(
+                    haversine(userLat, userLon, placeLat, placeLon));
 
-            if (name.isBlank()) {
-                name = tag(tags, "name:en");
+            // Photon reverse search is not a strict radius filter.
+            // Enforce the requested radius here.
+            if (distance > radius) {
+                continue;
             }
+
+            String name = firstProperty(
+                    properties, "name", "street");
 
             if (name.isBlank()) {
                 continue;
             }
 
-            String osmType = element.path("type").asText("");
-            String osmId = element.path("id").asText("");
+            String osmId = property(properties, "osm_id");
+            String photonOsmType = property(properties, "osm_type");
+
+            if (osmId.isBlank() || photonOsmType.isBlank()) {
+                continue;
+            }
+
+            String osmType = convertOsmType(photonOsmType);
+
+            if (osmType.isBlank()) {
+                continue;
+            }
 
             NearbyPlace place = new NearbyPlace();
 
@@ -581,84 +399,48 @@ public class NearbyPlacesService {
             place.setOsmType(osmType);
             place.setName(name);
 
-            place.setCategory(
-                    resolveCategory(tags, type)
-            );
+            place.setCategory(resolveCategory(properties, type));
 
             place.setLatitude(placeLat);
             place.setLongitude(placeLon);
+            place.setDistanceMeters(distance);
 
-            place.setDistanceMeters(
-                    Math.round(
-                            haversine(
-                                    userLat,
-                                    userLon,
-                                    placeLat,
-                                    placeLon
-                            )
-                    )
-            );
+            place.setAddress(buildAddress(properties));
 
-            place.setAddress(buildAddress(tags));
+            place.setPhone(firstProperty(
+                    properties, "phone", "contact:phone"));
 
-            place.setPhone(
-                    firstTag(tags, "contact:phone", "phone")
-            );
+            place.setEmail(firstProperty(
+                    properties, "email", "contact:email"));
 
-            place.setWebsite(
-                    normalizeUrl(
-                            firstTag(
-                                    tags,
-                                    "contact:website",
-                                    "website"
-                            )
-                    )
-            );
+            place.setWebsite(normalizeUrl(firstProperty(
+                    properties, "website", "url", "contact:website")));
 
-            place.setEmail(
-                    firstTag(tags, "contact:email", "email")
-            );
+            place.setOpeningHours(firstProperty(
+                    properties, "opening_hours"));
 
-            place.setOpeningHours(
-                    tag(tags, "opening_hours")
-            );
+            place.setCuisine(firstProperty(
+                    properties, "cuisine"));
 
-            place.setCuisine(
-                    tag(tags, "cuisine")
-            );
+            place.setImageUrl(resolveImage(properties));
 
-            place.setImageUrl(
-                    resolveImage(tags)
-            );
-
-            place.setBookingUrl(
-                    normalizeUrl(
-                            firstTag(
-                                    tags,
-                                    "contact:booking",
-                                    "booking",
-                                    "reservation",
-                                    "contact:website",
-                                    "website"
-                            )
-                    )
-            );
+            place.setBookingUrl(normalizeUrl(firstProperty(
+                    properties,
+                    "booking",
+                    "reservation",
+                    "website",
+                    "url")));
 
             place.setMapUrl(
                     "https://www.openstreetmap.org/"
-                            + osmType + "/" + osmId
-            );
+                            + osmType + "/" + osmId);
 
-            place.setSource("OpenStreetMap");
+            place.setSource("OpenStreetMap (Photon)");
 
-            /*
-             * OSM does not confirm live room availability.
-             */
             place.setAvailabilityStatus(
                     "accommodation".equals(type)
                             ? "NOT_VERIFIED"
-                            : "NOT_APPLICABLE"
-            );
+                            : "NOT_APPLICABLE");
 
             places.add(place);
         }
@@ -666,35 +448,107 @@ public class NearbyPlacesService {
         return places;
     }
 
-    // ==================================================
-    // CATEGORY
-    // ==================================================
+    // ---------------------------------------------------------
+    // CATEGORY MAPPING
+    // ---------------------------------------------------------
 
     private String resolveCategory(
-            JsonNode tags,
+            JsonNode properties,
             String type) {
+
+        String key = property(properties, "osm_key");
+        String value = property(properties, "osm_value");
 
         if ("food".equals(type)) {
 
-            String value = firstTag(
-                    tags,
-                    "amenity",
-                    "shop"
-            );
+            if ("shop".equals(key) && "bakery".equals(value)) {
+                return "bakery";
+            }
 
             return value.isBlank() ? "food" : value;
         }
 
-        String value = tag(tags, "tourism");
-
-        return value.isBlank()
-                ? "accommodation"
-                : value;
+        return value.isBlank() ? "accommodation" : value;
     }
 
-    // ==================================================
-    // URL HELPERS
-    // ==================================================
+    // ---------------------------------------------------------
+    // ADDRESS
+    // ---------------------------------------------------------
+
+    private String buildAddress(JsonNode properties) {
+
+        List<String> parts = new ArrayList<>();
+
+        addUnique(parts, property(properties, "housenumber"));
+        addUnique(parts, property(properties, "street"));
+        addUnique(parts, property(properties, "locality"));
+        addUnique(parts, property(properties, "district"));
+        addUnique(parts, property(properties, "city"));
+        addUnique(parts, property(properties, "state"));
+        addUnique(parts, property(properties, "postcode"));
+        addUnique(parts, property(properties, "country"));
+
+        return String.join(", ", parts);
+    }
+
+    private void addUnique(List<String> parts, String value) {
+
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        boolean alreadyPresent = parts.stream()
+                .anyMatch(existing ->
+                        existing.equalsIgnoreCase(value.trim()));
+
+        if (!alreadyPresent) {
+            parts.add(value.trim());
+        }
+    }
+
+    // ---------------------------------------------------------
+    // PHOTON PROPERTY HELPERS
+    // ---------------------------------------------------------
+
+    private String property(JsonNode node, String key) {
+
+        JsonNode value = node.path(key);
+
+        if (value.isMissingNode() || value.isNull()) {
+            return "";
+        }
+
+        return value.asText("").trim();
+    }
+
+    private String firstProperty(
+            JsonNode node,
+            String... keys) {
+
+        for (String key : keys) {
+            String value = property(node, key);
+
+            if (!value.isBlank()) {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    private String convertOsmType(String value) {
+
+        return switch (value.toUpperCase(Locale.ROOT)) {
+            case "N", "NODE" -> "node";
+            case "W", "WAY" -> "way";
+            case "R", "RELATION" -> "relation";
+            default -> "";
+        };
+    }
+
+    // ---------------------------------------------------------
+    // URL AND IMAGE HELPERS
+    // ---------------------------------------------------------
 
     private String normalizeUrl(String value) {
 
@@ -706,26 +560,20 @@ public class NearbyPlacesService {
 
         if (trimmed.startsWith("https://")
                 || trimmed.startsWith("http://")) {
-
             return trimmed;
         }
 
-        if (trimmed.contains(".")
-                && !trimmed.contains(" ")) {
-
+        if (trimmed.contains(".") && !trimmed.contains(" ")) {
             return "https://" + trimmed;
         }
 
         return "";
     }
 
-    private String resolveImage(JsonNode tags) {
+    private String resolveImage(JsonNode properties) {
 
-        String image = firstTag(
-                tags,
-                "image",
-                "contact:image"
-        );
+        String image = firstProperty(
+                properties, "image", "contact:image");
 
         String normalized = normalizeUrl(image);
 
@@ -733,87 +581,38 @@ public class NearbyPlacesService {
             return normalized;
         }
 
-        String commons = tag(
-                tags,
-                "wikimedia_commons"
-        );
+        String commons = property(properties, "wikimedia_commons");
 
         if (commons.startsWith("File:")) {
-
-            String fileName = commons.substring(
-                    "File:".length()
-            ).trim();
+            String fileName = commons.substring("File:".length()).trim();
 
             return "https://commons.wikimedia.org/wiki/Special:FilePath/"
                     + URLEncoder.encode(
-                            fileName,
-                            StandardCharsets.UTF_8
-                    );
+                            fileName, StandardCharsets.UTF_8);
         }
 
         return "";
     }
 
-    // ==================================================
-    // ADDRESS HELPERS
-    // ==================================================
+    // ---------------------------------------------------------
+    // VALIDATION
+    // ---------------------------------------------------------
 
-    private String buildAddress(JsonNode tags) {
+    private void validateCoordinates(double latitude, double longitude) {
 
-        List<String> parts = new ArrayList<>();
+        if (!Double.isFinite(latitude)
+                || !Double.isFinite(longitude)
+                || latitude < -90 || latitude > 90
+                || longitude < -180 || longitude > 180) {
 
-        addIfPresent(parts, tag(tags, "addr:housenumber"));
-        addIfPresent(parts, tag(tags, "addr:street"));
-        addIfPresent(parts, tag(tags, "addr:suburb"));
-        addIfPresent(parts, tag(tags, "addr:city"));
-        addIfPresent(parts, tag(tags, "addr:postcode"));
-
-        return String.join(", ", parts);
-    }
-
-    private void addIfPresent(
-            List<String> parts,
-            String value) {
-
-        if (value != null && !value.isBlank()) {
-            parts.add(value);
+            throw new IllegalArgumentException(
+                    "Invalid latitude or longitude.");
         }
     }
 
-    // ==================================================
-    // TAG HELPERS
-    // ==================================================
-
-    private String firstTag(
-            JsonNode tags,
-            String... keys) {
-
-        for (String key : keys) {
-
-            String value = tag(tags, key);
-
-            if (!value.isBlank()) {
-                return value;
-            }
-        }
-
-        return "";
-    }
-
-    private String tag(
-            JsonNode tags,
-            String key) {
-
-        JsonNode value = tags.path(key);
-
-        return value.isMissingNode() || value.isNull()
-                ? ""
-                : value.asText("").trim();
-    }
-
-    // ==================================================
-    // DISTANCE CALCULATION
-    // ==================================================
+    // ---------------------------------------------------------
+    // DISTANCE
+    // ---------------------------------------------------------
 
     private double haversine(
             double lat1,
@@ -833,14 +632,12 @@ public class NearbyPlacesService {
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
         return earthRadius * 2 * Math.atan2(
-                Math.sqrt(a),
-                Math.sqrt(1 - a)
-        );
+                Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // ==================================================
-    // RESPONSE MODEL
-    // ==================================================
+    // ---------------------------------------------------------
+    // RESPONSE DTO
+    // ---------------------------------------------------------
 
     public static class NearbyPlace {
 
@@ -851,157 +648,60 @@ public class NearbyPlacesService {
         private String address;
         private String phone;
         private String email;
-
         private String website;
         private String openingHours;
         private String cuisine;
         private String imageUrl;
         private String bookingUrl;
-
         private String mapUrl;
         private String source;
         private String availabilityStatus;
 
         private double latitude;
         private double longitude;
-
         private long distanceMeters;
 
-        public String getOsmId() {
-            return osmId;
-        }
+        public String getOsmId() { return osmId; }
+        public void setOsmId(String v) { osmId = v; }
 
-        public void setOsmId(String v) {
-            osmId = v;
-        }
+        public String getOsmType() { return osmType; }
+        public void setOsmType(String v) { osmType = v; }
 
-        public String getOsmType() {
-            return osmType;
-        }
+        public String getName() { return name; }
+        public void setName(String v) { name = v; }
 
-        public void setOsmType(String v) {
-            osmType = v;
-        }
+        public String getCategory() { return category; }
+        public void setCategory(String v) { category = v; }
 
-        public String getName() {
-            return name;
-        }
+        public String getAddress() { return address; }
+        public void setAddress(String v) { address = v; }
 
-        public void setName(String v) {
-            name = v;
-        }
+        public String getPhone() { return phone; }
+        public void setPhone(String v) { phone = v; }
 
-        public String getCategory() {
-            return category;
-        }
+        public String getEmail() { return email; }
+        public void setEmail(String v) { email = v; }
 
-        public void setCategory(String v) {
-            category = v;
-        }
+        public String getWebsite() { return website; }
+        public void setWebsite(String v) { website = v; }
 
-        public double getLatitude() {
-            return latitude;
-        }
+        public String getOpeningHours() { return openingHours; }
+        public void setOpeningHours(String v) { openingHours = v; }
 
-        public void setLatitude(double v) {
-            latitude = v;
-        }
+        public String getCuisine() { return cuisine; }
+        public void setCuisine(String v) { cuisine = v; }
 
-        public double getLongitude() {
-            return longitude;
-        }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String v) { imageUrl = v; }
 
-        public void setLongitude(double v) {
-            longitude = v;
-        }
+        public String getBookingUrl() { return bookingUrl; }
+        public void setBookingUrl(String v) { bookingUrl = v; }
 
-        public long getDistanceMeters() {
-            return distanceMeters;
-        }
+        public String getMapUrl() { return mapUrl; }
+        public void setMapUrl(String v) { mapUrl = v; }
 
-        public void setDistanceMeters(long v) {
-            distanceMeters = v;
-        }
-
-        public String getAddress() {
-            return address;
-        }
-
-        public void setAddress(String v) {
-            address = v;
-        }
-
-        public String getPhone() {
-            return phone;
-        }
-
-        public void setPhone(String v) {
-            phone = v;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String v) {
-            email = v;
-        }
-
-        public String getWebsite() {
-            return website;
-        }
-
-        public void setWebsite(String v) {
-            website = v;
-        }
-
-        public String getOpeningHours() {
-            return openingHours;
-        }
-
-        public void setOpeningHours(String v) {
-            openingHours = v;
-        }
-
-        public String getCuisine() {
-            return cuisine;
-        }
-
-        public void setCuisine(String v) {
-            cuisine = v;
-        }
-
-        public String getImageUrl() {
-            return imageUrl;
-        }
-
-        public void setImageUrl(String v) {
-            imageUrl = v;
-        }
-
-        public String getBookingUrl() {
-            return bookingUrl;
-        }
-
-        public void setBookingUrl(String v) {
-            bookingUrl = v;
-        }
-
-        public String getMapUrl() {
-            return mapUrl;
-        }
-
-        public void setMapUrl(String v) {
-            mapUrl = v;
-        }
-
-        public String getSource() {
-            return source;
-        }
-
-        public void setSource(String v) {
-            source = v;
-        }
+        public String getSource() { return source; }
+        public void setSource(String v) { source = v; }
 
         public String getAvailabilityStatus() {
             return availabilityStatus;
@@ -1010,5 +710,14 @@ public class NearbyPlacesService {
         public void setAvailabilityStatus(String v) {
             availabilityStatus = v;
         }
+
+        public double getLatitude() { return latitude; }
+        public void setLatitude(double v) { latitude = v; }
+
+        public double getLongitude() { return longitude; }
+        public void setLongitude(double v) { longitude = v; }
+
+        public long getDistanceMeters() { return distanceMeters; }
+        public void setDistanceMeters(long v) { distanceMeters = v; }
     }
 }

@@ -1,0 +1,440 @@
+/* =========================================================
+   READABILITY LAYER  -  Plan Trip, My Trips, Profile
+   ---------------------------------------------------------
+   WHY THIS FILE EXISTS
+   App.css was written for a dark theme (white text on a navy
+   page). TravelTheme.css later put those same components on
+   white "paper" cards, so headings, labels, input text and
+   some buttons ended up white-on-white.
+
+   WHAT THIS FILE DOES
+   - Loaded LAST (see main.jsx) so it wins over earlier CSS
+     without editing the 8,000-line App.css.
+   - Changes only colours, borders, focus and disabled states.
+     Layouts, spacing and component structure are untouched,
+     so the existing designs of these pages are preserved.
+   - Scoped to the three pages (not Budget, Food, etc.).
+
+   CONTRAST (WCAG AA needs 4.5:1 for normal text)
+     ink     #10303a on #fff  = 13.4:1
+     soft    #46616b on #fff  =  6.3:1
+     white   on #0f3d3e       = 11.7:1
+     error   #9b1c13 on #fdeceb = 7.4:1
+     success #0b6b3a on #e6f6ed = 6.3:1
+========================================================= */
+
+.app-shell {
+  --rd-ink: #10303a;
+  --rd-soft: #46616b;
+  --rd-forest: #0f3d3e;
+  --rd-forest-2: #165456;
+  --rd-sky: #1d6f93;
+  --rd-border: #7f9aa2;
+  --rd-border-soft: #c9d8da;
+  --rd-surface: #ffffff;
+  --rd-surface-2: #f3f8f8;
+  --rd-focus: #1d78a6;
+}
+
+/* =========================================================
+   0. SHARED: focus ring + disabled buttons (all shell views
+      except Budget, which keeps its own frame)
+========================================================= */
+.app-shell:not(.view-budget) :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--rd-focus);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   1. PLAN TRIP + MY TRIPS  (components/Trips.jsx)
+========================================================= */
+
+/* ---- Hero: title, subtitle, eyebrow, saved-trips counter ---- */
+.app-shell .trip-hero :is(h1, h2, h3) {
+  color: var(--rd-forest);
+}
+.app-shell .trip-hero :is(p, small) {
+  color: var(--rd-soft);
+}
+.app-shell .trip-hero .page-eyebrow,
+.app-shell .trip-manager-page .page-eyebrow {
+  color: var(--rd-sky);
+}
+.app-shell .trip-count {
+  background: var(--rd-surface-2);
+  border: 1px solid var(--rd-border-soft);
+  border-radius: 14px;
+}
+.app-shell .trip-count :is(strong, b, span) {
+  color: var(--rd-forest);
+}
+.app-shell .trip-count small {
+  color: var(--rd-soft);
+}
+
+/* ---- Create / edit form ---- */
+.app-shell .modern-trip-form .form-heading :is(h1, h2, h3) {
+  color: var(--rd-forest);
+}
+.app-shell .modern-trip-form .form-heading :is(p, small) {
+  color: var(--rd-soft);
+}
+.app-shell .modern-trip-form .page-eyebrow {
+  color: var(--rd-sky);
+}
+.app-shell .modern-trip-form .close-page-button {
+  background: var(--rd-surface-2);
+  color: var(--rd-ink);
+  border: 1.5px solid var(--rd-border);
+}
+.app-shell .modern-trip-form .close-page-button:hover {
+  background: #e3eeee;
+}
+
+.app-shell .modern-form-group label {
+  color: var(--rd-ink);
+  font-weight: 700;
+}
+
+.app-shell .modern-form-group :is(input, select, textarea) {
+  background: var(--rd-surface);
+  color: var(--rd-ink);
+  border: 1.5px solid var(--rd-border);
+  border-radius: 10px;
+  color-scheme: light;
+  -webkit-text-fill-color: var(--rd-ink);
+}
+.app-shell .modern-form-group :is(input, select, textarea)::placeholder {
+  color: #5d747c;
+  opacity: 1;
+  -webkit-text-fill-color: #5d747c;
+}
+.app-shell .modern-form-group select option {
+  background: #ffffff;
+  color: var(--rd-ink);
+}
+.app-shell .modern-form-group input[type="date"] {
+  min-height: 44px;
+}
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit,
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit-text,
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit-month-field,
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit-day-field,
+.app-shell .modern-form-group input[type="date"]::-webkit-datetime-edit-year-field {
+  color: var(--rd-ink);
+}
+.app-shell .modern-form-group input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+}
+.app-shell .modern-form-group :is(input, select, textarea):hover {
+  border-color: var(--rd-forest-2);
+}
+.app-shell .modern-form-group :is(input, select, textarea):focus {
+  border-color: var(--rd-focus);
+  box-shadow: 0 0 0 3px rgba(29, 120, 166, 0.25);
+}
+.app-shell .modern-form-group :is(input, select, textarea):disabled,
+.app-shell .modern-form-group :is(input, select, textarea)[readonly] {
+  background: #eaf0f1;
+  color: #3d545c;
+  -webkit-text-fill-color: #3d545c;
+  cursor: not-allowed;
+}
+
+/* ---- Buttons ---- */
+.app-shell .primary-trip-button {
+  background: var(--rd-forest);
+  color: #ffffff;
+  border: 2px solid var(--rd-forest);
+}
+.app-shell .primary-trip-button :is(span, svg) {
+  color: #ffffff;
+}
+.app-shell .primary-trip-button:hover:not(:disabled) {
+  background: var(--rd-forest-2);
+  border-color: var(--rd-forest-2);
+}
+
+.app-shell .secondary-trip-button,
+.app-shell .draft-trip-button {
+  background: #ffffff;
+  color: var(--rd-forest);
+  border: 2px solid var(--rd-forest);
+  font-weight: 700;
+}
+.app-shell .secondary-trip-button:hover:not(:disabled),
+.app-shell .draft-trip-button:hover:not(:disabled) {
+  background: #e6f1f1;
+}
+
+/* Card action row: all five buttons are visible, then variants add colour */
+.app-shell .modern-trip-card .trip-card-actions button {
+  background: #ffffff;
+  color: var(--rd-ink);
+  border: 1.5px solid var(--rd-border);
+  font-weight: 700;
+  border-radius: 10px;
+}
+.app-shell .modern-trip-card .trip-card-actions button:hover:not(:disabled) {
+  background: #e9f2f3;
+  border-color: var(--rd-forest-2);
+}
+.app-shell .modern-trip-card .trip-card-actions .route-action-button {
+  background: #e1f0f7;
+  color: #0b4d6b;
+  border-color: #7fb4cc;
+}
+.app-shell .modern-trip-card .trip-card-actions .edit-action-button {
+  background: #fff1d9;
+  color: #7a4300;
+  border-color: #e0b36a;
+}
+.app-shell .modern-trip-card .trip-card-actions .delete-action-button {
+  background: #fdeceb;
+  color: #9b1c13;
+  border-color: #e3a7a2;
+}
+.app-shell .modern-trip-card .trip-card-actions .delete-action-button:hover:not(:disabled) {
+  background: #f9d6d3;
+}
+
+/* Disabled buttons look disabled but stay legible */
+.app-shell:not(.view-budget)
+  :is(.primary-trip-button, .secondary-trip-button, .draft-trip-button, .primary-pill):disabled,
+.app-shell .modern-trip-card .trip-card-actions button:disabled {
+  background: #d5e0e2;
+  color: #3d545c;
+  border: 2px solid #aebfc3;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* ---- Trip cards ---- */
+.app-shell .modern-trip-card :is(h1, h2, h3, h4) {
+  color: var(--rd-forest);
+}
+.app-shell .modern-trip-card .trip-number {
+  color: var(--rd-sky);
+  font-weight: 800;
+}
+.app-shell .modern-trip-card .trip-date,
+.app-shell .modern-trip-card .trip-meta,
+.app-shell .modern-trip-card .trip-meta span {
+  color: var(--rd-soft);
+}
+.app-shell .modern-trip-card .trip-route-line,
+.app-shell .modern-trip-card .trip-route-line span {
+  color: var(--rd-ink);
+}
+.app-shell .modern-trip-card .trip-features {
+  background: var(--rd-surface-2);
+  color: var(--rd-ink);
+  border: 1px solid var(--rd-border-soft);
+}
+
+.app-shell .trip-status {
+  font-weight: 800;
+}
+.app-shell .trip-status.active {
+  background: #dff3e8;
+  color: #0a5f35;
+  border: 1px solid #9fd3b6;
+}
+.app-shell .trip-status.draft {
+  background: #fdeedc;
+  color: #7a4300;
+  border: 1px solid #e0b36a;
+}
+
+/* ---- Empty / loading / error states ---- */
+.app-shell .modern-empty-trips,
+.app-shell .trip-loading {
+  background: var(--rd-surface);
+  color: var(--rd-ink);
+}
+.app-shell .modern-empty-trips :is(h1, h2, h3) {
+  color: var(--rd-forest);
+}
+.app-shell .modern-empty-trips :is(p, small),
+.app-shell .trip-loading :is(p, small) {
+  color: var(--rd-soft);
+}
+.app-shell .modern-trip-error {
+  background: #fdeceb;
+  color: #9b1c13;
+  border: 1.5px solid #e3a7a2;
+  font-weight: 600;
+}
+
+/* =========================================================
+   2. PROFILE + PREFERENCES + PASSWORD
+      (components/ProfilePanel.jsx, Profile.jsx, Preferences.jsx)
+========================================================= */
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) {
+  color: var(--rd-ink);
+}
+
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) :is(h1, h2, h3, h4) {
+  color: var(--rd-forest);
+}
+
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) :is(p, small, li) {
+  color: var(--rd-soft);
+}
+
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) label,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) .form-group label,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) .pref-block > :is(strong, span, label, p, h4) {
+  color: var(--rd-ink);
+  font-weight: 700;
+}
+
+.app-shell .profile-eyebrow,
+.app-shell .profile-panel .page-eyebrow {
+  color: var(--rd-sky);
+}
+
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  background: var(--rd-surface);
+  color: var(--rd-ink);
+  border: 1.5px solid var(--rd-border);
+  border-radius: 12px;
+  min-height: 44px;
+  color-scheme: light;
+  -webkit-text-fill-color: var(--rd-ink);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) :is(input, textarea)::placeholder {
+  color: #5d747c;
+  opacity: 1;
+  -webkit-text-fill-color: #5d747c;
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) select option {
+  background: #ffffff;
+  color: var(--rd-ink);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):hover {
+  border-color: var(--rd-forest-2);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: var(--rd-focus);
+  box-shadow: 0 0 0 3px rgba(29, 120, 166, 0.25);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[type="date"]::-webkit-datetime-edit,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[type="date"]::-webkit-datetime-edit-text,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[type="date"]::-webkit-datetime-edit-month-field,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[type="date"]::-webkit-datetime-edit-day-field,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[type="date"]::-webkit-datetime-edit-year-field {
+  color: var(--rd-ink);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(input, select, textarea):disabled,
+.app-shell :is(.profile-panel, .profile-card, .preferences-card) input[readonly] {
+  background: #eaf0f1;
+  color: #3d545c;
+  -webkit-text-fill-color: #3d545c;
+  cursor: not-allowed;
+}
+
+/* Password show/hide toggle */
+.app-shell :is(.profile-panel, .profile-card) .password-toggle {
+  background: transparent;
+  color: var(--rd-forest);
+  border: 0;
+  font-weight: 700;
+}
+
+/* ---- Preference chips: every option is readable before hover ---- */
+.app-shell :is(.choice-button, .modern-choice) {
+  background: #ffffff;
+  color: var(--rd-ink);
+  border: 1.5px solid var(--rd-border);
+  font-weight: 600;
+  min-height: 40px;
+}
+.app-shell :is(.choice-button, .modern-choice) :is(span, small, strong) {
+  color: inherit;
+}
+.app-shell :is(.choice-button, .modern-choice):hover {
+  background: #e9f2f3;
+  border-color: var(--rd-forest-2);
+}
+.app-shell :is(.choice-button.selected, .modern-choice.selected, .modern-choice.active) {
+  background: var(--rd-forest);
+  color: #ffffff;
+  border-color: var(--rd-forest);
+}
+.app-shell :is(.choice-button.selected, .modern-choice.selected, .modern-choice.active) :is(span, small, strong) {
+  color: #ffffff;
+}
+
+/* ---- Profile buttons ---- */
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(.primary-pill, .save-preferences-button, .save-preferences-modern, button[type="submit"]) {
+  background: var(--rd-forest);
+  color: #ffffff;
+  border: 2px solid var(--rd-forest);
+  font-weight: 800;
+  min-height: 44px;
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(.primary-pill, .save-preferences-button, .save-preferences-modern, button[type="submit"]) :is(span, svg) {
+  color: #ffffff;
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(.primary-pill, .save-preferences-button, .save-preferences-modern, button[type="submit"]):hover:not(:disabled) {
+  background: var(--rd-forest-2);
+}
+.app-shell :is(.profile-panel, .profile-card, .preferences-card)
+  :is(.inner-back-button, .profile-back-button, .page-back-button, .logout-button) {
+  background: #ffffff;
+  color: var(--rd-forest);
+  border: 2px solid var(--rd-forest);
+  font-weight: 700;
+}
+
+/* The preferences hero is a dark band: keep its text white */
+.app-shell .preferences-hero :is(h1, h2, h3, p, span, small, strong) {
+  color: #ffffff;
+}
+
+/* Summary chips on the profile */
+.app-shell .profile-preferences-summary,
+.app-shell .preference-summary-grid > * {
+  color: var(--rd-ink);
+}
+
+/* =========================================================
+   3. MESSAGES (success / error) used by the three pages
+========================================================= */
+.app-shell .shell-alert {
+  font-weight: 600;
+  border: 1.5px solid transparent;
+}
+.app-shell .shell-alert.error {
+  background: #fdeceb;
+  color: #9b1c13;
+  border-color: #e3a7a2;
+}
+.app-shell .shell-alert.success {
+  background: #e6f6ed;
+  color: #0b6b3a;
+  border-color: #9fd3b6;
+}
+
+/* =========================================================
+   Responsive: shared top bar must never force sideways scrolling
+========================================================= */
+.shell-topbar { flex-wrap: wrap; min-width: 0; }
+.shell-topbar > * { min-width: 0; }
+.topbar-weather { max-width: 100%; box-sizing: border-box; }
+@media (max-width: 600px) {
+  .shell-topbar { gap: 10px; }
+  .shell-topbar h2 { font-size: 19px; }
+  .topbar-weather { flex: 1 1 auto; min-width: 0; padding: 6px 10px; }
+  .topbar-weather small { max-width: 120px; }
+}

@@ -1,17 +1,14 @@
 
 package backend.service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -23,6 +20,8 @@ import backend.dto.DestinationResponse;
 import backend.dto.ReorderDestinationRequest;
 import backend.dto.RouteDistanceResponse;
 import backend.dto.RouteEtaResponse;
+import backend.dto.RouteLegResponse;
+import backend.dto.RouteSummaryResponse;
 import backend.entity.Trip;
 import backend.entity.TripDestination;
 import backend.repository.TripDestinationRepository;
@@ -31,14 +30,33 @@ import backend.repository.TripRepository;
 @Service
 public class RouteService {
 
-    // HTTP client for road routing
-    private static final HttpClient httpClient =
-            HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(15))
-                    .build();
+    /*
+     * Road routing server. Defaults to the free public OSRM demo server.
+     * Override in application.properties with:
+     *     route.osrm.base-url=http://your-own-osrm:5000
+     */
+    @Value("${route.osrm.base-url:https://router.project-osrm.org}")
+    private String osrmBaseUrl;
 
-    private final ObjectMapper objectMapper =
-            new ObjectMapper();
+    @Value("${route.osrm.timeout-seconds:12}")
+    private long osrmTimeoutSeconds;
+
+    private volatile RouteCalculator routeCalculator;
+
+    private RouteCalculator calculator() {
+        RouteCalculator local = routeCalculator;
+        if (local == null) {
+            synchronized (this) {
+                if (routeCalculator == null) {
+                    routeCalculator = new RouteCalculator(
+                            osrmBaseUrl,
+                            Duration.ofSeconds(osrmTimeoutSeconds));
+                }
+                local = routeCalculator;
+            }
+        }
+        return local;
+    }
 
     @Autowired
     private TripRepository tripRepository;
@@ -54,6 +72,7 @@ public class RouteService {
     // ADD DESTINATION
     // ==========================================
 
+    @Transactional
     public DestinationResponse addDestination(
             Integer userId,
             Integer tripId,
@@ -86,9 +105,17 @@ public class RouteService {
                 request.getLongitude()
         );
 
-        destination.setDestinationOrder(
-                destinations.size() + 1
-        );
+        // Use the highest existing order + 1 (not the list size), so the
+        // new stop is always last even if earlier orders have gaps.
+        int nextOrder = 1;
+        for (TripDestination existing : destinations) {
+            if (existing.getDestinationOrder() != null
+                    && existing.getDestinationOrder() >= nextOrder) {
+                nextOrder = existing.getDestinationOrder() + 1;
+            }
+        }
+
+        destination.setDestinationOrder(nextOrder);
 
         setModule5Data(destination, request);
 
@@ -102,6 +129,7 @@ public class RouteService {
     // UPDATE DESTINATION
     // ==========================================
 
+    @Transactional
     public DestinationResponse updateDestination(
             Integer userId,
             Integer tripId,
@@ -215,6 +243,7 @@ public class RouteService {
     // REORDER DESTINATIONS
     // ==========================================
 
+    @Transactional
     public List<DestinationResponse> reorderDestinations(
             Integer userId,
             Integer tripId,
@@ -231,26 +260,38 @@ public class RouteService {
             );
         }
 
+        List<Integer> requestedIds = request.getDestinationIds();
+
+        // Reject duplicates. Without this check a list such as [1, 1, 3]
+        // has the right size but leaves destination 2 without a new order.
+        Set<Integer> uniqueIds = new HashSet<>(requestedIds);
+
+        if (uniqueIds.contains(null)
+                || uniqueIds.size() != requestedIds.size()) {
+
+            throw new RuntimeException(
+                    "Invalid destination order: each destination must appear exactly once"
+            );
+        }
+
         List<TripDestination> destinations =
                 tripDestinationRepository
                         .findByTrip_TripIdOrderByDestinationOrderAsc(
                                 tripId
                         );
 
-        if (destinations.size() !=
-                request.getDestinationIds().size()) {
+        if (destinations.size() != requestedIds.size()) {
 
             throw new RuntimeException(
                     "All destinations must be included when reordering"
             );
         }
 
-        for (int i = 0;
-             i < request.getDestinationIds().size();
-             i++) {
+        // Save all changes together, in one transaction
+        // (all succeed, or none are applied).
+        for (int i = 0; i < requestedIds.size(); i++) {
 
-            Integer destinationId =
-                    request.getDestinationIds().get(i);
+            Integer destinationId = requestedIds.get(i);
 
             TripDestination destination =
                     destinations.stream()
@@ -266,9 +307,9 @@ public class RouteService {
                             );
 
             destination.setDestinationOrder(i + 1);
-
-            tripDestinationRepository.save(destination);
         }
+
+        tripDestinationRepository.saveAll(destinations);
 
         return tripDestinationRepository
                 .findByTrip_TripIdOrderByDestinationOrderAsc(
@@ -280,7 +321,46 @@ public class RouteService {
     }
 
     // ==========================================
-    // CALCULATE ROAD DISTANCE
+    // ROUTE SUMMARY (NEW: totals + every leg in one call)
+    // ==========================================
+
+    public RouteSummaryResponse getRouteSummary(
+            Integer userId,
+            Integer tripId) {
+
+        getUserTrip(tripId, userId);
+
+        RouteCalculator.Result route = computeRoute(tripId);
+
+        List<RouteLegResponse> legs = new ArrayList<>();
+
+        for (RouteCalculator.Leg leg : route.legs) {
+            legs.add(new RouteLegResponse(
+                    leg.from.id,
+                    leg.from.name,
+                    leg.to.id,
+                    leg.to.name,
+                    leg.distanceKm,
+                    leg.durationMinutes
+            ));
+        }
+
+        RouteSummaryResponse response = new RouteSummaryResponse();
+        response.setTripId(tripId);
+        response.setStopCount(route.legs.size() + 1);
+        response.setTotalDistanceKm(route.totalDistanceKm);
+        response.setTotalDurationMinutes(route.totalDurationMinutes);
+        response.setAverageSpeedKmph(route.averageSpeedKmph());
+        response.setSource(route.source);
+        response.setApproximate(route.isApproximate());
+        response.setNotice(route.notice);
+        response.setLegs(legs);
+
+        return response;
+    }
+
+    // ==========================================
+    // CALCULATE ROAD DISTANCE (existing endpoint, unchanged format)
     // ==========================================
 
     public RouteDistanceResponse calculateDistance(
@@ -289,22 +369,16 @@ public class RouteService {
 
         getUserTrip(tripId, userId);
 
-        RoadRoute route = getRoadRoute(tripId);
-
-        double distanceKm =
-                route.distanceMeters / 1000.0;
-
-        distanceKm =
-                Math.round(distanceKm * 100.0) / 100.0;
+        RouteCalculator.Result route = computeRoute(tripId);
 
         return new RouteDistanceResponse(
                 tripId,
-                distanceKm
+                route.totalDistanceKm
         );
     }
 
     // ==========================================
-    // CALCULATE ROAD ETA
+    // CALCULATE ROAD ETA (existing endpoint, unchanged format)
     // ==========================================
 
     public RouteEtaResponse calculateEta(
@@ -313,42 +387,26 @@ public class RouteService {
 
         getUserTrip(tripId, userId);
 
-        RoadRoute route = getRoadRoute(tripId);
+        RouteCalculator.Result route = computeRoute(tripId);
 
-        double distanceKm =
-                route.distanceMeters / 1000.0;
-
-        double estimatedHours =
-                route.durationSeconds / 3600.0;
-
-        double averageSpeed = 0.0;
-
-        if (estimatedHours > 0) {
-            averageSpeed = distanceKm / estimatedHours;
-        }
-
-        distanceKm =
-                Math.round(distanceKm * 100.0) / 100.0;
-
-        estimatedHours =
-                Math.round(estimatedHours * 100.0) / 100.0;
-
-        averageSpeed =
-                Math.round(averageSpeed * 100.0) / 100.0;
+        double hours =
+                Math.round(
+                        route.totalDurationMinutes / 60.0 * 100.0
+                ) / 100.0;
 
         return new RouteEtaResponse(
                 tripId,
-                distanceKm,
-                averageSpeed,
-                estimatedHours
+                route.totalDistanceKm,
+                route.averageSpeedKmph(),
+                hours
         );
     }
 
     // ==========================================
-    // GET ROAD ROUTE FROM OSRM
+    // LOAD STOPS AND CALCULATE (OSRM, with safe fallback)
     // ==========================================
 
-    private RoadRoute getRoadRoute(Integer tripId) {
+    private RouteCalculator.Result computeRoute(Integer tripId) {
 
         List<TripDestination> destinations =
                 tripDestinationRepository
@@ -362,8 +420,7 @@ public class RouteService {
             );
         }
 
-        StringBuilder coordinates =
-                new StringBuilder();
+        List<RouteCalculator.Stop> stops = new ArrayList<>();
 
         for (TripDestination destination : destinations) {
 
@@ -375,101 +432,15 @@ public class RouteService {
                 );
             }
 
-            if (coordinates.length() > 0) {
-                coordinates.append(";");
-            }
-
-            // OSRM requires longitude first, latitude second
-            coordinates.append(destination.getLongitude())
-                    .append(",")
-                    .append(destination.getLatitude());
+            stops.add(new RouteCalculator.Stop(
+                    destination.getDestinationId(),
+                    destination.getDestinationName(),
+                    destination.getLatitude(),
+                    destination.getLongitude()
+            ));
         }
 
-        try {
-
-            String url =
-                    "https://router.project-osrm.org/route/v1/driving/"
-                            + coordinates
-                            + "?overview=false&steps=false";
-
-            HttpRequest request =
-                    HttpRequest.newBuilder()
-                            .uri(URI.create(url))
-                            .timeout(Duration.ofSeconds(30))
-                            .GET()
-                            .build();
-
-            HttpResponse<String> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers.ofString()
-                    );
-
-            if (response.statusCode() != 200) {
-                throw new RuntimeException(
-                        "Road routing service returned HTTP "
-                                + response.statusCode()
-                );
-            }
-
-            JsonNode root =
-                    objectMapper.readTree(response.body());
-
-            if (!"Ok".equals(root.path("code").asText())) {
-                throw new RuntimeException(
-                        "Unable to calculate road route: "
-                                + root.path("message").asText()
-                );
-            }
-
-            JsonNode routes = root.path("routes");
-
-            if (!routes.isArray() || routes.isEmpty()) {
-                throw new RuntimeException(
-                        "No driving route found for these destinations"
-                );
-            }
-
-            JsonNode firstRoute = routes.get(0);
-
-            double distanceMeters =
-                    firstRoute.path("distance").asDouble();
-
-            double durationSeconds =
-                    firstRoute.path("duration").asDouble();
-
-            if (distanceMeters <= 0 || durationSeconds <= 0) {
-                throw new RuntimeException(
-                        "Invalid distance or duration returned by routing service"
-                );
-            }
-
-            return new RoadRoute(
-                    distanceMeters,
-                    durationSeconds
-            );
-
-        } catch (InterruptedException e) {
-
-            Thread.currentThread().interrupt();
-
-            throw new RuntimeException(
-                    "Road route calculation was interrupted",
-                    e
-            );
-
-        } catch (Exception e) {
-
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-
-            throw new RuntimeException(
-                    "Unable to calculate road distance and travel time: "
-                            + e.getMessage(),
-                    e
-            );
-        }
+        return calculator().calculate(stops);
     }
 
     // ==========================================
@@ -733,24 +704,6 @@ public class RouteService {
             throw new RuntimeException(
                     "Opening time must be before closing time"
             );
-        }
-    }
-
-    // ==========================================
-    // ROAD ROUTE DATA
-    // ==========================================
-
-    private static class RoadRoute {
-
-        private final double distanceMeters;
-        private final double durationSeconds;
-
-        public RoadRoute(
-                double distanceMeters,
-                double durationSeconds) {
-
-            this.distanceMeters = distanceMeters;
-            this.durationSeconds = durationSeconds;
         }
     }
 }

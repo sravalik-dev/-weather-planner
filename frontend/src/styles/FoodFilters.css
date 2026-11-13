@@ -1,0 +1,314 @@
+/* =========================================================
+   FOOD & DINING - filter panel, result header, restyle (prefix fd-)
+   Loaded after Food.css. Explicit colours everywhere so text is
+   always readable: ink #10303a, muted #46616b on white.
+========================================================= */
+
+.food-module {
+  --fd-ink: #10303a;
+  --fd-muted: #46616b;
+  --fd-line: #c9d8da;
+  --fd-border: #7f9aa2;
+  --fd-forest: #0f3d3e;
+  --fd-forest-2: #165456;
+  --fd-emerald: #0e8f6e;
+  --fd-soft: #e3f5ee;
+  --fd-sky: #1d78a6;
+  color: var(--fd-ink);
+}
+
+.food-module :is(button, a, input, select):focus-visible {
+  outline: 3px solid #1d78a6;
+  outline-offset: 2px;
+}
+
+/* Header */
+.food-topbar {
+  padding: 26px 28px;
+  border-radius: 22px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(125, 211, 232, 0.3), transparent 45%),
+    linear-gradient(120deg, #0b3b3c, #0f5a57 60%, #1d78a6 140%);
+}
+.food-topbar h1 { color: #ffffff; }
+.food-topbar p { color: #e3f3f1; }
+.food-topbar .food-eyebrow { color: #9fe3cf; }
+.food-topbar .food-back-button {
+  background: #ffffff;
+  color: var(--fd-forest);
+  border: 0;
+  font-weight: 700;
+  min-height: 42px;
+}
+
+/* ---------- Type picker ---------- */
+.fd-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.fd-type {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  color: var(--fd-ink);
+  background: #ffffff;
+  border: 1.5px solid var(--fd-line);
+  border-radius: 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.fd-type > span { font-size: 1.4rem; }
+.fd-type strong { color: var(--fd-ink); }
+.fd-type small { color: var(--fd-muted); }
+.fd-type:hover { border-color: var(--fd-emerald); transform: translateY(-1px); }
+.fd-type.is-selected {
+  border-color: var(--fd-forest);
+  background: var(--fd-forest);
+  box-shadow: 0 8px 20px rgba(15, 61, 62, 0.25);
+}
+.fd-type.is-selected strong,
+.fd-type.is-selected small { color: #ffffff; }
+
+/* ---------- Filter panel ---------- */
+.fd-panel {
+  padding: 20px;
+  margin-bottom: 22px;
+  background: #ffffff;
+  border: 1px solid var(--fd-line);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(16, 48, 58, 0.07);
+}
+.fd-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.fd-panel-head h3 { margin: 2px 0 0; color: var(--fd-forest); }
+
+.fd-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.fd-group {
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px 16px;
+  background: #f4f9f8;
+  border: 1px solid var(--fd-line);
+  border-radius: 14px;
+}
+.fd-group legend {
+  padding: 0 8px;
+  font-weight: 800;
+  color: var(--fd-forest);
+}
+.fd-groups > .fd-group:first-child { grid-column: 1 / -1; }
+.fd-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.fd-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fd-field label { font-weight: 700; font-size: 0.9rem; color: var(--fd-ink); }
+.fd-field :is(select, input) {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--fd-ink);
+  background: #ffffff;
+  border: 1.5px solid var(--fd-border);
+  border-radius: 10px;
+  -webkit-text-fill-color: var(--fd-ink);
+}
+.fd-field input::placeholder { color: #5d747c; opacity: 1; -webkit-text-fill-color: #5d747c; }
+.fd-field :is(select, input):hover:not(:disabled) { border-color: var(--fd-forest-2); }
+.fd-field :is(select, input):disabled {
+  background: #e7eeee;
+  color: #3d545c;
+  -webkit-text-fill-color: #3d545c;
+  cursor: not-allowed;
+}
+.fd-field small { color: var(--fd-muted); line-height: 1.35; }
+.fd-field.is-disabled label { color: var(--fd-muted); }
+
+.fd-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px 14px;
+}
+.fd-toggle {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1.5px solid var(--fd-line);
+  border-radius: 10px;
+}
+.fd-toggle input { width: 20px; height: 20px; accent-color: var(--fd-forest); margin: 0; }
+.fd-toggle label { font-weight: 700; color: var(--fd-ink); cursor: pointer; }
+.fd-toggle small { grid-column: 2; color: var(--fd-muted); }
+.fd-toggle.is-disabled { background: #eef3f3; }
+.fd-toggle.is-disabled label { color: var(--fd-muted); cursor: not-allowed; }
+
+.fd-notices, .fd-issues { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.fd-notices li {
+  padding: 8px 12px; border-radius: 10px;
+  background: #e4f2f9; color: #0b4d6b; font-weight: 600;
+}
+.fd-issues li { padding: 8px 12px; border-radius: 10px; font-weight: 600; }
+.fd-issue-error { background: #fdeceb; color: #9b1c13; border: 1.5px solid #e3a7a2; }
+.fd-issue-warning { background: #fff4de; color: #7a4300; border: 1.5px solid #e0b36a; }
+
+.fd-apply-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px -20px -20px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-top: 1px solid var(--fd-line);
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 -8px 18px rgba(16, 48, 58, 0.06);
+}
+.fd-apply-bar p { margin: 0; color: var(--fd-muted); font-weight: 600; }
+
+/* Buttons */
+.fd-btn {
+  min-height: 44px;
+  padding: 0 22px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 12px;
+  border: 2px solid var(--fd-forest);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.fd-btn-primary { background: var(--fd-forest); color: #ffffff; }
+.fd-btn-primary:hover:not(:disabled) { background: var(--fd-forest-2); transform: translateY(-1px); }
+.fd-btn-outline { background: #ffffff; color: var(--fd-forest); }
+.fd-btn-outline:hover:not(:disabled) { background: #e6f1f1; }
+.fd-btn:disabled {
+  background: #d5e0e2; color: #3d545c; border-color: #aebfc3; cursor: not-allowed;
+}
+
+/* ---------- Results header + chips ---------- */
+.fd-results-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.fd-results-head h3 { margin: 2px 0 0; font-size: 1.4rem; color: var(--fd-forest); }
+.fd-results-head h3 small { font-size: 0.85rem; color: var(--fd-muted); font-weight: 600; }
+.fd-saved-view { display: flex; flex-direction: column; gap: 4px; font-weight: 700; color: var(--fd-ink); }
+.fd-saved-view select {
+  min-height: 40px; padding: 0 10px; font: inherit;
+  color: var(--fd-ink); background: #ffffff;
+  border: 1.5px solid var(--fd-border); border-radius: 10px;
+}
+
+.fd-active { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.fd-active-label { font-weight: 800; color: var(--fd-forest); margin-right: 4px; }
+.fd-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; font: inherit; font-size: 0.88rem;
+  color: #0a5f46; background: var(--fd-soft);
+  border: 1.5px solid #9fd3b6; border-radius: 999px;
+}
+.fd-chip b { color: #08432f; }
+.fd-chip-muted { color: var(--fd-muted); background: #eef3f3; border-color: var(--fd-line); }
+.fd-chip-remove { cursor: pointer; }
+.fd-chip-remove:hover { background: #cdeee0; }
+.fd-active-editable .fd-chip { background: #e4f2f9; border-color: #86bdd6; color: #0b4d6b; }
+.fd-active-editable .fd-chip b { color: #08384f; }
+.fd-link {
+  padding: 6px; background: none; border: 0; font: inherit; font-weight: 800;
+  color: var(--fd-sky); cursor: pointer; text-decoration: underline;
+}
+
+.fd-banner {
+  margin: 10px 0 14px; padding: 12px 16px; border-radius: 12px; line-height: 1.5;
+}
+.fd-banner p { margin: 6px 0 0; }
+.fd-banner-info { background: #e4f2f9; color: #0b4d6b; border: 1.5px solid #86bdd6; font-weight: 600; }
+.fd-banner-warn { background: #fff4de; color: #5e3500; border: 1.5px solid #e0b36a; }
+.fd-banner-warn strong { color: #5e3500; }
+
+/* ---------- Existing cards: readable + polished ---------- */
+.food-recommendation-card,
+.food-empty-card,
+.food-state-card { color: var(--fd-ink); }
+.food-empty-card h3, .food-state-card h3, .food-state-card h2 { color: var(--fd-forest); }
+.food-empty-card p, .food-state-card p { color: var(--fd-muted); }
+.food-empty-card .fd-btn { margin-top: 12px; }
+
+.food-alert-error { background: #fdeceb; color: #9b1c13; border: 1.5px solid #e3a7a2; }
+.food-alert-error p, .food-alert-error strong { color: #9b1c13; }
+.food-alert-error button {
+  background: #ffffff; color: #9b1c13; border: 1.5px solid #9b1c13; font-weight: 700; min-height: 38px;
+}
+
+.food-trip-panel select,
+.food-planning-bar :is(input, select) {
+  min-height: 44px;
+  color: var(--fd-ink);
+  background: #ffffff;
+  border: 1.5px solid var(--fd-border);
+  border-radius: 10px;
+  -webkit-text-fill-color: var(--fd-ink);
+  color-scheme: light;
+}
+.food-planning-bar label { color: var(--fd-ink); font-weight: 700; }
+
+.food-sidebar button { min-height: 44px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .fd-groups { grid-template-columns: 1fr; }
+  .food-topbar { padding: 20px; }
+}
+@media (max-width: 560px) {
+  .fd-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fd-apply-bar { flex-direction: column; align-items: stretch; }
+  .fd-btn { width: 100%; }
+  .fd-panel-head { flex-direction: column; align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-type, .fd-btn { transition: none; }
+}
+
+/* ---------- Fixes found while testing in the browser ---------- */
+/* TravelTheme sets dark heading colours on .app-shell h1; win on specificity. */
+.app-shell .food-module .food-topbar :is(h1, h2) { color: #ffffff; }
+.app-shell .food-module .food-topbar p { color: #e3f3f1; }
+.app-shell .food-module .food-topbar .food-eyebrow { color: #9fe3cf; }
+
+.fd-groups > .fd-group:last-child { grid-column: 1 / -1; }
+.fd-toggles { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+/* The reason is shown once (on Local Drinks) to avoid repeating it 3 times. */
+.fd-toggle.is-disabled:not(:has(#fd-drinks)) small { display: none; }
+.app-shell:not(.view-budget) .food-module .food-topbar h1 { color: #ffffff; }
+.app-shell:not(.view-budget) .food-module .food-topbar p { color: #e3f3f1; }

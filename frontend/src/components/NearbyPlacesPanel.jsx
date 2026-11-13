@@ -264,7 +264,11 @@ export default function NearbyPlacesPanel({
                 {place.phone && <p style={styles.detail}><strong>Phone:</strong> <a href={`tel:${place.phone}`}>{place.phone}</a></p>}
                 {place.openingHours && <p style={styles.detail}><strong>Hours:</strong> {place.openingHours}</p>}
                 {place.cuisine && <p style={styles.detail}><strong>Cuisine:</strong> {place.cuisine}</p>}
-                {!isFood && <p style={styles.availability}>Room availability: Not verified by OpenStreetMap</p>}
+                {!isFood && (
+                  <p style={styles.availability}>
+                    Unverified: OpenStreetMap does not provide room availability or prices. Contact the property to confirm.
+                  </p>
+                )}
                 <div style={styles.links}>
                   {place.website && <a href={place.website} target="_blank" rel="noreferrer">Website</a>}
                   {place.bookingUrl && <a href={place.bookingUrl} target="_blank" rel="noreferrer">Booking / Contact</a>}
@@ -307,7 +311,7 @@ const styles = {
   placeName: { margin: "0 0 6px", fontSize: 17 },
   category: { margin: "0 0 10px", textTransform: "capitalize", color: "#52627a", fontSize: 12 },
   detail: { fontSize: 12, lineHeight: 1.5, margin: "6px 0", overflowWrap: "anywhere" },
-  availability: { fontSize: 12, fontWeight: 700, color: "#805b12" },
+  availability: { fontSize: 12, fontWeight: 700, color: "#6b4a00", background: "#fff7e0", border: "1px solid #ecd48a", borderRadius: 8, padding: "6px 8px", margin: "6px 0" },
   links: { display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12, fontSize: 12, fontWeight: 700 },
   source: { display: "block", marginTop: 12, color: "#64748b", fontSize: 10 },
   message: { padding: 14, background: "#f1f5f9", borderRadius: 10, fontSize: 13 },

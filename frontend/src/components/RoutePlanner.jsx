@@ -7,7 +7,9 @@ import {
   reorderDestinations,
   calculateDistance,
   calculateEta,
+  getRouteSummary,
 } from "../services/routeService";
+import "../styles/RoutePlanner.css";
 import {
   addItineraryActivity,
   deleteItineraryActivity,
@@ -307,10 +309,21 @@ function RoutePlanner({ trip, onBack }) {
   const [reorderingId, setReorderingId] =
     useState(null);
 
-  const [distance, setDistance] =
+  // One summary object from the backend: totals + every leg.
+  const [routeSummary, setRouteSummary] =
     useState(null);
 
-  const [eta, setEta] =
+  const [routeReloadKey, setRouteReloadKey] =
+    useState(0);
+
+  // Drag and drop / confirm-before-remove
+  const [dragIndex, setDragIndex] =
+    useState(null);
+
+  const [dragOverIndex, setDragOverIndex] =
+    useState(null);
+
+  const [confirmRemoveId, setConfirmRemoveId] =
     useState(null);
 
   const [routeSummaryLoading, setRouteSummaryLoading] =
@@ -436,75 +449,91 @@ function RoutePlanner({ trip, onBack }) {
   // ROUTE SUMMARY
   // =====================================================
 
-  // =====================================================
-// ROUTE SUMMARY
-// =====================================================
+  // Recalculate only when the ORDER or COORDINATES of the stops change
+  // (not when unrelated details such as ticket price are edited).
+  const routeKey = destinations
+    .map(
+      (item) =>
+        `${getDestinationId(item)}:${item?.latitude},${item?.longitude}`
+    )
+    .join("|");
 
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  const loadRouteSummary = async () => {
-    if (!tripId || destinations.length < 2) {
-      setDistance(null);
-      setEta(null);
-      setRouteSummaryLoading(false);
-      setRouteSummaryError("");
-      return;
-    }
-
-    setRouteSummaryLoading(true);
-    setRouteSummaryError("");
-
-    try {
-      const [distanceResponse, etaResponse] =
-        await Promise.all([
-          calculateDistance(tripId),
-          calculateEta(tripId),
-        ]);
-
-      if (cancelled) return;
-
-      // Backend returns totalDistanceKm
-      setDistance(
-        distanceResponse?.totalDistanceKm ??
-        distanceResponse?.distance ??
-        null
-      );
-
-      // Backend returns estimatedTravelTimeHours
-      // Frontend formatter expects minutes
-      const estimatedHours =
-        etaResponse?.estimatedTravelTimeHours;
-
-      setEta(
-        estimatedHours != null
-          ? Number(estimatedHours) * 60
-          : null
-      );
-
-    } catch (error) {
-      if (!cancelled) {
-        setDistance(null);
-        setEta(null);
-
-        setRouteSummaryError(
-          error?.message ||
-          "Unable to calculate route distance and estimated time."
-        );
-      }
-    } finally {
-      if (!cancelled) {
+    const loadRouteSummary = async () => {
+      if (!tripId || destinations.length < 2) {
+        setRouteSummary(null);
         setRouteSummaryLoading(false);
+        setRouteSummaryError("");
+        return;
       }
-    }
-  };
 
-  loadRouteSummary();
+      setRouteSummaryLoading(true);
+      setRouteSummaryError("");
 
-  return () => {
-    cancelled = true;
-  };
-}, [tripId, destinations]);
+      try {
+        let summary;
+
+        try {
+          summary = await getRouteSummary(tripId);
+        } catch (error) {
+          // Older backend without /route/summary: use the two original
+          // endpoints. The page then shows totals but no per-leg details.
+          if (error?.status !== 404 && error?.status !== 405) {
+            throw error;
+          }
+
+          const [distanceResponse, etaResponse] =
+            await Promise.all([
+              calculateDistance(tripId),
+              calculateEta(tripId),
+            ]);
+
+          const hours = Number(
+            etaResponse?.estimatedTravelTimeHours
+          );
+
+          summary = {
+            totalDistanceKm:
+              distanceResponse?.totalDistanceKm ?? null,
+            totalDurationMinutes: Number.isFinite(hours)
+              ? hours * 60
+              : null,
+            averageSpeedKmph:
+              etaResponse?.averageSpeedKmph ?? null,
+            approximate: false,
+            source: "OSRM",
+            legs: [],
+          };
+        }
+
+        if (!cancelled) {
+          setRouteSummary(summary);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRouteSummary(null);
+
+          setRouteSummaryError(
+            error?.message ||
+              "Unable to calculate route distance and estimated time."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setRouteSummaryLoading(false);
+        }
+      }
+    };
+
+    loadRouteSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId, routeKey, routeReloadKey]);
+
   // =====================================================
   // LOAD ITINERARY
   // =====================================================
@@ -859,51 +888,40 @@ useEffect(() => {
   // REORDER DESTINATIONS
   // =====================================================
 
-  const moveDestination = async (
-    index,
-    direction
-  ) => {
-    const targetIndex =
-      index + direction;
-
+  const reorderTo = async (fromIndex, toIndex) => {
     if (
-      targetIndex < 0 ||
-      targetIndex >=
-        destinations.length ||
-      !tripId
+      !tripId ||
+      fromIndex === toIndex ||
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= destinations.length ||
+      toIndex >= destinations.length
     ) {
       return;
     }
 
-    const current =
-      [...destinations];
+    const previous = destinations;
+    const current = [...destinations];
 
-    const [moved] =
-      current.splice(index, 1);
+    const [moved] = current.splice(fromIndex, 1);
+    current.splice(toIndex, 0, moved);
 
-    current.splice(
-      targetIndex,
-      0,
-      moved
-    );
-
+    // Show the new order immediately...
     setDestinations(current);
 
-    const destinationIds =
-      current
-        .map(getDestinationId)
-        .filter(Boolean);
+    const destinationIds = current
+      .map(getDestinationId)
+      .filter(Boolean);
 
-    setReorderingId(
-      getDestinationId(moved)
-    );
+    setReorderingId(getDestinationId(moved));
 
     try {
-      await reorderDestinations(
-        tripId,
-        destinationIds
-      );
+      await reorderDestinations(tripId, destinationIds);
     } catch (error) {
+      // ...but put the old order back if the server refused, so the
+      // screen never disagrees with what is saved.
+      setDestinations(previous);
+
       setListError(
         error?.message ||
           "Unable to save destination order."
@@ -1495,7 +1513,31 @@ useEffect(() => {
     trip?.title ||
     "Your Trip";
 
+  const routeLegs = routeSummary?.legs || [];
+
+  const longestLegKm = Math.max(
+    1,
+    ...routeLegs.map((leg) => Number(leg.distanceKm) || 0)
+  );
+
+  const formatTripDate = (value) => {
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime())
+      ? ""
+      : date.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+  };
+
+  const tripDateRange =
+    trip?.startDate && trip?.endDate
+      ? `${formatTripDate(trip.startDate)} – ${formatTripDate(trip.endDate)}`
+      : "";
+
   const travelerCount =
+    trip?.noOfTravelers ??
     trip?.travelers ??
     trip?.numberOfTravelers ??
     trip?.travellers ??
@@ -1506,6 +1548,11 @@ useEffect(() => {
     trip?.totalBudget ??
     trip?.estimatedBudget ??
     "--";
+
+  const budgetText =
+    budget === "--" || !Number.isFinite(Number(budget))
+      ? "--"
+      : `₹${Number(budget).toLocaleString("en-IN")}`;
 
   // =====================================================
   // EMPTY
@@ -1537,449 +1584,351 @@ useEffect(() => {
   }
 
   return (
-    <div className="route-planner-page">
-      <div className="route-planner-shell">
-
-        {/* HEADER */}
+    <div className="route-planner-page rp-page">
+      <div className="route-planner-shell rp-shell">
 
         <button
           type="button"
-          className="route-back-button"
+          className="route-back-button rp-back"
           onClick={onBack}
         >
           ← Back to My Trips
         </button>
 
-        <header className="route-planner-header">
-          <div>
-            <span className="route-eyebrow">
-              SMART TRAVEL WORKSPACE
-            </span>
+        {/* ===================== HERO ===================== */}
 
-            <h1>
-              Smart Route Planner
-            </h1>
-
+        <header className="rp-hero">
+          <div className="rp-hero-text">
+            <span className="rp-eyebrow">Smart travel workspace</span>
+            <h1>Smart Route Planner</h1>
             <p>
-              Plan, customize, reorder
-              and optimize your
-              multi-destination journey
-              with smart route insights.
+              Arrange your stops, see the driving distance and time between
+              each one, and keep everything in the order you will travel.
             </p>
           </div>
 
-          <div className="route-header-icon">
-            🧭
-          </div>
+          <dl className="rp-trip-facts" aria-label="Selected trip">
+            <div>
+              <dt>Trip</dt>
+              <dd>{tripTitle}</dd>
+            </div>
+            {tripDateRange && (
+              <div>
+                <dt>Dates</dt>
+                <dd>{tripDateRange}</dd>
+              </div>
+            )}
+            <div>
+              <dt>Travelers</dt>
+              <dd>{travelerCount}</dd>
+            </div>
+            <div>
+              <dt>Budget</dt>
+              <dd>{budgetText}</dd>
+            </div>
+          </dl>
         </header>
 
-        {/* TRIP SUMMARY */}
+        {/* ===================== SUMMARY STRIP ===================== */}
 
-        <section className="route-trip-banner">
-          <div>
-            <span>
-              SELECTED TRIP
-            </span>
-
-            <strong>
-              {tripTitle}
-            </strong>
+        <section className="rp-metrics" aria-label="Route summary" aria-busy={routeSummaryLoading}>
+          <div className="rp-metric">
+            <span className="rp-metric-icon" aria-hidden="true">📍</span>
+            <div>
+              <strong>{destinations.length}</strong>
+              <span>{destinations.length === 1 ? "Stop" : "Stops"}</span>
+            </div>
           </div>
-
-          <div>
-            <span>
-              TRIP ID
-            </span>
-
-            <strong>
-              {tripId}
-            </strong>
+          <div className="rp-metric">
+            <span className="rp-metric-icon" aria-hidden="true">🛣️</span>
+            <div>
+              <strong>
+                {routeSummaryLoading ? <i className="rp-skel" /> : formatDistance(routeSummary?.totalDistanceKm)}
+              </strong>
+              <span>Total distance</span>
+            </div>
           </div>
-
-          <div>
-            <span>
-              TRAVELERS
-            </span>
-
-            <strong>
-              {travelerCount}
-            </strong>
+          <div className="rp-metric">
+            <span className="rp-metric-icon" aria-hidden="true">⏱️</span>
+            <div>
+              <strong>
+                {routeSummaryLoading ? <i className="rp-skel" /> : formatDuration(routeSummary?.totalDurationMinutes)}
+              </strong>
+              <span>Driving time</span>
+            </div>
           </div>
-
-          <div>
-            <span>
-              BUDGET
-            </span>
-
-            <strong>
-              {budget === "--"
-                ? "--"
-                : `₹${budget}`}
-            </strong>
+          <div className="rp-metric">
+            <span className="rp-metric-icon" aria-hidden="true">🚗</span>
+            <div>
+              <strong>
+                {routeSummaryLoading
+                  ? <i className="rp-skel" />
+                  : routeSummary?.averageSpeedKmph
+                    ? `${Math.round(routeSummary.averageSpeedKmph)} km/h`
+                    : "--"}
+              </strong>
+              <span>Average speed</span>
+            </div>
           </div>
         </section>
 
-        {/* METRICS */}
-
-        <div className="route-metrics">
-          <div className="route-stat-card">
-            <span>
-              DESTINATIONS
-            </span>
-
-            <strong>
-              {destinations.length}
-            </strong>
-          </div>
-
-          <div className="route-stat-card">
-            <span>
-              TOTAL DISTANCE
-            </span>
-
-            <strong>
-              {routeSummaryLoading
-                ? "..."
-                : formatDistance(
-                    distance
-                  )}
-            </strong>
-          </div>
-
-          <div className="route-stat-card">
-            <span>
-              ESTIMATED TIME
-            </span>
-
-            <strong>
-              {routeSummaryLoading
-                ? "..."
-                : formatDuration(
-                    eta
-                  )}
-            </strong>
-          </div>
-
-          <div className="route-stat-card">
-            <span>
-              AVG. SPEED
-            </span>
-
-            <strong>
-              50 km/h
-            </strong>
-          </div>
-        </div>
-
-        {/* ALERTS */}
+        {/* ===================== ALERTS ===================== */}
 
         {listError && (
-          <div className="route-alert route-error">
-            ⚠️ {listError}
-
-            <button
-              type="button"
-              onClick={() =>
-                setListError("")
-              }
-            >
-              ×
-            </button>
+          <div className="rp-alert rp-alert-error" role="alert">
+            <span>{listError}</span>
+            <button type="button" onClick={() => setListError("")} aria-label="Dismiss message">×</button>
           </div>
         )}
 
-        {routeSummaryError && (
-          <div className="route-alert route-error">
-            ⚠️ {routeSummaryError}
+        {/* ===================== WORKSPACE ===================== */}
 
-            <button
-              type="button"
-              onClick={() =>
-                setRouteSummaryError("")
-              }
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <div className="rp-workspace">
 
-        {/* ADD DESTINATION */}
+          {/* ---------- LEFT: add stop + timeline ---------- */}
 
-        <section className="route-control-card">
-          <div className="route-card-title">
-            <div>
-              <span>
-                ADD DESTINATION
-              </span>
-
-              <h2>
-                Build your route
-              </h2>
-
-              <p>
-                Add places to your trip
-                and arrange them in the
-                order you want to visit.
-              </p>
-            </div>
-
-            <span className="route-section-icon">
-              📍
-            </span>
-          </div>
-
-          <form
-            className="route-add-form"
-            onSubmit={
-              handleAddDestination
-            }
-          >
-            <input
-              type="text"
-              value={
-                destinationInput
-              }
-              onChange={(event) =>
-                setDestinationInput(
-                  event.target.value
-                )
-              }
-              placeholder="Search city or destination..."
-              disabled={adding}
-            />
-
-            <button
-              type="submit"
-              disabled={
-                adding ||
-                geocoding
-              }
-            >
-              {geocoding
-                ? "Finding..."
-                : adding
-                ? "Adding..."
-                : "Add Destination"}
-            </button>
-          </form>
-
-          {addError && (
-            <div className="route-inline-error">
-              {addError}
-            </div>
-          )}
-        </section>
-
-        {/* YOUR ROUTE */}
-
-        <section className="route-main-card">
-          <div className="route-section-heading">
-            <div>
-              <span>
-                ROUTE PLANNER
-              </span>
-
-              <h2>
-                📍 Your Route
-              </h2>
-
-              <p>
-                Drag destinations or use
-                the controls to change
-                their order.
-              </p>
-            </div>
-
-            <span className="route-count-badge">
-              {destinations.length} stops
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="route-loading">
-              Loading destinations...
-            </div>
-          ) : destinations.length ===
-            0 ? (
-            <div className="route-empty-state">
+          <section className="rp-card rp-route-card" aria-labelledby="rp-route-title">
+            <div className="rp-card-head">
               <div>
-                📍
+                <h2 id="rp-route-title">Your route</h2>
+                <p>Drag a stop by its handle, or use the arrows, to change the order.</p>
               </div>
-
-              <h3>
-                No destinations yet
-              </h3>
-
-              <p>
-                Add your first destination
-                above.
-              </p>
+              <span className="rp-badge">{destinations.length} {destinations.length === 1 ? "stop" : "stops"}</span>
             </div>
-          ) : (
-            <div className="destination-list">
-              {destinations.map(
-                (
-                  destination,
-                  index
-                ) => {
-                  const id =
-                    getDestinationId(
-                      destination
-                    );
+
+            <form className="rp-add-form" onSubmit={handleAddDestination}>
+              <label htmlFor="rp-add-input" className="rp-sr-only">Add a destination</label>
+              <input
+                id="rp-add-input"
+                type="text"
+                value={destinationInput}
+                onChange={(event) => setDestinationInput(event.target.value)}
+                placeholder="Search a city or place to add..."
+                disabled={adding}
+                autoComplete="off"
+              />
+              <button type="submit" disabled={adding || geocoding || !destinationInput.trim()}>
+                {geocoding ? "Finding..." : adding ? "Adding..." : "+ Add stop"}
+              </button>
+            </form>
+
+            {addError && <div className="rp-inline-error" role="alert">{addError}</div>}
+
+            {loading ? (
+              <div className="rp-skeleton-list" aria-busy="true" aria-label="Loading stops">
+                <i /><i /><i />
+              </div>
+            ) : destinations.length === 0 ? (
+              <div className="rp-empty">
+                <span aria-hidden="true">🧭</span>
+                <h3>No stops yet</h3>
+                <p>Search for your first destination above. Add at least two stops to see distances and travel times.</p>
+              </div>
+            ) : (
+              <ol className="rp-timeline">
+                {destinations.map((destination, index) => {
+                  const id = getDestinationId(destination);
+                  const leg = routeLegs[index - 1]; // leg that arrives at this stop
+                  const category = destination?.category;
+                  const confirming = confirmRemoveId !== null && confirmRemoveId === id;
+                  const dragging = dragIndex === index;
+                  const dropTarget = dragOverIndex === index && dragIndex !== null && dragIndex !== index;
 
                   return (
-                    <div
-                      className="destination-item"
-                      key={
-                        id ||
-                        `${getDestinationName(
-                          destination
-                        )}-${index}`
-                      }
+                    <li
+                      key={id || `${getDestinationName(destination)}-${index}`}
+                      className={`rp-stop-wrap ${dragging ? "is-dragging" : ""} ${dropTarget ? "is-drop-target" : ""}`}
+                      onDragOver={(event) => {
+                        if (dragIndex === null) return;
+                        event.preventDefault();
+                        if (dragOverIndex !== index) setDragOverIndex(index);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (dragIndex !== null) reorderTo(dragIndex, index);
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
                     >
-                      <div className="destination-number">
-                        {index + 1}
+                      {index > 0 && (
+                        <div className="rp-leg" aria-label={`From ${getDestinationName(destinations[index - 1])} to ${getDestinationName(destination)}`}>
+                          <span className="rp-leg-line" aria-hidden="true" />
+                          {routeSummaryLoading ? (
+                            <span className="rp-leg-chip"><i className="rp-skel" /></span>
+                          ) : leg ? (
+                            <span className="rp-leg-chip">
+                              🚗 {formatDistance(leg.distanceKm)} · {formatDuration(leg.durationMinutes)}
+                              {routeSummary?.approximate && <em title="Estimated, not live road data"> ≈</em>}
+                            </span>
+                          ) : (
+                            <span className="rp-leg-chip rp-leg-muted">Distance not available</span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="rp-stop">
+                        <span
+                          className="rp-handle"
+                          draggable={reorderingId === null}
+                          onDragStart={(event) => {
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", String(index));
+                            setDragIndex(index);
+                          }}
+                          onDragEnd={() => {
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          title="Drag to reorder"
+                          aria-hidden="true"
+                        >
+                          ⠿
+                        </span>
+
+                        <span className="rp-stop-number">{index + 1}</span>
+
+                        <div className="rp-stop-body">
+                          <strong>{getDestinationName(destination)}</strong>
+                          <span>
+                            {category ? category : "No category yet"}
+                            {destination?.bestTime ? ` · Best: ${destination.bestTime}` : ""}
+                          </span>
+                        </div>
+
+                        {confirming ? (
+                          <div className="rp-stop-actions rp-confirm" role="group" aria-label="Confirm removal">
+                            <span>Remove this stop?</span>
+                            <button
+                              type="button"
+                              className="rp-danger"
+                              onClick={() => {
+                                setConfirmRemoveId(null);
+                                handleRemoveDestination(destination);
+                              }}
+                            >
+                              Remove
+                            </button>
+                            <button type="button" onClick={() => setConfirmRemoveId(null)}>Keep</button>
+                          </div>
+                        ) : (
+                          <div className="rp-stop-actions">
+                            <button
+                              type="button"
+                              onClick={() => handleEditDestination(destination)}
+                              aria-label={`Edit details for ${getDestinationName(destination)}`}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => reorderTo(index, index - 1)}
+                              disabled={index === 0 || reorderingId !== null}
+                              aria-label={`Move ${getDestinationName(destination)} up`}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => reorderTo(index, index + 1)}
+                              disabled={index === destinations.length - 1 || reorderingId !== null}
+                              aria-label={`Move ${getDestinationName(destination)} down`}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="rp-icon-danger"
+                              onClick={() => setConfirmRemoveId(id)}
+                              disabled={removingId === id}
+                              aria-label={`Remove ${getDestinationName(destination)}`}
+                            >
+                              {removingId === id ? "…" : "×"}
+                            </button>
+                          </div>
+                        )}
                       </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
 
-                      <div className="destination-content">
-                        <strong>
-                          {getDestinationName(
-                            destination
-                          )}
-                        </strong>
+          {/* ---------- RIGHT: overview ---------- */}
 
-                        <span>
-                          {displayValue(
-                            getDestinationField(
-                              destination,
-                              "country",
-                              "state"
-                            )
-                          )}
+          <aside className="rp-card rp-overview" aria-labelledby="rp-overview-title">
+            <div className="rp-card-head">
+              <div>
+                <h2 id="rp-overview-title">Route overview</h2>
+                <p>Distance and time for each leg of the journey.</p>
+              </div>
+            </div>
+
+            {destinations.length < 2 ? (
+              <div className="rp-empty rp-empty-small">
+                <span aria-hidden="true">🗺️</span>
+                <p>
+                  {destinations.length === 0
+                    ? "Add two or more stops to see your route."
+                    : "Add one more stop to calculate the route."}
+                </p>
+              </div>
+            ) : routeSummaryError ? (
+              <div className="rp-alert rp-alert-error" role="alert">
+                <span>{routeSummaryError}</span>
+                <button type="button" className="rp-retry" onClick={() => setRouteReloadKey((value) => value + 1)}>
+                  Try again
+                </button>
+              </div>
+            ) : routeSummaryLoading ? (
+              <div className="rp-skeleton-list" aria-busy="true" aria-label="Calculating route">
+                <i /><i /><i />
+              </div>
+            ) : routeSummary ? (
+              <>
+                <div className={`rp-source ${routeSummary.approximate ? "is-estimate" : "is-live"}`}>
+                  <strong>
+                    {routeSummary.approximate ? "Approximate estimate" : "Road route"}
+                  </strong>
+                  <span>
+                    {routeSummary.approximate
+                      ? routeSummary.notice || "Live road routing is unavailable, so these numbers are estimated from straight-line distance."
+                      : "Driving distance and time from the OpenStreetMap routing service. Traffic is not included."}
+                  </span>
+                </div>
+
+                <div className="rp-totals">
+                  <div>
+                    <span>Total distance</span>
+                    <strong>{formatDistance(routeSummary.totalDistanceKm)}</strong>
+                  </div>
+                  <div>
+                    <span>Driving time</span>
+                    <strong>{formatDuration(routeSummary.totalDurationMinutes)}</strong>
+                  </div>
+                </div>
+
+                <ul className="rp-legs">
+                  {routeLegs.map((leg, index) => (
+                    <li key={`${leg.fromDestinationId}-${leg.toDestinationId}-${index}`}>
+                      <div className="rp-leg-row">
+                        <span className="rp-leg-names">
+                          <b>{index + 1}</b> {leg.fromName} <span aria-hidden="true">→</span> {leg.toName}
+                        </span>
+                        <span className="rp-leg-values">
+                          {formatDistance(leg.distanceKm)} · {formatDuration(leg.durationMinutes)}
                         </span>
                       </div>
-
-                      <div className="destination-actions">
-                        <button
-                          type="button"
-                          onClick={() => handleEditDestination(destination)}
-                          title="Edit destination information"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moveDestination(
-                              index,
-                              -1
-                            )
-                          }
-                          disabled={
-                            index === 0 ||
-                            reorderingId !==
-                              null
-                          }
-                        >
-                          ↑
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            moveDestination(
-                              index,
-                              1
-                            )
-                          }
-                          disabled={
-                            index ===
-                              destinations.length -
-                                1 ||
-                            reorderingId !==
-                              null
-                          }
-                        >
-                          ↓
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleRemoveDestination(
-                              destination
-                            )
-                          }
-                          disabled={
-                            removingId ===
-                            id
-                          }
-                        >
-                          {removingId ===
-                          id
-                            ? "..."
-                            : "×"}
-                        </button>
+                      <div className="rp-leg-bar" aria-hidden="true">
+                        <i style={{ width: `${Math.max(4, Math.round((Number(leg.distanceKm) / longestLegKm) * 100))}%` }} />
                       </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* ROUTE SUMMARY */}
-
-        <section className="route-result-card">
-          <div>
-            <span>
-              ROUTE STATUS
-            </span>
-
-            <strong>
-              {destinations.length >=
-              2
-                ? "Ready"
-                : "Add another stop"}
-            </strong>
-          </div>
-
-          <div>
-            <span>
-              DISTANCE
-            </span>
-
-            <strong>
-              {formatDistance(
-                distance
-              )}
-            </strong>
-          </div>
-
-          <div>
-            <span>
-              ESTIMATED TIME
-            </span>
-
-            <strong>
-              {formatDuration(
-                eta
-              )}
-            </strong>
-          </div>
-
-          <div>
-            <span>
-              STOPS
-            </span>
-
-            <strong>
-              {destinations.length}
-            </strong>
-          </div>
-        </section>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </aside>
+        </div>
 
         {/* =================================================
             DESTINATION INFORMATION
@@ -2361,7 +2310,7 @@ useEffect(() => {
 
               <div>
                 <span className="module6-eyebrow">
-                  MODULE 6
+                  DAY-BY-DAY PLAN
                 </span>
 
                 <h2>
@@ -2826,7 +2775,7 @@ useEffect(() => {
             <div className="module6-modal-header">
               <div>
                 <span className="module6-eyebrow">
-                  MODULE 6
+                  DAY-BY-DAY PLAN
                 </span>
 
                 <h2>

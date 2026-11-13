@@ -48,3 +48,19 @@ export const getAccommodationHistoryByTrip = async (tripId) => {
   );
   return Array.isArray(data) ? data : [];
 };
+
+/**
+ * POST /api/accommodations/search  (existing backend endpoint)
+ *
+ * Body = AccommodationSearchRequest. All fields are optional. The backend
+ * answers 400 with a message such as "No accommodation matches your selected
+ * preferences." when nothing matches, so callers should treat that case as
+ * an empty result (see isNoMatchError in utils/accommodationFilters.js).
+ */
+export const searchAccommodations = async (searchRequest) => {
+  const data = await apiRequest("/accommodations/search", {
+    method: "POST",
+    body: JSON.stringify(searchRequest || {}),
+  });
+  return Array.isArray(data) ? data : [];
+};

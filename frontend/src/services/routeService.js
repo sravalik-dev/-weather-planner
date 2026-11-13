@@ -61,3 +61,14 @@ export const calculateEta = (tripId) =>
   apiRequest(
     `/trips/${encodeURIComponent(tripId)}/route/eta`
   );
+
+/**
+ * One call for everything the Route Planner needs: totals, every leg
+ * (from -> to with distance and time), and whether the numbers are live
+ * road data (source "OSRM") or an approximate estimate (source "ESTIMATE").
+ * Backend: GET /api/trips/{tripId}/route/summary
+ */
+export const getRouteSummary = (tripId) =>
+  apiRequest(
+    `/trips/${encodeURIComponent(tripId)}/route/summary`
+  );

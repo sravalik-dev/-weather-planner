@@ -19,6 +19,7 @@ import backend.dto.DestinationResponse;
 import backend.dto.ReorderDestinationRequest;
 import backend.dto.RouteDistanceResponse;
 import backend.dto.RouteEtaResponse;
+import backend.dto.RouteSummaryResponse;
 import backend.dto.TripRequest;
 import backend.dto.TripResponse;
 import backend.service.RouteService;
@@ -341,6 +342,26 @@ public class TripController {
 
         return ResponseEntity.ok(
                 routeService.calculateEta(
+                        userId,
+                        tripId
+                )
+        );
+    }
+
+    // ==========================================
+    // ROUTE SUMMARY (totals + every leg, one call)
+    // ==========================================
+
+    @GetMapping("/{tripId}/route/summary")
+    public ResponseEntity<RouteSummaryResponse>
+    getRouteSummary(
+            Authentication authentication,
+            @PathVariable Integer tripId) {
+
+        Integer userId = getUserId(authentication);
+
+        return ResponseEntity.ok(
+                routeService.getRouteSummary(
                         userId,
                         tripId
                 )
