@@ -150,102 +150,89 @@ public class ProfileService {
         return "Profile updated successfully!";
     }
 
-    public String updatePreferences(
-            Integer userId,
-            PreferenceUpdateRequest request) {
+    
+public String updatePreferences(
+        Integer userId,
+        PreferenceUpdateRequest request) {
 
-        Optional<User> userOptional =
-                userRepository.findById(userId);
+    Optional<User> userOptional =
+            userRepository.findById(userId);
 
-        if (userOptional.isEmpty()) {
-            return "User not found!";
-        }
-
-        if (request.getBudget() == null
-                || request.getBudget().trim().isEmpty()) {
-            return "Budget is required!";
-        }
-
-        String budget =
-                request.getBudget().trim();
-
-        if (!budget.equals("Budget")
-                && !budget.equals("Economy")
-                && !budget.equals("Mid-Range")
-                && !budget.equals("Luxury")) {
-
-            return "Invalid budget!";
-        }
-
-        if (request.getTravelPace() == null
-                || request.getTravelPace().trim().isEmpty()) {
-            return "Travel pace is required!";
-        }
-
-        String travelPace =
-                request.getTravelPace().trim();
-
-        if (!travelPace.equals("Relaxed")
-                && !travelPace.equals("Moderate")
-                && !travelPace.equals("Fast-Paced")) {
-
-            return "Invalid travel pace!";
-        }
-
-        if (request.getTransport() != null
-                && request.getTransport().trim().isEmpty()) {
-
-            return "At least one transport option must be selected!";
-        }
-
-        if (request.getAccommodation() != null
-                && request.getAccommodation().trim().isEmpty()) {
-
-            return "At least one accommodation option must be selected!";
-        }
-
-        UserPreference preference;
-
-        Optional<UserPreference> preferenceOptional =
-                userPreferenceRepository.findByUserId(userId);
-
-        if (preferenceOptional.isPresent()) {
-
-            preference =
-                    preferenceOptional.get();
-
-        } else {
-
-            preference =
-                    new UserPreference();
-
-            preference.setUserId(userId);
-        }
-
-        preference.setBudget(budget);
-
-        preference.setTransport(
-                cleanValue(request.getTransport())
-        );
-
-        preference.setAccommodation(
-                cleanValue(request.getAccommodation())
-        );
-
-        preference.setFoodPreferences(
-                cleanValue(request.getFoodPreferences())
-        );
-
-        preference.setInterests(
-                cleanValue(request.getInterests())
-        );
-
-        preference.setTravelPace(travelPace);
-
-        userPreferenceRepository.save(preference);
-
-        return "Preferences updated successfully!";
+    if (userOptional.isEmpty()) {
+        return "User not found!";
     }
+
+    if (request == null) {
+        return "Preference details are required!";
+    }
+
+    // Validate budget values displayed in the Profile page.
+    if (request.getBudget() == null
+            || request.getBudget().trim().isEmpty()) {
+        return "Please select a budget!";
+    }
+
+    String budget = request.getBudget().trim();
+
+    if (!budget.equals("Budget")
+            && !budget.equals("Economy")
+            && !budget.equals("Moderate")
+            && !budget.equals("Mid-Range")
+            && !budget.equals("Premium")
+            && !budget.equals("Luxury")) {
+        return "Invalid budget selection!";
+    }
+
+    // Validate travel pace values displayed in the Profile page.
+    if (request.getTravelPace() == null
+            || request.getTravelPace().trim().isEmpty()) {
+        return "Please select your travel pace!";
+    }
+
+    String travelPace = request.getTravelPace().trim();
+
+    if (!travelPace.equals("Relaxed")
+            && !travelPace.equals("Balanced")
+            && !travelPace.equals("Packed")
+            && !travelPace.equals("Moderate")
+            && !travelPace.equals("Fast-Paced")) {
+        return "Invalid travel pace selection!";
+    }
+
+    if (request.getTransport() != null
+            && request.getTransport().trim().isEmpty()) {
+        return "Please select a travel type!";
+    }
+
+    if (request.getAccommodation() != null
+            && request.getAccommodation().trim().isEmpty()) {
+        return "Please select an accommodation!";
+    }
+
+    UserPreference preference;
+
+    Optional<UserPreference> preferenceOptional =
+            userPreferenceRepository.findByUserId(userId);
+
+    if (preferenceOptional.isPresent()) {
+        preference = preferenceOptional.get();
+    } else {
+        preference = new UserPreference();
+        preference.setUserId(userId);
+    }
+
+    preference.setBudget(budget);
+    preference.setTransport(cleanValue(request.getTransport()));
+    preference.setAccommodation(cleanValue(request.getAccommodation()));
+    preference.setFoodPreferences(cleanValue(request.getFoodPreferences()));
+    preference.setInterests(cleanValue(request.getInterests()));
+    preference.setTravelPace(travelPace);
+
+    userPreferenceRepository.save(preference);
+
+    return "Preferences updated successfully!";
+}
+
 
     public String changePassword(
             Integer userId,

@@ -9,7 +9,6 @@ import {
   calculateEta,
   getRouteSummary,
 } from "../services/routeService";
-import "../styles/RoutePlanner.css";
 import {
   addItineraryActivity,
   deleteItineraryActivity,
@@ -19,6 +18,300 @@ import {
   toggleItineraryActivityLock,
   updateItineraryActivity,
 } from "../services/itineraryService";
+
+
+
+const routePlannerStyles = `
+  .route-planner-page.rp-page {
+    --rp-ink: #142b3b;
+    --rp-muted: #647887;
+    --rp-line: #dce7e9;
+    --rp-teal: #087e78;
+    --rp-teal-dark: #075e5b;
+    --rp-teal-soft: #e8f5f2;
+    --rp-canvas: #f4f7f6;
+    --rp-card: #ffffff;
+    --rp-shadow: 0 12px 34px rgba(20, 43, 59, .07);
+    min-height: 100vh;
+    padding: 28px clamp(14px, 3vw, 42px) 54px;
+    color: var(--rp-ink);
+    background:
+      radial-gradient(circle at 88% 4%, rgba(8,126,120,.09), transparent 25rem),
+      linear-gradient(180deg, #f5f8f7 0%, #edf3f2 100%);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .rp-page *, .rp-page *::before, .rp-page *::after { box-sizing: border-box; }
+  .rp-page button, .rp-page input, .rp-page select, .rp-page textarea { font: inherit; }
+  .rp-shell { width: min(1380px, 100%); margin: 0 auto; }
+  .rp-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--rp-line); border-radius: 999px;
+    padding: 9px 15px; margin-bottom: 18px; color: var(--rp-ink);
+    background: rgba(255,255,255,.88); font-weight: 650; cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .rp-back:hover { transform: translateY(-1px); border-color: #9bcac4; box-shadow: 0 6px 18px rgba(20,43,59,.08); }
+  .rp-hero {
+    position: relative; overflow: hidden; display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, .9fr);
+    gap: 26px; align-items: center; padding: clamp(24px, 4vw, 42px);
+    border-radius: 26px; color: white;
+    background: linear-gradient(120deg, #123d51 0%, #075e61 58%, #087e78 100%);
+    box-shadow: 0 18px 44px rgba(7,94,91,.18);
+  }
+  .rp-hero::after {
+    content: ""; position: absolute; width: 340px; height: 340px; right: 20%;
+    top: -245px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%;
+    box-shadow: 0 0 0 34px rgba(255,255,255,.035), 0 0 0 70px rgba(255,255,255,.025);
+    pointer-events: none;
+  }
+  .rp-hero-text, .rp-trip-facts { position: relative; z-index: 1; }
+  .rp-eyebrow { display: inline-block; margin-bottom: 10px; color: #9fe4d9; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  .rp-hero h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.04em; color: #fff; }
+  .rp-hero p { max-width: 610px; margin: 13px 0 0; color: rgba(255,255,255,.82); font-size: 14px; line-height: 1.7; }
+  .rp-trip-facts {
+    display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px;
+    margin: 0; padding: 0;
+  }
+  .rp-trip-facts > div { min-width: 0; padding: 13px 15px; border: 1px solid rgba(255,255,255,.16); border-radius: 15px; background: rgba(255,255,255,.09); backdrop-filter: blur(8px); }
+  .rp-trip-facts dt { margin-bottom: 5px; color: #a8ded8; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .rp-trip-facts dd { overflow-wrap: anywhere; margin: 0; color: #fff; font-size: 14px; font-weight: 700; }
+  .rp-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 13px; margin: 18px 0 22px; }
+  .rp-metric {
+    display: flex; align-items: center; gap: 14px; min-width: 0; padding: 17px 18px;
+    border: 1px solid var(--rp-line); border-radius: 18px; background: var(--rp-card);
+    box-shadow: 0 5px 18px rgba(20,43,59,.035);
+  }
+  .rp-metric-icon { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 13px; background: var(--rp-teal-soft); font-size: 19px; }
+  .rp-metric strong { display: block; color: var(--rp-ink); font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: -.03em; }
+  .rp-metric div > span { display: block; margin-top: 4px; color: var(--rp-muted); font-size: 11px; font-weight: 650; }
+  .rp-workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .85fr); gap: 18px; align-items: start; }
+  .rp-card, .destination-information-card, .route-insight-card, .module6-itinerary-card {
+    min-width: 0; border: 1px solid var(--rp-line); border-radius: 22px;
+    background: var(--rp-card); box-shadow: var(--rp-shadow);
+  }
+  .rp-card { padding: 22px; }
+  .rp-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .rp-card-head h2 { margin: 0; color: var(--rp-ink); font-size: 19px; letter-spacing: -.025em; }
+  .rp-card-head p { margin: 6px 0 0; color: var(--rp-muted); font-size: 12px; line-height: 1.55; }
+  .rp-badge { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; color: var(--rp-teal-dark); background: var(--rp-teal-soft); font-size: 11px; font-weight: 800; }
+  .rp-add-form { display: flex; gap: 9px; margin-bottom: 15px; }
+  .rp-add-form input, .rp-page input:not([type="checkbox"]), .rp-page select, .rp-page textarea {
+    width: 100%; min-width: 0; border: 1px solid #d5e1e3; border-radius: 11px;
+    padding: 11px 13px; color: var(--rp-ink); background: #fbfdfd; outline: none;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+  .rp-page input:focus, .rp-page select:focus, .rp-page textarea:focus { border-color: #55aaa1; background: #fff; box-shadow: 0 0 0 3px rgba(8,126,120,.12); }
+  .rp-add-form button, .rp-stop-actions button, .rp-retry {
+    border: 0; border-radius: 10px; padding: 10px 14px; color: #fff;
+    background: var(--rp-teal); font-size: 12px; font-weight: 750; cursor: pointer;
+    transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+  }
+  .rp-add-form button:hover, .rp-stop-actions button:hover, .rp-retry:hover { transform: translateY(-1px); background: var(--rp-teal-dark); box-shadow: 0 5px 12px rgba(8,126,120,.18); }
+  .rp-page button:disabled { cursor: not-allowed; opacity: .48; transform: none; box-shadow: none; }
+  .rp-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .rp-timeline { position: relative; display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+  .rp-stop-wrap { position: relative; border-radius: 15px; transition: background .15s ease, transform .15s ease; }
+  .rp-stop-wrap.is-drop-target { background: #e9f6f3; outline: 2px dashed #55aaa1; }
+  .rp-stop-wrap.is-dragging { opacity: .5; }
+  .rp-stop { display: flex; align-items: center; gap: 12px; padding: 13px 10px; border: 1px solid transparent; border-radius: 15px; }
+  .rp-stop:hover { border-color: #e0eceb; background: #fbfdfd; }
+  .rp-handle { color: #8aa1a8; cursor: grab; font-size: 20px; user-select: none; }
+  .rp-stop-number { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #0c8980, #075e61); font-size: 13px; font-weight: 800; box-shadow: 0 4px 10px rgba(8,126,120,.18); }
+  .rp-stop-body { display: grid; flex: 1; min-width: 0; gap: 4px; }
+  .rp-stop-body strong { overflow-wrap: anywhere; color: var(--rp-ink); font-size: 14px; }
+  .rp-stop-body > span { color: var(--rp-muted); font-size: 11px; }
+  .rp-stop-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .rp-stop-actions button { padding: 7px 9px; font-size: 11px; }
+  .rp-stop-actions .rp-icon-danger, .rp-stop-actions .rp-danger { background: #fff0ee; color: #b33e35; }
+  .rp-stop-actions .rp-icon-danger:hover, .rp-stop-actions .rp-danger:hover { background: #b33e35; color: white; }
+  .rp-confirm { color: #8b423c; font-size: 11px; font-weight: 700; }
+  .rp-leg { position: relative; display: flex; align-items: center; min-height: 27px; padding-left: 57px; }
+  .rp-leg-line { position: absolute; top: -3px; bottom: -3px; left: 26px; width: 2px; background: #c6dfda; }
+  .rp-leg-chip { position: relative; z-index: 1; padding: 5px 10px; border: 1px solid #dcece8; border-radius: 999px; color: #28746e; background: #f0f8f6; font-size: 10px; font-weight: 700; }
+  .rp-leg-muted { color: var(--rp-muted); background: #f6f8f8; }
+  .rp-overview { position: sticky; top: 18px; }
+  .rp-source { display: grid; gap: 5px; padding: 13px 14px; border-radius: 13px; background: #edf7f5; }
+  .rp-source strong { color: var(--rp-teal-dark); font-size: 12px; }
+  .rp-source span { color: var(--rp-muted); font-size: 11px; line-height: 1.55; }
+  .rp-source.is-estimate { background: #fff7e9; }
+  .rp-source.is-estimate strong { color: #94621b; }
+  .rp-totals { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin: 13px 0; }
+  .rp-totals > div { padding: 13px; border: 1px solid var(--rp-line); border-radius: 13px; background: #fbfdfd; }
+  .rp-totals span { display: block; color: var(--rp-muted); font-size: 10px; font-weight: 700; }
+  .rp-totals strong { display: block; margin-top: 5px; color: var(--rp-ink); font-size: 18px; }
+  .rp-legs { display: grid; gap: 14px; margin: 16px 0 0; padding: 0; list-style: none; }
+  .rp-leg-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; }
+  .rp-leg-names { min-width: 0; color: var(--rp-ink); font-weight: 650; }
+  .rp-leg-names b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 5px; border-radius: 50%; color: var(--rp-teal-dark); background: var(--rp-teal-soft); }
+  .rp-leg-values { flex: 0 0 auto; color: var(--rp-teal-dark); font-weight: 750; }
+  .rp-leg-bar { height: 5px; overflow: hidden; margin: 8px 0 0 28px; border-radius: 99px; background: #edf2f2; }
+  .rp-leg-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#7ac6bb,#087e78); }
+  .rp-empty, .rp-empty-small { padding: 30px 18px; text-align: center; border: 1px dashed #cbdcdd; border-radius: 15px; background: #fbfdfd; }
+  .rp-empty > span, .rp-empty-small > span { display: block; margin-bottom: 8px; font-size: 28px; }
+  .rp-empty h3 { margin: 0 0 6px; font-size: 15px; }
+  .rp-empty p, .rp-empty-small p { max-width: 420px; margin: 0 auto; color: var(--rp-muted); font-size: 12px; line-height: 1.6; }
+  .rp-empty-small { padding: 24px 14px; }
+  .rp-alert, .rp-inline-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-radius: 12px; font-size: 12px; }
+  .rp-alert-error, .rp-inline-error { border: 1px solid #f1c4bd; color: #963e36; background: #fff1ef; }
+  .rp-alert button { border: 0; color: inherit; background: transparent; font-size: 19px; cursor: pointer; }
+  .rp-inline-error { margin: 10px 0; }
+  .rp-skeleton-list { display: grid; gap: 10px; }
+  .rp-skeleton-list > i { display: block; height: 62px; border-radius: 13px; background: linear-gradient(90deg,#eef3f3,#f8fbfb,#eef3f3); background-size: 200% 100%; animation: rp-shimmer 1.5s infinite; }
+  .rp-skel { display: inline-block; width: 56px; height: 13px; border-radius: 99px; background: #e4eeee; vertical-align: middle; }
+  @keyframes rp-shimmer { to { background-position: -200% 0; } }
+  .destination-information-card, .route-insight-card, .module6-itinerary-card { margin-top: 20px; padding: clamp(18px, 2.5vw, 28px); }
+  .destination-information-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 17px; }
+  .destination-information-header > div > span, .route-insight-card > span { color: var(--rp-teal); font-size: 10px; font-weight: 850; letter-spacing: .16em; }
+  .destination-information-header h2, .route-insight-card h2 { margin: 7px 0; color: var(--rp-ink); font-size: 21px; letter-spacing: -.03em; }
+  .destination-information-header p { margin: 0; color: var(--rp-muted); font-size: 12px; }
+  .destination-table-wrapper { overflow-x: auto; border: 1px solid var(--rp-line); border-radius: 14px; }
+  .destination-table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: 11px; }
+  .destination-table th { padding: 12px 10px; color: #55717d; background: #f2f7f6; text-align: left; font-size: 9px; letter-spacing: .08em; white-space: nowrap; }
+  .destination-table td { padding: 12px 10px; border-top: 1px solid #edf1f1; color: #425d69; vertical-align: middle; }
+  .destination-table tbody tr:hover { background: #f9fcfb; }
+  .destination-table td strong { display: block; color: var(--rp-ink); font-size: 11px; }
+  .destination-table td small { display: block; margin-top: 4px; color: #84969d; font-size: 9px; }
+  .destination-order-pill { display: inline-grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; color: var(--rp-teal-dark); background: var(--rp-teal-soft); font-weight: 800; }
+  .destination-information-empty { padding: 24px; border: 1px dashed #cbdcdd; border-radius: 14px; color: var(--rp-muted); background: #fbfdfd; text-align: center; font-size: 12px; }
+  .route-insight-card { overflow: hidden; background: linear-gradient(135deg,#f7fbfa,#edf7f5); }
+  .route-sequence { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+  .route-sequence-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid #d7e8e4; border-radius: 999px; background: #fff; }
+  .route-sequence-item > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; color: #fff; background: var(--rp-teal); font-size: 10px; font-weight: 800; }
+  .route-sequence-item strong { color: var(--rp-ink); font-size: 11px; }
+  .route-sequence-item b { margin-left: 3px; color: #8aa7a4; }
+  .module6-itinerary-card { overflow: hidden; }
+  .module6-header { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 22px; border-radius: 17px; color: white; background: linear-gradient(115deg,#123d51,#075e61 68%,#087e78); }
+  .module6-header-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .module6-icon { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.2); border-radius: 15px; background: rgba(255,255,255,.13); font-size: 23px; }
+  .module6-eyebrow { color: #a9e4dc; font-size: 9px; font-weight: 850; letter-spacing: .16em; }
+  .module6-header h2 { margin: 4px 0 5px; color: #fff; font-size: clamp(18px,2vw,23px); letter-spacing: -.03em; }
+  .module6-header p { margin: 0; color: rgba(255,255,255,.78); font-size: 11px; line-height: 1.5; }
+  .module6-header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .module6-header-actions button, .module6-day-add, .module6-empty-day button, .module6-modal-actions button {
+    border: 1px solid transparent; border-radius: 10px; padding: 10px 13px; font-size: 11px; font-weight: 750; cursor: pointer; transition: .16s ease;
+  }
+  .module6-secondary-button { color: var(--rp-teal-dark); background: #fff; }
+  .module6-primary-button { color: #fff; background: #2679ed; }
+  .module6-save-button { color: #fff; border-color: rgba(255,255,255,.22) !important; background: rgba(255,255,255,.12); }
+  .module6-header-actions button:hover, .module6-day-add:hover, .module6-empty-day button:hover { transform: translateY(-1px); filter: brightness(.96); }
+  .module6-info-strip { display: grid; grid-template-columns: repeat(3,minmax(90px,.65fr)) minmax(180px,1.4fr); gap: 9px; margin: 14px 0; }
+  .module6-info-strip > div { padding: 12px 14px; border: 1px solid var(--rp-line); border-radius: 13px; background: #f7faf9; }
+  .module6-info-strip span { display: block; color: #68818a; font-size: 9px; font-weight: 850; letter-spacing: .1em; }
+  .module6-info-strip strong { display: block; margin-top: 5px; color: var(--rp-ink); font-size: 19px; }
+  .module6-info-strip .module6-info-note p { margin: 6px 0 0; color: var(--rp-muted); font-size: 10px; line-height: 1.5; }
+  .module6-alert { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; padding: 11px 13px; border-radius: 11px; font-size: 11px; }
+  .module6-success { color: #176b50; border: 1px solid #bfe4d3; background: #effaf4; }
+  .module6-error { color: #9a4039; border: 1px solid #f0c5bf; background: #fff2f0; }
+  .module6-alert button { border: 0; color: inherit; background: transparent; font-size: 18px; cursor: pointer; }
+  .module6-loading { padding: 35px; color: var(--rp-muted); text-align: center; font-size: 12px; }
+  .module6-days { display: grid; gap: 13px; margin-top: 15px; }
+  .module6-day-card { overflow: hidden; border: 1px solid #dce7e7; border-radius: 15px; background: #fff; transition: border-color .16s ease, box-shadow .16s ease; }
+  .module6-day-card:focus-within, .module6-day-card:hover { border-color: #b7d8d2; box-shadow: 0 6px 18px rgba(20,43,59,.045); }
+  .module6-day-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #dceae7; background: linear-gradient(90deg,#edf7f4,#f6faf9); }
+  .module6-day-header > div { display: flex; align-items: center; gap: 12px; }
+  .module6-day-header span { color: var(--rp-teal); font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+  .module6-day-header h3 { margin: 0; color: var(--rp-ink); font-size: 14px; }
+  .module6-day-add { border-color: #b9d2d1; color: var(--rp-teal-dark); background: #fff; }
+  .module6-empty-day { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px; padding: 15px; border: 1px dashed #c7d9d9; border-radius: 12px; background: #fbfdfd; }
+  .module6-empty-day strong { color: var(--rp-ink); font-size: 11px; }
+  .module6-empty-day p { flex: 1; margin: 0; color: var(--rp-muted); font-size: 10px; }
+  .module6-empty-day button { border-color: #c7d9d9; color: var(--rp-teal-dark); background: #fff; }
+  .module6-activity-list { display: grid; gap: 9px; padding: 10px; }
+  .module6-activity { display: grid; grid-template-columns: 78px minmax(0,1fr); gap: 14px; padding: 13px; border: 1px solid #dce7e9; border-radius: 13px; background: #fff; transition: box-shadow .16s ease, transform .16s ease, border-color .16s ease; }
+  .module6-activity:hover { border-color: #b9d9d3; box-shadow: 0 5px 16px rgba(20,43,59,.06); }
+  .module6-activity[draggable="true"] { cursor: grab; }
+  .module6-activity-locked { border-color: #e5d8b8; background: #fffdf8; }
+  .module6-time-column { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; padding-right: 13px; border-right: 2px solid #d5e6e4; }
+  .module6-time-column strong { color: var(--rp-ink); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .module6-time-column span { color: var(--rp-muted); font-size: 10px; }
+  .module6-activity-body { min-width: 0; }
+  .module6-activity-top { display: flex; justify-content: space-between; gap: 12px; }
+  .module6-activity-title-row { display: flex; align-items: center; gap: 8px; }
+  .module6-activity-title-row h4 { margin: 0; color: var(--rp-ink); font-size: 13px; }
+  .module6-lock-badge { padding: 3px 6px; border-radius: 99px; color: #8a641c; background: #fff1cc; font-size: 9px; }
+  .module6-location { display: inline-block; margin-top: 6px; color: var(--rp-muted); font-size: 10px; }
+  .module6-activity-notes { margin: 8px 0 0; color: #637983; font-size: 10px; line-height: 1.5; }
+  .module6-activity-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .module6-activity-actions button { border: 1px solid #cbdcde; border-radius: 8px; padding: 5px 9px; color: #315b6a; background: #f7faf9; font-size: 10px; font-weight: 700; cursor: pointer; }
+  .module6-activity-actions button:hover { border-color: #8fc3ba; color: var(--rp-teal-dark); background: #edf8f5; }
+  .module6-drag-handle { color: #9aadb2; }
+  .module6-footer { margin-top: 13px; padding: 11px 13px; border: 1px solid var(--rp-line); border-radius: 11px; color: var(--rp-muted); background: #f7faf9; font-size: 10px; text-align: center; }
+  .module6-modal-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 18px; background: rgba(10,29,39,.58); backdrop-filter: blur(5px); }
+  .module6-modal { width: min(540px,100%); max-height: min(90vh,800px); overflow-y: auto; padding: 22px; border: 1px solid rgba(255,255,255,.5); border-radius: 20px; background: #fff; box-shadow: 0 25px 80px rgba(0,0,0,.25); }
+  .module6-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--rp-line); }
+  .module6-modal-header h2 { margin: 5px 0 0; color: var(--rp-ink); font-size: 22px; }
+  .module6-modal-close { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--rp-line); border-radius: 50%; color: var(--rp-ink); background: #f8fbfa; font-size: 20px; cursor: pointer; }
+  .module6-form { display: grid; gap: 13px; padding-top: 16px; }
+  .module6-form label, .destination-information-card form label { display: grid; gap: 6px; color: #405c68; font-size: 11px; font-weight: 700; }
+  .module6-form label > span { color: #405c68; }
+  .module6-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .module6-form textarea { resize: vertical; }
+  .module6-modal-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 6px; }
+  .module6-cancel-button { border-color: var(--rp-line) !important; color: var(--rp-ink); background: #fff; }
+  .module6-modal-actions .module6-primary-button { color: #fff; background: var(--rp-teal); }
+  .route-empty-trip { max-width: 620px; margin: 12vh auto; padding: 42px; border: 1px solid var(--rp-line); border-radius: 22px; background: #fff; box-shadow: var(--rp-shadow); text-align: center; }
+  .route-empty-trip h2 { color: var(--rp-ink); }
+  .route-empty-trip p { color: var(--rp-muted); }
+  .route-planner-footer { margin-top: 18px; color: var(--rp-muted); font-size: 10px; text-align: center; }
+  @media (max-width: 980px) {
+    .rp-hero { grid-template-columns: 1fr; }
+    .rp-workspace { grid-template-columns: 1fr; }
+    .rp-overview { position: static; }
+    .module6-header { align-items: flex-start; flex-direction: column; }
+    .module6-header-actions { justify-content: flex-start; }
+  }
+  @media (max-width: 680px) {
+    .route-planner-page.rp-page { padding: 15px 11px 35px; }
+    .rp-hero { padding: 23px 19px; border-radius: 19px; }
+    .rp-trip-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .rp-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
+    .rp-metric { gap: 9px; padding: 12px 10px; border-radius: 13px; }
+    .rp-metric-icon { flex-basis: 34px; width: 34px; height: 34px; font-size: 16px; }
+    .rp-metric strong { font-size: 17px; }
+    .rp-metric div > span { font-size: 9px; }
+    .rp-card { padding: 15px; }
+    .rp-add-form { flex-direction: column; }
+    .rp-stop { flex-wrap: wrap; padding: 11px 7px; }
+    .rp-stop-body { flex-basis: calc(100% - 105px); }
+    .rp-stop-actions { width: 100%; padding-left: 46px; }
+    .rp-leg { padding-left: 48px; }
+    .rp-leg-line { left: 22px; }
+    .module6-itinerary-card, .destination-information-card, .route-insight-card { padding: 13px; border-radius: 17px; }
+    .module6-header { padding: 17px; }
+    .module6-header-main { align-items: flex-start; }
+    .module6-header-actions { width: 100%; }
+    .module6-header-actions button { flex: 1 1 auto; }
+    .module6-info-strip { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .module6-info-strip .module6-info-note { grid-column: 1 / -1; }
+    .module6-activity { grid-template-columns: 62px minmax(0,1fr); gap: 10px; padding: 10px; }
+    .module6-time-column { padding-right: 9px; }
+    .module6-activity-top { flex-direction: column; }
+    .module6-empty-day { align-items: flex-start; flex-direction: column; }
+    .module6-form-grid { grid-template-columns: 1fr; }
+    .module6-modal { padding: 17px; }
+    .route-sequence { align-items: flex-start; flex-direction: column; }
+    .route-sequence-item { width: 100%; justify-content: flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rp-page *, .rp-page *::before, .rp-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+`;
+
+// Always normalize activity times before placing them in a time input or API payload.
+// Accepts HH:mm, HH:mm:ss, and ISO date-time strings; rejects invalid values.
+const toInputTime = (value, fallback = "09:00") => {
+  if (value === null || value === undefined) return fallback;
+
+  const raw = String(value).trim();
+  if (!raw || /nan|null|undefined/i.test(raw)) return fallback;
+
+  const timePart = raw.includes("T") ? raw.split("T").pop() : raw;
+  const match = /^(?:([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d(?:\.\d+)?)?)/.exec(timePart);
+
+  if (!match) return fallback;
+  return `${match[1]}:${match[2]}`;
+};
 
 const getTripId = (trip) =>
   trip?.tripId ?? trip?.id ?? trip?.tripID ?? null;
@@ -67,18 +360,43 @@ const normalizeActivity = (activity, day) => ({
   locked: Boolean(activity?.locked),
 });
 
+// Keep trip dates as calendar strings. Avoid toISOString() on local-midnight
+// dates because it can move the date backwards in UTC+05:30.
+const addDaysToDateString = (dateString, days = 0) => {
+  if (!dateString) return "";
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+    String(dateString).slice(0, 10)
+  );
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day) + Number(days)
+    )
+  );
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+};
+
 const normalizeItinerary = (value, days, startDate) => {
   const source = Array.isArray(value) ? value : [];
-  const start = new Date(`${startDate}T00:00:00`);
 
   return Array.from({ length: days }, (_, index) => {
     const dayNumber = index + 1;
-    const activityDate = new Date(start);
-    activityDate.setDate(start.getDate() + index);
-    const dateKey = activityDate.toISOString().slice(0, 10);
+    const dateKey = addDaysToDateString(startDate, index);
     const existingActivities = source
-      .filter((item) => item?.activityDate === dateKey)
-      .sort((a, b) => Number(a.orderIndex) - Number(b.orderIndex));
+      .filter((item) => String(item?.activityDate || "").slice(0, 10) === dateKey)
+      .sort((a, b) => Number(a.orderIndex || 0) - Number(b.orderIndex || 0));
 
     return {
       day: dayNumber,
@@ -89,12 +407,8 @@ const normalizeItinerary = (value, days, startDate) => {
   });
 };
 
-const getActivityDate = (trip, day) => {
-  const start = new Date(`${trip?.startDate}T00:00:00`);
-  if (Number.isNaN(start.getTime())) return "";
-  start.setDate(start.getDate() + day - 1);
-  return start.toISOString().slice(0, 10);
-};
+const getActivityDate = (trip, day) =>
+  addDaysToDateString(trip?.startDate, Math.max(1, Number(day) || 1) - 1);
 
 const formatDistance = (value) => {
   if (
@@ -993,7 +1307,7 @@ function RoutePlanner({ trip, onBack }) {
         )
       );
       setItineraryMessage(
-        "Itinerary generated successfully from your route."
+        "Round-trip itinerary generated with road ETAs, meal breaks, and a return journey."
       );
     } catch (error) {
       setItineraryError(
@@ -1076,9 +1390,7 @@ function RoutePlanner({ trip, onBack }) {
 
       setActivityForm({
         day,
-        time:
-          activity.time ||
-          "09:00",
+        time: toInputTime(activity.time, "09:00"),
         title:
           activity.title ||
           "",
@@ -1134,16 +1446,42 @@ function RoutePlanner({ trip, onBack }) {
       tripDays,
       Math.max(1, Number(activityForm.day) || 1)
     );
-    const startTime = activityForm.time || "09:00";
-    const duration = Number(activityForm.duration) || 60;
-    const endTime = new Date(
-      `2000-01-01T${startTime}:00`
-    );
-    endTime.setMinutes(endTime.getMinutes() + duration);
-    const endTimeValue = `${String(endTime.getHours()).padStart(2, "0")}:${String(
-      endTime.getMinutes()
-    ).padStart(2, "0")}`;
+
+    // Validate and normalize the HTML time input before building the request.
+    const startTime = toInputTime(activityForm.time, "");
+    if (!startTime) {
+      setItineraryError("Please select a valid activity start time.");
+      return;
+    }
+
+    const duration = Number(activityForm.duration);
+    if (!Number.isFinite(duration) || !Number.isInteger(duration) || duration < 1 || duration > 1440) {
+      setItineraryError("Activity duration must be a whole number between 1 and 1440 minutes.");
+      return;
+    }
+
+    // Calculate end time using integer minutes. This avoids Invalid Date and NaN:NaN.
+    const [startHours, startMinutesPart] = startTime.split(":").map(Number);
+    const totalStartMinutes = startHours * 60 + startMinutesPart;
+    const totalEndMinutes = totalStartMinutes + duration;
+    if (totalEndMinutes >= 24 * 60) {
+      setItineraryError("An activity must finish before midnight. Choose an earlier start time or shorter duration.");
+      return;
+    }
+    const endHours = Math.floor(totalEndMinutes / 60);
+    const endMinutes = totalEndMinutes % 60;
+    const endTimeValue =
+      `${String(endHours).padStart(2, "0")}:` +
+      `${String(endMinutes).padStart(2, "0")}`;
+
     const activityDate = getActivityDate(trip, selectedDay);
+    if (!activityDate) {
+      setItineraryError(
+        "This trip is missing a valid start date. Refresh your trips and try again."
+      );
+      return;
+    }
+
     const request = {
       destinationId: null,
       activityDate,
@@ -1156,51 +1494,38 @@ function RoutePlanner({ trip, onBack }) {
       locked: false,
     };
 
+    // Keep this log while testing; both LocalTime values must be HH:mm.
+    console.log("ITINERARY ACTIVITY REQUEST:", request);
+
     try {
       if (editingActivity) {
         const existing = itinerary
-          .find((day) => day.day === selectedDay)
+          .find((day) => day.day === editingActivity.day)
           ?.activities.find((activity) => activity.id === editingActivity.id);
 
-        if (!existing) {
-          throw new Error("Activity not found.");
+        if (!existing) throw new Error("Activity not found. Refresh the itinerary and try again.");
+        if (existing.locked) throw new Error("Unlock this activity before editing it.");
+        if (existing.id === null || existing.id === undefined || existing.id === "") {
+          throw new Error("This activity has no saved database ID. Refresh the itinerary before editing it.");
         }
 
-        if (existing.locked) {
-          throw new Error("Unlock this activity before editing it.");
+        request.destinationId = existing.destinationId ?? null;
+        request.category = existing.category || "Custom";
+        const updated = await updateItineraryActivity(tripId, existing.id, request);
+        const updatedId = updated?.activityId ?? updated?.id ?? existing.id;
+        if (updatedId === null || updatedId === undefined || updatedId === "") {
+          throw new Error("The server did not return the updated activity ID. Refresh the itinerary.");
         }
-
-        const updated = await updateItineraryActivity(
-          tripId,
-          existing.id,
-          request
-        );
-        setItinerary((current) =>
-          current.map((day) =>
-            day.day === selectedDay
-              ? {
-                  ...day,
-                  activities: day.activities.map((activity) =>
-                    activity.id === existing.id
-                      ? {
-                          ...activity,
-                          ...updated,
-                          day: selectedDay,
-                          time: updated.startTime,
-                          title: updated.activityName,
-                          location: updated.destinationName || activity.location,
-                          duration: updated.duration,
-                          notes: updated.description,
-                          locked: Boolean(updated.locked),
-                        }
-                      : activity
-                  ),
-                }
-              : day
-          )
-        );
+        const refreshed = await getItinerary(tripId);
+        setItinerary(normalizeItinerary(refreshed, tripDays, trip?.startDate));
       } else {
         const saved = await addItineraryActivity(tripId, request);
+        const savedId = saved?.activityId ?? saved?.id ?? null;
+        if (savedId === null || savedId === undefined || savedId === "") {
+          throw new Error(
+            "The server did not return the saved activity ID. The activity may have been saved; refresh the itinerary before trying again."
+          );
+        }
         setItinerary((current) =>
           current.map((day) =>
             day.day === selectedDay
@@ -1210,6 +1535,7 @@ function RoutePlanner({ trip, onBack }) {
                     ...day.activities,
                     {
                       ...saved,
+                      id: savedId,
                       day: selectedDay,
                       time: saved.startTime,
                       title: saved.activityName,
@@ -1246,6 +1572,10 @@ function RoutePlanner({ trip, onBack }) {
       ?.activities.find((item) => item.id === activityId);
 
     if (!activity) return;
+    if (activityId === null || activityId === undefined || activityId === "") {
+      setItineraryError("This activity has no saved ID. Refresh the itinerary before deleting it.");
+      return;
+    }
     if (activity.locked) {
       setItineraryError("Unlock this activity before removing it.");
       return;
@@ -1279,6 +1609,10 @@ function RoutePlanner({ trip, onBack }) {
       ?.activities.find((item) => item.id === activityId);
 
     if (!activity) return;
+    if (activityId === null || activityId === undefined || activityId === "") {
+      setItineraryError("This activity has no saved ID. Refresh the itinerary before changing its lock.");
+      return;
+    }
 
     try {
       const nextLocked = !activity.locked;
@@ -1321,6 +1655,13 @@ function RoutePlanner({ trip, onBack }) {
       setItineraryError(
         "Unlock the activities before rearranging them."
       );
+      return;
+    }
+
+    if (day.activities.some((activity) =>
+      activity.id === null || activity.id === undefined || activity.id === ""
+    )) {
+      setItineraryError("At least one activity is missing its saved ID. Refresh the itinerary before rearranging activities.");
       return;
     }
 
@@ -1371,6 +1712,9 @@ function RoutePlanner({ trip, onBack }) {
 
       if (
         !activity ||
+        activity.id === null ||
+        activity.id === undefined ||
+        activity.id === "" ||
         activity.locked
       ) {
         return;
@@ -1406,73 +1750,97 @@ function RoutePlanner({ trip, onBack }) {
       });
     };
 
-  const handleDrop = async (
-    event,
-    targetDay,
-    targetId = null
-  ) => {
+  const handleDrop = async (event, targetDay, targetId = null) => {
     event.preventDefault();
-
-    if (!draggedActivity) {
-      return;
-    }
+    if (!draggedActivity) return;
 
     const sourceDay = draggedActivity.day;
     const sourceId = draggedActivity.id;
+    const source = itinerary.find((day) => day.day === sourceDay);
+    const sourceActivity = source?.activities.find((activity) => activity.id === sourceId);
 
-    if (sourceDay !== targetDay) {
-      setItineraryError(
-        "Activities can be reordered within the same day."
-      );
+    if (!sourceActivity) {
+      setItineraryError("The dragged activity could not be found. Refresh the itinerary.");
       handleDragEnd();
       return;
     }
 
-    const source = itinerary.find((day) => day.day === sourceDay);
-    const sourceIndex = source?.activities.findIndex(
-      (activity) => activity.id === sourceId
-    );
+    if (sourceDay !== targetDay) {
+      if (sourceActivity.locked) {
+        setItineraryError("Unlock this activity before moving it to another day.");
+        handleDragEnd();
+        return;
+      }
+      if (sourceActivity.id === null || sourceActivity.id === undefined || sourceActivity.id === "") {
+        setItineraryError("This activity has no saved ID. Refresh the itinerary before moving it.");
+        handleDragEnd();
+        return;
+      }
+      const target = itinerary.find((day) => day.day === targetDay);
+      const targetDate = getActivityDate(trip, targetDay);
+      const duration = Math.max(1, Number(sourceActivity.duration) || 60);
+      const latestEnd = (target?.activities || []).reduce((latest, item) => {
+        const end = toInputTime(item.endTime, "");
+        return end && end > latest ? end : latest;
+      }, "08:00");
+      const [hh, mm] = latestEnd.split(":").map(Number);
+      const startTotal = Math.max(9 * 60, hh * 60 + mm + 15);
+      const endTotal = startTotal + duration;
+      if (!targetDate || endTotal > 22 * 60) {
+        setItineraryError("There is not enough free time on that day. Choose another day or edit the activity time.");
+        handleDragEnd();
+        return;
+      }
+      const formatMinutes = (value) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+      const moveRequest = {
+        destinationId: sourceActivity.destinationId ?? null,
+        activityDate: targetDate,
+        startTime: formatMinutes(startTotal),
+        endTime: formatMinutes(endTotal),
+        activityName: sourceActivity.title,
+        description: sourceActivity.notes || "",
+        category: sourceActivity.category || "Custom",
+        duration,
+        locked: false,
+      };
+      try {
+        await updateItineraryActivity(tripId, sourceActivity.id, moveRequest);
+        const refreshed = await getItinerary(tripId);
+        setItinerary(normalizeItinerary(refreshed, tripDays, trip?.startDate));
+        setItineraryMessage(`Moved activity to Day ${targetDay}.`);
+      } catch (error) {
+        setItineraryError(error?.message || "Unable to move activity to the selected day.");
+      } finally {
+        handleDragEnd();
+      }
+      return;
+    }
+
+    const sourceIndex = source?.activities.findIndex((activity) => activity.id === sourceId);
     const targetIndex = targetId
       ? source?.activities.findIndex((activity) => activity.id === targetId)
       : source?.activities.length;
-
-    if (
-      sourceIndex === undefined ||
-      sourceIndex < 0 ||
-      targetIndex === undefined ||
-      targetIndex < 0 ||
-      source.activities[sourceIndex].locked ||
-      source.activities[targetIndex]?.locked
-    ) {
+    if (sourceIndex === undefined || sourceIndex < 0 || targetIndex === undefined || targetIndex < 0
+        || source.activities[sourceIndex].locked || source.activities[targetIndex]?.locked) {
       setItineraryError("Unlock the activities before rearranging them.");
+      handleDragEnd();
+      return;
+    }
+    if (source.activities.some((activity) => activity.id === null || activity.id === undefined || activity.id === "")) {
+      setItineraryError("At least one activity is missing its saved ID. Refresh the itinerary before rearranging activities.");
       handleDragEnd();
       return;
     }
 
     const reordered = [...source.activities];
     const [moved] = reordered.splice(sourceIndex, 1);
-    const adjustedTarget = reordered.findIndex(
-      (activity) => activity.id === targetId
-    );
+    const adjustedTarget = reordered.findIndex((activity) => activity.id === targetId);
     reordered.splice(adjustedTarget >= 0 ? adjustedTarget : reordered.length, 0, moved);
-
     try {
-      await reorderItineraryActivities(
-        tripId,
-        getActivityDate(trip, sourceDay),
-        reordered.map((activity) => activity.id)
-      );
-      setItinerary((current) =>
-        current.map((day) =>
-          day.day === sourceDay
-            ? { ...day, activities: reordered }
-            : day
-        )
-      );
+      await reorderItineraryActivities(tripId, getActivityDate(trip, sourceDay), reordered.map((activity) => activity.id));
+      setItinerary((current) => current.map((day) => day.day === sourceDay ? { ...day, activities: reordered } : day));
     } catch (error) {
-      setItineraryError(
-        error?.message || "Unable to reorder activities."
-      );
+      setItineraryError(error?.message || "Unable to reorder activities.");
     } finally {
       handleDragEnd();
     }
@@ -1560,8 +1928,9 @@ function RoutePlanner({ trip, onBack }) {
 
   if (!trip) {
     return (
-      <div className="route-planner-page">
-        <div className="route-planner-shell">
+      <div className="route-planner-page rp-page">
+        <style>{routePlannerStyles}</style>
+        <div className="route-planner-shell rp-shell">
           <div className="route-empty-trip">
             <h2>No trip selected</h2>
 
@@ -1585,6 +1954,7 @@ function RoutePlanner({ trip, onBack }) {
 
   return (
     <div className="route-planner-page rp-page">
+      <style>{routePlannerStyles}</style>
       <div className="route-planner-shell rp-shell">
 
         <button
@@ -2318,9 +2688,8 @@ function RoutePlanner({ trip, onBack }) {
                 </h2>
 
                 <p>
-                  Build a complete
-                  day-by-day itinerary
-                  from your route.
+                  Plan a realistic round trip with road ETAs, meal breaks,
+                  overnight continuity, and a final return to your starting point.
                 </p>
               </div>
             </div>
@@ -2533,7 +2902,7 @@ function RoutePlanner({ trip, onBack }) {
                           ) => (
                             <article
                               key={
-                                activity.id
+                                activity.id ?? `activity-${day.day}-${activityIndex}`
                               }
                               className={`module6-activity ${
                                 activity.locked

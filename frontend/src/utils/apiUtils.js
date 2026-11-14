@@ -81,11 +81,11 @@ export const apiRequest = async (endpoint, options = {}) => {
     ? endpoint
     : `/${endpoint}`;
 
-  // Public auth endpoints (register, OTP, reset) must not carry a stale
-  // JWT, and a failure there must not wipe an existing session.
+  // Public authentication endpoints should not send stale JWT tokens.
   const isPublicAuthCall = /^\/auth\//.test(path);
 
   const headers = getAuthHeaders();
+
   if (isPublicAuthCall) {
     delete headers.Authorization;
   }
@@ -98,28 +98,44 @@ export const apiRequest = async (endpoint, options = {}) => {
     },
   });
 
-  const text = await response.text();
+  const responseText = await response.text();
 
   let data = null;
 
-  if (text) {
+  if (responseText) {
     try {
-      data = JSON.parse(text);
+      data = JSON.parse(responseText);
     } catch {
-      data = text;
+      data = responseText;
     }
   }
 
   if (!response.ok) {
-    const error = new Error(
-      await readApiError(response, text)
+    const message = await readApiError(
+      response,
+      responseText
     );
+
+    // Detailed debugging information without exposing JWT tokens.
+    console.error("API REQUEST FAILED", {
+      endpoint,
+      status: response.status,
+      message,
+      responseData: data,
+      responseBody: responseText,
+    });
+
+    const error = new Error(message);
 
     error.status = response.status;
     error.endpoint = endpoint;
     error.responseData = data;
+    error.responseBody = responseText;
 
-    if (!isPublicAuthCall && (response.status === 401 || response.status === 403)) {
+    if (
+      !isPublicAuthCall &&
+      (response.status === 401 || response.status === 403)
+    ) {
       clearAuthStorage();
     }
 
