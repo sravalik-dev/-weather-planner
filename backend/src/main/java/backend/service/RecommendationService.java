@@ -10,10 +10,14 @@ import java.time.Month;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -69,7 +73,8 @@ public class RecommendationService {
 
         if (destinations == null || destinations.isEmpty()) {
             throw new IllegalArgumentException(
-                    "No suitable nearby attractions found.");
+                    "Add at least one destination to this trip before "
+                            + "generating recommendations.");
         }
 
         LocalDate date = resolveDate(trip, plannedDate);
@@ -87,23 +92,23 @@ public class RecommendationService {
         TripDestination anchorDestination = destinations.get(0);
 
         /*
-         * Generate destination-specific weather data.
+         * Destination-specific weather for the PLANNED date.
+         *
+         * - uses the daily forecast when the date is inside the forecast
+         *   window, otherwise the current reading (clearly labelled)
+         * - one failed lookup no longer cancels the whole generation:
+         *   that destination simply gets no weather-based recommendation
+         * - lookups run in parallel and identical coordinates are fetched
+         *   only once
          */
+        LocalDate today =
+                LocalDate.now(ZoneId.of("Asia/Kolkata"));
+
         Map<Integer, WeatherData> weatherByDestination =
-                new LinkedHashMap<>();
-
-        for (TripDestination destination : destinations) {
-
-            Map<String, Object> rawWeather =
-                    getWeatherSafely(destination);
-
-            WeatherData weather =
-                    extractWeather(rawWeather);
-
-            weatherByDestination.put(
-                    destination.getDestinationId(),
-                    weather);
-        }
+                loadWeatherForDestinations(
+                        destinations,
+                        date,
+                        today);
 
         String season = determineSeason(date);
 
@@ -125,12 +130,11 @@ public class RecommendationService {
                     destination.getDestinationId(),
                     crowd);
         }
+
         /*
- * Keep previous recommendations because recommendation_history
- * contains foreign-key references to them.
- *
- * New generations are stored as new recommendation records,
- * preserving the complete recommendation history.
+ * Older, un-actioned recommendations are cleaned up later (see
+ * removeSupersededRecommendations); ones the user acted on are kept
+ * because recommendation_history references them.
  */
 
         List<Recommendation> generated =
@@ -155,15 +159,17 @@ public class RecommendationService {
              * WEATHER
              */
             Recommendation weatherRecommendation =
-                    buildWeatherRecommendation(
-                            trip,
-                            destination,
-                            weather,
-                            crowd,
-                            date,
-                            time,
-                            season,
-                            distance);
+                    weather.unavailable
+                            ? null
+                            : buildWeatherRecommendation(
+                                    trip,
+                                    destination,
+                                    weather,
+                                    crowd,
+                                    date,
+                                    time,
+                                    season,
+                                    distance);
 
             if (weatherRecommendation != null) {
                 generated.add(weatherRecommendation);
@@ -247,6 +253,27 @@ public class RecommendationService {
             throw new IllegalArgumentException(
                     "No recommendations match current conditions.");
         }
+
+        /*
+         * Every recommendation of this run shares ONE timestamp, so the
+         * "latest generation" can be told apart from older ones.
+         * (Seconds precision survives every database column type.)
+         */
+        LocalDateTime generatedAt =
+                LocalDateTime.now().withNano(0);
+
+        for (Recommendation recommendation : generated) {
+            recommendation.setCreatedAt(generatedAt);
+        }
+
+        /*
+         * Remove superseded recommendations that nobody acted on (and
+         * their "generated" log rows), so repeated clicks on Generate no
+         * longer pile up duplicates. Recommendations the user viewed,
+         * accepted, rejected or used keep their history and are only
+         * hidden from the default list.
+         */
+        removeSupersededRecommendations(tripId);
 
         /*
          * Persist recommendations.
@@ -336,6 +363,40 @@ public class RecommendationService {
         response.put(
                 "weather",
                 firstWeather.toMap());
+
+        response.put(
+                "generatedAt",
+                generatedAt.toString());
+
+        response.put(
+                "weatherBasis",
+                firstWeather.basis);
+
+        List<String> weatherMissing = new ArrayList<>();
+
+        for (TripDestination destination : destinations) {
+
+            WeatherData data =
+                    weatherByDestination.get(
+                            destination.getDestinationId());
+
+            if (data != null && data.unavailable) {
+                weatherMissing.add(
+                        destination.getDestinationName());
+            }
+        }
+
+        response.put(
+                "weatherUnavailableFor",
+                weatherMissing);
+
+        response.put(
+                "weatherNote",
+                buildWeatherNote(
+                        firstWeather,
+                        weatherMissing,
+                        date,
+                        today));
         response.put(
                 "recommendations",
                 responseItems);
@@ -357,12 +418,31 @@ public class RecommendationService {
             Integer tripId,
             Integer userId) {
 
+        return getRecommendations(tripId, userId, false);
+    }
+
+    /*
+     * By default only the LATEST generation is returned, so the screen
+     * shows one clean set instead of every run mixed together.
+     * includePrevious = true returns everything that is still stored.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getRecommendations(
+            Integer tripId,
+            Integer userId,
+            boolean includePrevious) {
+
         getUserTrip(tripId, userId);
 
         List<Recommendation> recommendations =
                 recommendationRepository
                         .findByTrip_TripIdOrderByScoreDescCreatedAtDesc(
                                 tripId);
+
+        if (!includePrevious) {
+            recommendations =
+                    keepLatestGeneration(recommendations);
+        }
 
         List<Map<String, Object>> response =
                 new ArrayList<>();
@@ -387,6 +467,17 @@ public class RecommendationService {
             Integer userId,
             RecommendationType type) {
 
+        return getRecommendationsByType(
+                tripId, userId, type, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getRecommendationsByType(
+            Integer tripId,
+            Integer userId,
+            RecommendationType type,
+            boolean includePrevious) {
+
         getUserTrip(tripId, userId);
 
         if (type == null) {
@@ -394,11 +485,28 @@ public class RecommendationService {
                     "Recommendation type is required.");
         }
 
-        List<Recommendation> recommendations =
-                recommendationRepository
-                        .findByTrip_TripIdAndRecommendationTypeOrderByScoreDescCreatedAtDesc(
-                                tripId,
-                                type);
+        List<Recommendation> recommendations;
+
+        if (includePrevious) {
+            recommendations =
+                    recommendationRepository
+                            .findByTrip_TripIdAndRecommendationTypeOrderByScoreDescCreatedAtDesc(
+                                    tripId,
+                                    type);
+        } else {
+            // Decide "latest" from the WHOLE trip, then filter by type,
+            // so a type that was not generated last time is not mistaken
+            // for the newest generation.
+            recommendations =
+                    keepLatestGeneration(
+                            recommendationRepository
+                                    .findByTrip_TripIdOrderByScoreDescCreatedAtDesc(
+                                            tripId))
+                            .stream()
+                            .filter(item -> item.getRecommendationType()
+                                    == type)
+                            .toList();
+        }
 
         List<Map<String, Object>> response =
                 new ArrayList<>();
@@ -409,6 +517,130 @@ public class RecommendationService {
         }
 
         return response;
+    }
+
+    /*
+     * =========================================================
+     * LATEST GENERATION / CLEAN-UP HELPERS
+     * =========================================================
+     */
+
+    /*
+     * A generation is the group of recommendations created in the same
+     * run. New runs share one timestamp; rows created by older versions
+     * were stamped a few milliseconds apart, so a small window keeps them
+     * together as well.
+     */
+    private List<Recommendation> keepLatestGeneration(
+            List<Recommendation> all) {
+
+        LocalDateTime newest = null;
+
+        for (Recommendation item : all) {
+            if (item.getCreatedAt() != null
+                    && (newest == null
+                    || item.getCreatedAt().isAfter(newest))) {
+                newest = item.getCreatedAt();
+            }
+        }
+
+        if (newest == null) {
+            return all;
+        }
+
+        LocalDateTime cutoff = newest.minusSeconds(10);
+
+        List<Recommendation> latest = new ArrayList<>();
+
+        for (Recommendation item : all) {
+            if (item.getCreatedAt() != null
+                    && !item.getCreatedAt().isBefore(cutoff)) {
+                latest.add(item);
+            }
+        }
+
+        return latest;
+    }
+
+    private static final Set<String> GENERATED_ACTIONS = Set.of(
+            "Weather Recommendation Generated",
+            "Nearby Attraction Recommended",
+            "Crowd Recommendation Generated",
+            "Seasonal Recommendation Generated",
+            "Time Based Recommendation Generated",
+            "Recommendation Generated");
+
+    private void removeSupersededRecommendations(Integer tripId) {
+
+        List<Recommendation> previous =
+                recommendationRepository
+                        .findByTrip_TripIdOrderByScoreDescCreatedAtDesc(
+                                tripId);
+
+        if (previous.isEmpty()) {
+            return;
+        }
+
+        List<RecommendationHistory> allHistory =
+                recommendationHistoryRepository
+                        .findByTrip_TripIdOrderByCreatedAtDesc(tripId);
+
+        // recommendationId -> history rows
+        Map<Integer, List<RecommendationHistory>> byRecommendation =
+                new HashMap<>();
+
+        for (RecommendationHistory row : allHistory) {
+            if (row.getRecommendation() != null) {
+                byRecommendation
+                        .computeIfAbsent(
+                                row.getRecommendation()
+                                        .getRecommendationId(),
+                                key -> new ArrayList<>())
+                        .add(row);
+            }
+        }
+
+        List<Recommendation> removable = new ArrayList<>();
+        List<RecommendationHistory> removableHistory = new ArrayList<>();
+        Set<Integer> seen = new HashSet<>();
+
+        for (Recommendation item : previous) {
+
+            if (!seen.add(item.getRecommendationId())) {
+                continue;
+            }
+
+            List<RecommendationHistory> rows =
+                    byRecommendation.getOrDefault(
+                            item.getRecommendationId(),
+                            List.of());
+
+            boolean userActedOnIt = false;
+
+            for (RecommendationHistory row : rows) {
+                if (row.getAction() == null
+                        || !GENERATED_ACTIONS.contains(row.getAction())) {
+                    userActedOnIt = true;
+                    break;
+                }
+            }
+
+            if (!userActedOnIt) {
+                removable.add(item);
+                removableHistory.addAll(rows);
+            }
+        }
+
+        if (removable.isEmpty()) {
+            return;
+        }
+
+        // History rows reference the recommendations (foreign key), so
+        // they must be deleted first.
+        recommendationHistoryRepository.deleteAll(removableHistory);
+        recommendationHistoryRepository.flush();
+        recommendationRepository.deleteAll(removable);
+        recommendationRepository.flush();
     }
 
     /*
@@ -1682,34 +1914,150 @@ public class RecommendationService {
      * =========================================================
      */
 
-    private Map<String, Object> getWeatherSafely(
-            TripDestination destination) {
+    /*
+     * Loads weather for every destination IN PARALLEL (identical
+     * coordinates are requested once). A failed lookup never throws:
+     * that destination is marked unavailable instead.
+     */
+    private Map<Integer, WeatherData> loadWeatherForDestinations(
+            List<TripDestination> destinations,
+            LocalDate date,
+            LocalDate today) {
 
-        try {
+        Map<String, CompletableFuture<Map<String, Object>>> futures =
+                new LinkedHashMap<>();
 
-            Map<String, Object> result =
-                    weatherService.getCurrentWeather(
+        for (TripDestination destination : destinations) {
+
+            String key =
+                    String.format(
+                            Locale.ROOT,
+                            "%.4f,%.4f",
                             destination.getLatitude(),
                             destination.getLongitude());
 
-            if (result == null
-                    || result.isEmpty()) {
+            futures.computeIfAbsent(
+                    key,
+                    unused -> CompletableFuture.supplyAsync(
+                            () -> fetchPlanningWeather(
+                                    destination,
+                                    date,
+                                    today)));
+        }
 
-                throw new IllegalArgumentException(
-                        "Weather information is currently unavailable.");
+        Map<Integer, WeatherData> result =
+                new LinkedHashMap<>();
+
+        for (TripDestination destination : destinations) {
+
+            String key =
+                    String.format(
+                            Locale.ROOT,
+                            "%.4f,%.4f",
+                            destination.getLatitude(),
+                            destination.getLongitude());
+
+            Map<String, Object> raw = null;
+
+            try {
+                raw = futures.get(key).join();
+            } catch (Exception exception) {
+                raw = null;
             }
 
-            return result;
+            WeatherData data;
 
-        } catch (IllegalArgumentException exception) {
+            if (raw == null || raw.isEmpty()) {
 
-            throw exception;
+                data = new WeatherData();
+                data.unavailable = true;
+                data.basis = "UNAVAILABLE";
+                data.condition = "Weather unavailable";
+
+            } else {
+
+                data = extractWeather(raw);
+
+                Object basis = raw.get("weatherBasis");
+                data.basis = basis == null
+                        ? RecommendationWeatherResolver.BASIS_CURRENT
+                        : String.valueOf(basis);
+            }
+
+            result.put(destination.getDestinationId(), data);
+        }
+
+        return result;
+    }
+
+    private Map<String, Object> fetchPlanningWeather(
+            TripDestination destination,
+            LocalDate date,
+            LocalDate today) {
+
+        try {
+
+            Map<String, Object> planning =
+                    weatherService.getPlanningWeather(
+                            destination.getLatitude(),
+                            destination.getLongitude());
+
+            return RecommendationWeatherResolver.resolve(
+                    planning,
+                    date,
+                    today);
 
         } catch (Exception exception) {
 
-            throw new IllegalArgumentException(
-                    "Weather information is currently unavailable.");
+            return null;
         }
+    }
+
+    private String buildWeatherNote(
+            WeatherData first,
+            List<String> missing,
+            LocalDate date,
+            LocalDate today) {
+
+        StringBuilder note = new StringBuilder();
+
+        if (RecommendationWeatherResolver.BASIS_FORECAST
+                .equals(first.basis)) {
+
+            note.append("Based on the weather forecast for ")
+                    .append(date)
+                    .append(".");
+
+        } else if (RecommendationWeatherResolver.BASIS_CURRENT
+                .equals(first.basis)) {
+
+            note.append("Based on today's weather.");
+
+        } else if (RecommendationWeatherResolver.BASIS_CURRENT_FALLBACK
+                .equals(first.basis)) {
+
+            note.append("The planned date (")
+                    .append(date)
+                    .append(") is outside the 7-day forecast, so today's ")
+                    .append("weather was used as a guide. Generate again ")
+                    .append("closer to your trip for a forecast-based result.");
+
+        } else {
+
+            note.append("Weather data could not be loaded.");
+        }
+
+        if (!missing.isEmpty()
+                && !"UNAVAILABLE".equals(first.basis)) {
+
+            note.append(" Weather was unavailable for: ")
+                    .append(String.join(", ", missing))
+                    .append(", so no weather recommendation was made for ")
+                    .append(missing.size() == 1 ? "it" : "them")
+                    .append(".");
+        }
+
+        return note.toString();
     }
 
     private WeatherData extractWeather(
@@ -2760,6 +3108,12 @@ public class RecommendationService {
 
         String condition = "";
 
+        // true when the weather lookup failed for this destination
+        boolean unavailable;
+
+        // CURRENT, FORECAST, CURRENT_FALLBACK or UNAVAILABLE
+        String basis = RecommendationWeatherResolver.BASIS_CURRENT;
+
         Map<String, Object> toMap() {
 
             Map<String, Object> map =
@@ -2788,6 +3142,10 @@ public class RecommendationService {
             map.put(
                     "condition",
                     condition);
+
+            map.put(
+                    "basis",
+                    basis);
 
             return map;
         }

@@ -107,6 +107,7 @@ public class RecommendationController {
     @GetMapping("/trips/{tripId}")
     public ResponseEntity<?> getRecommendations(
             @PathVariable Integer tripId,
+            @RequestParam(defaultValue = "false") boolean includePrevious,
             Authentication authentication) {
 
         try {
@@ -118,7 +119,8 @@ public class RecommendationController {
                     recommendationService
                             .getRecommendations(
                                     tripId,
-                                    userId
+                                    userId,
+                                    includePrevious
                             );
 
             return ResponseEntity.ok(response);
@@ -170,6 +172,7 @@ public class RecommendationController {
     public ResponseEntity<?> getRecommendationsByType(
             @PathVariable Integer tripId,
             @PathVariable String type,
+            @RequestParam(defaultValue = "false") boolean includePrevious,
             Authentication authentication) {
 
         try {
@@ -200,7 +203,8 @@ public class RecommendationController {
                             .getRecommendationsByType(
                                     tripId,
                                     userId,
-                                    recommendationType
+                                    recommendationType,
+                                    includePrevious
                             );
 
             return ResponseEntity.ok(response);

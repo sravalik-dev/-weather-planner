@@ -57,6 +57,30 @@ public class WeatherService {
     }
 
     // =========================================================
+    // PLANNING WEATHER (current + daily, from ONE forecast request)
+    // Used by the recommendation engine so it can pick the weather for the
+    // planned date without making several separate HTTP calls.
+    // =========================================================
+
+    public Map<String, Object> getPlanningWeather(
+            Double latitude,
+            Double longitude) {
+
+        validateCoordinates(latitude, longitude);
+
+        JsonNode forecast =
+                getForecastData(latitude, longitude);
+
+        Map<String, Object> result =
+                new LinkedHashMap<>();
+
+        result.put("current", buildCurrentWeather(forecast));
+        result.put("daily", buildDailyForecast(forecast));
+
+        return result;
+    }
+
+    // =========================================================
     // HOURLY FORECAST
     // =========================================================
 
@@ -1066,7 +1090,7 @@ public class WeatherService {
                         + "weather_code,"
                         + "wind_speed_10m,"
                         + "wind_direction_10m,"
-                        + "wind_gusts_10m,"
+                        + "wind_gusts_10m"
                         + "&daily="
                         + "weather_code,"
                         + "temperature_2m_max,"
@@ -1079,7 +1103,8 @@ public class WeatherService {
                         + "precipitation_hours,"
                         + "sunrise,"
                         + "sunset,"
-                        + "uv_index_max"
+                        + "uv_index_max,"
+                        + "wind_speed_10m_max"
                         + "&forecast_days=7"
                         + "&timezone=auto";
 
@@ -1441,6 +1466,14 @@ public class WeatherService {
                 readArray(
                         daily,
                         "uv_index_max"
+                )
+        );
+
+        result.put(
+                "windSpeedMax",
+                readArray(
+                        daily,
+                        "wind_speed_10m_max"
                 )
         );
 

@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   generateRecommendations,
   getRecommendations,
-  getRecommendationsByType,
   getRecommendationHistory,
   recordRecommendationAction,
   RECOMMENDATION_TYPES,
@@ -12,706 +11,445 @@ import {
 import { getTrip } from "../services/tripService";
 
 import "../styles/RecommendationEngine.css";
+import "../styles/RecommendationRedesign.css";
+
+/* =========================================================
+   DYNAMIC RECOMMENDATIONS (prefix rx-)
+
+   - Loads the latest generation once and filters by type in the
+     browser (instant, and no request-order races).
+   - Each card shows the user's latest decision, read from history.
+   - Shows which weather the backend used (forecast / today / unavailable).
+========================================================= */
+
+const TYPE_BY_VALUE = Object.fromEntries(
+  RECOMMENDATION_TYPES.map((type) => [type.value, type])
+);
+
+const ACTION_BADGES = {
+  accepted: { label: "Accepted", tone: "good" },
+  rejected: { label: "Rejected", tone: "bad" },
+  "used in itinerary": { label: "In itinerary", tone: "info" },
+  viewed: { label: "Viewed", tone: "muted" },
+};
+
+const SORT_OPTIONS = [
+  { value: "score", label: "Best match" },
+  { value: "distance", label: "Nearest first" },
+  { value: "name", label: "Destination A–Z" },
+];
+
+const isGeneratedAction = (action) =>
+  /generated|recommended$/i.test(String(action || "")) &&
+  !/^recommendation (viewed|accepted|rejected|used)/i.test(String(action || ""));
+
+const normalizeDate = (value) => {
+  if (!value) return "";
+  const text = String(value);
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const toList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.recommendations)) return data.recommendations;
+  if (data && Array.isArray(data.data)) return data.data;
+  return [];
+};
+
+const typeInfo = (type) => {
+  const key = String(type || "").toUpperCase();
+  return TYPE_BY_VALUE[key] || { value: key, label: key || "Recommendation", icon: "✨" };
+};
+
+/* "Recommendation Accepted" -> "accepted" ; unknown actions -> "" */
+const statusKey = (action) => {
+  const text = String(action || "").toLowerCase().replace(/^recommendation\s+/, "").trim();
+  return ACTION_BADGES[text] ? text : "";
+};
+
+const formatTime = (value) => {
+  if (!value) return "Flexible";
+  const text = String(value);
+  return /^\d{2}:\d{2}/.test(text) ? text.slice(0, 5) : text;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "Recently";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+};
+
+const formatDay = (value) => {
+  const iso = normalizeDate(value);
+  if (!iso) return "";
+  const date = new Date(`${iso}T00:00:00`);
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+};
+
+const scoreNumber = (score) => {
+  const n = Number(score);
+  return score === null || score === undefined || score === "" || !Number.isFinite(n) ? null : n;
+};
+
+const scoreTone = (score) => {
+  const n = scoreNumber(score);
+  if (n === null) return "neutral";
+  if (n >= 75) return "high";
+  if (n >= 50) return "medium";
+  return "low";
+};
+
+const crowdTone = (level) => {
+  const text = String(level || "").toLowerCase().replace(/_/g, " ");
+  if (text === "low") return "low";
+  if (text === "high") return "high";
+  if (text === "very high") return "very-high";
+  return "moderate";
+};
+
+const prettyLevel = (level) =>
+  level ? String(level).toLowerCase().replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "—";
+
+const distanceText = (item) => {
+  const value = item?.distanceKm ?? item?.distance;
+  const n = Number(value);
+  if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return "—";
+  return n === 0 ? "At the stop" : `${n.toFixed(1)} km`;
+};
+
+const destinationName = (item) =>
+  item?.destinationName ||
+  item?.destination?.destinationName ||
+  item?.destination?.name ||
+  "Recommended destination";
 
 function RecommendationEngine({ tripId, onBack }) {
   const [recommendations, setRecommendations] = useState([]);
   const [history, setHistory] = useState([]);
+  const [trip, setTrip] = useState(null);
 
   const [selectedType, setSelectedType] = useState("ALL");
+  const [sortMode, setSortMode] = useState("score");
+  const [includePrevious, setIncludePrevious] = useState(false);
 
   const [plannedDate, setPlannedDate] = useState("");
   const [plannedTime, setPlannedTime] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [tripLoading, setTripLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [generationInfo, setGenerationInfo] = useState(null);
 
-  const [activeRecommendation, setActiveRecommendation] =
-    useState(null);
-
+  const [activeRecommendation, setActiveRecommendation] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [hideGenerated, setHideGenerated] = useState(true);
 
-  const [actionLoading, setActionLoading] = useState(null);
+  /* Ignore answers that arrive after a newer request was started. */
+  const listRequest = useRef(0);
+  const historyRequest = useRef(0);
+  const generatingRef = useRef(false);
 
-  /*
-   * =========================================================
-   * SELECTED TRIP
-   * =========================================================
-   */
+  const tripStartDate = useMemo(() => normalizeDate(trip?.startDate), [trip]);
+  const tripEndDate = useMemo(() => normalizeDate(trip?.endDate), [trip]);
 
-  const [trip, setTrip] = useState(null);
-  const [tripLoading, setTripLoading] = useState(false);
+  /* ---------------- loading ---------------- */
 
-  /*
-   * =========================================================
-   * NORMALIZE DATE
-   * =========================================================
-   */
-
-  const normalizeDate = (value) => {
-    if (!value) {
-      return "";
-    }
-
-    const text = String(value);
-
-    /*
-     * Backend may return:
-     *
-     * 2026-09-15
-     * 2026-09-15T00:00:00
-     * 2026-09-15T00:00:00.000Z
-     *
-     * For the HTML date input we only need:
-     *
-     * YYYY-MM-DD
-     */
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-      return text;
-    }
-
-    const match = text.match(
-      /^(\d{4}-\d{2}-\d{2})/
-    );
-
-    if (match) {
-      return match[1];
-    }
-
-    try {
-      const date = new Date(text);
-
-      if (Number.isNaN(date.getTime())) {
-        return "";
+  const loadRecommendations = useCallback(
+    async (previous = includePrevious) => {
+      if (!tripId) {
+        setRecommendations([]);
+        return;
       }
-
-      const year = date.getFullYear();
-      const month = String(
-        date.getMonth() + 1
-      ).padStart(2, "0");
-      const day = String(
-        date.getDate()
-      ).padStart(2, "0");
-
-      return `${year}-${month}-${day}`;
-    } catch {
-      return "";
-    }
-  };
-
-  /*
-   * =========================================================
-   * LOAD SELECTED TRIP
-   * =========================================================
-   */
-
-  const loadTrip = async () => {
-    if (!tripId) {
-      setTrip(null);
-      return;
-    }
-
-    try {
-      setTripLoading(true);
-      setError("");
-
-      const data = await getTrip(tripId);
-
-      setTrip(data || null);
-
-      /*
-       * If no planned date has been selected yet,
-       * automatically use the trip start date.
-       *
-       * This prevents the user from accidentally
-       * generating recommendations outside the trip.
-       */
-      const tripStartDate = normalizeDate(
-        data?.startDate
-      );
-
-      if (tripStartDate) {
-        setPlannedDate((previous) => {
-          return previous || tripStartDate;
-        });
+      const requestId = ++listRequest.current;
+      try {
+        setLoading(true);
+        const data = await getRecommendations(tripId, previous);
+        if (requestId !== listRequest.current) return;
+        setRecommendations(toList(data));
+      } catch (err) {
+        if (requestId !== listRequest.current) return;
+        console.error("Recommendation loading error:", err);
+        setRecommendations([]);
+        setError(err?.message || "Unable to load recommendations.");
+      } finally {
+        if (requestId === listRequest.current) setLoading(false);
       }
-    } catch (err) {
-      console.error(
-        "Trip loading error:",
-        err
-      );
+    },
+    [tripId, includePrevious]
+  );
 
-      setTrip(null);
-
-      setError(
-        err?.message ||
-          "Unable to load the selected trip."
-      );
-    } finally {
-      setTripLoading(false);
-    }
-  };
-
-  /*
-   * =========================================================
-   * TRIP DATE RANGE
-   * =========================================================
-   */
-
-  const tripStartDate = useMemo(() => {
-    return normalizeDate(trip?.startDate);
-  }, [trip]);
-
-  const tripEndDate = useMemo(() => {
-    return normalizeDate(trip?.endDate);
-  }, [trip]);
-
-  /*
-   * =========================================================
-   * VALIDATE PLANNED DATE
-   * =========================================================
-   */
-
-  const validatePlannedDate = () => {
-    if (!plannedDate) {
-      return {
-        valid: true,
-        message: "",
-      };
-    }
-
-    /*
-     * If the trip dates could not be loaded,
-     * do not incorrectly block the request here.
-     * The backend remains the final authority.
-     */
-    if (!tripStartDate || !tripEndDate) {
-      return {
-        valid: true,
-        message: "",
-      };
-    }
-
-    if (
-      plannedDate < tripStartDate ||
-      plannedDate > tripEndDate
-    ) {
-      return {
-        valid: false,
-        message:
-          `Planned date must be within the trip dates: ` +
-          `${tripStartDate} to ${tripEndDate}.`,
-      };
-    }
-
-    return {
-      valid: true,
-      message: "",
-    };
-  };
-
-  /*
-   * =========================================================
-   * LOAD EXISTING RECOMMENDATIONS
-   * =========================================================
-   */
-
-  const loadRecommendations = async () => {
-    if (!tripId) {
-      setRecommendations([]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-
-      let data;
-
-      if (selectedType === "ALL") {
-        data = await getRecommendations(
-          tripId
-        );
-      } else {
-        data =
-          await getRecommendationsByType(
-            tripId,
-            selectedType
-          );
-      }
-
-      setRecommendations(
-        normalizeRecommendations(data)
-      );
-    } catch (err) {
-      console.error(
-        "Recommendation loading error:",
-        err
-      );
-
-      setRecommendations([]);
-
-      setError(
-        err?.message ||
-          "Unable to load recommendations."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /*
-   * =========================================================
-   * LOAD HISTORY
-   * =========================================================
-   */
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!tripId) {
       setHistory([]);
       return;
     }
-
+    const requestId = ++historyRequest.current;
     try {
       setHistoryLoading(true);
-
-      const data =
-        await getRecommendationHistory(
-          tripId
-        );
-
-      setHistory(
-        Array.isArray(data)
-          ? data
-          : []
-      );
+      const data = await getRecommendationHistory(tripId);
+      if (requestId !== historyRequest.current) return;
+      setHistory(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(
-        "Recommendation history error:",
-        err
-      );
-
+      if (requestId !== historyRequest.current) return;
+      console.error("Recommendation history error:", err);
       setHistory([]);
     } finally {
-      setHistoryLoading(false);
+      if (requestId === historyRequest.current) setHistoryLoading(false);
     }
-  };
-
-  /*
-   * =========================================================
-   * NORMALIZE BACKEND RESPONSE
-   * =========================================================
-   */
-
-  const normalizeRecommendations = (
-    data
-  ) => {
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    if (
-      data &&
-      Array.isArray(
-        data.recommendations
-      )
-    ) {
-      return data.recommendations;
-    }
-
-    if (
-      data &&
-      Array.isArray(data.data)
-    ) {
-      return data.data;
-    }
-
-    return [];
-  };
-
-  /*
-   * =========================================================
-   * INITIAL LOAD
-   * =========================================================
-   */
+  }, [tripId]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    setSelectedType("ALL");
+    setGenerationInfo(null);
+    setError("");
+    setSuccess("");
+    setActiveRecommendation(null);
+
     if (!tripId) {
       setTrip(null);
       setRecommendations([]);
       setHistory([]);
       setPlannedDate("");
-      return;
+      return undefined;
     }
 
-    loadTrip();
+    (async () => {
+      try {
+        setTripLoading(true);
+        const data = await getTrip(tripId);
+        if (cancelled) return;
+        setTrip(data || null);
+        /* default to the trip start date so the date is always inside the trip */
+        setPlannedDate(normalizeDate(data?.startDate));
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Trip loading error:", err);
+        setTrip(null);
+        setPlannedDate("");
+        setError(err?.message || "Unable to load the selected trip.");
+      } finally {
+        if (!cancelled) setTripLoading(false);
+      }
+    })();
+
     loadRecommendations();
     loadHistory();
 
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
-  /*
-   * =========================================================
-   * TYPE FILTER
-   * =========================================================
-   */
-
+  /* close the details dialog with Escape */
   useEffect(() => {
-    if (!tripId) {
-      return;
+    if (!activeRecommendation) return undefined;
+    const onKey = (event) => {
+      if (event.key === "Escape") setActiveRecommendation(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeRecommendation]);
+
+  /* ---------------- derived data ---------------- */
+
+  /* latest decision per recommendation, from history (newest first) */
+  const statusById = useMemo(() => {
+    const map = {};
+    const ordered = [...history].sort(
+      (a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
+    );
+    ordered.forEach((row) => {
+      const id = row?.recommendationId;
+      const key = statusKey(row?.action);
+      if (id == null || !key) return;
+      /* a real decision (accept/reject/itinerary) outranks "viewed" */
+      const existing = map[id];
+      if (!existing || (existing === "viewed" && key !== "viewed")) {
+        map[id] = key;
+      }
+    });
+    return map;
+  }, [history]);
+
+  const counts = useMemo(() => {
+    const result = { ALL: recommendations.length };
+    RECOMMENDATION_TYPES.forEach((type) => {
+      if (type.value !== "ALL") result[type.value] = 0;
+    });
+    recommendations.forEach((item) => {
+      const key = String(item?.recommendationType || "").toUpperCase();
+      if (key in result) result[key] += 1;
+    });
+    return result;
+  }, [recommendations]);
+
+  const visible = useMemo(() => {
+    const filtered =
+      selectedType === "ALL"
+        ? recommendations
+        : recommendations.filter(
+            (item) => String(item?.recommendationType || "").toUpperCase() === selectedType
+          );
+    const list = [...filtered];
+    const num = (value, fallback) => {
+      const n = Number(value);
+      return value === null || value === undefined || value === "" || !Number.isFinite(n) ? fallback : n;
+    };
+    if (sortMode === "distance") {
+      list.sort(
+        (a, b) => num(a?.distanceKm ?? a?.distance, Infinity) - num(b?.distanceKm ?? b?.distance, Infinity)
+      );
+    } else if (sortMode === "name") {
+      list.sort((a, b) => destinationName(a).localeCompare(destinationName(b)));
+    } else {
+      list.sort((a, b) => num(b?.score, -1) - num(a?.score, -1));
     }
+    return list;
+  }, [recommendations, selectedType, sortMode]);
 
-    loadRecommendations();
+  const decisionCounts = useMemo(() => {
+    const result = { accepted: 0, rejected: 0, "used in itinerary": 0 };
+    recommendations.forEach((item) => {
+      const key = statusById[item?.recommendationId];
+      if (key && key in result) result[key] += 1;
+    });
+    return result;
+  }, [recommendations, statusById]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType]);
+  const nameById = useMemo(() => {
+    const map = {};
+    recommendations.forEach((item) => {
+      map[item?.recommendationId] = destinationName(item);
+    });
+    return map;
+  }, [recommendations]);
 
-  /*
-   * =========================================================
-   * GENERATE RECOMMENDATIONS
-   * =========================================================
-   */
+  const historyRows = useMemo(
+    () => (hideGenerated ? history.filter((row) => !isGeneratedAction(row?.action)) : history),
+    [history, hideGenerated]
+  );
+
+  /* ---------------- actions ---------------- */
+
+  const dateProblem = useMemo(() => {
+    if (!plannedDate || !tripStartDate || !tripEndDate) return "";
+    if (plannedDate < tripStartDate || plannedDate > tripEndDate) {
+      return `Choose a date between ${formatDay(tripStartDate)} and ${formatDay(tripEndDate)}.`;
+    }
+    return "";
+  }, [plannedDate, tripStartDate, tripEndDate]);
 
   const handleGenerate = async () => {
     if (!tripId) {
-      setError(
-        "Please select a trip before generating recommendations."
-      );
+      setError("Please select a trip before generating recommendations.");
       return;
     }
-
-    /*
-     * Validate the planned date BEFORE sending
-     * the request to Spring Boot.
-     */
-    const validation =
-      validatePlannedDate();
-
-    if (!validation.valid) {
-      setError(validation.message);
+    if (generatingRef.current) return;
+    if (dateProblem) {
+      setError(dateProblem);
       setSuccess("");
       return;
     }
 
+    generatingRef.current = true;
     try {
-      setLoading(true);
+      setGenerating(true);
       setError("");
       setSuccess("");
 
-      const result =
-        await generateRecommendations(
-          tripId,
-          plannedDate,
-          plannedTime
-        );
+      const result = await generateRecommendations(tripId, plannedDate, plannedTime);
 
-      const generated =
-        normalizeRecommendations(
-          result
-        );
+      setGenerationInfo(result && typeof result === "object" && !Array.isArray(result) ? result : null);
+      setSelectedType("ALL");
+      setIncludePrevious(false);
 
-      /*
-       * Reload persisted recommendations.
-       */
-      await loadRecommendations();
+      await Promise.all([loadRecommendations(false), loadHistory()]);
 
-      await loadHistory();
-
-      if (
-        generated.length > 0 ||
-        result
-      ) {
-        setSuccess(
-          "Recommendations generated successfully."
-        );
-      } else {
-        setSuccess(
-          "Recommendation generation completed."
-        );
-      }
+      const count = Number(result?.recommendationCount ?? toList(result).length);
+      setSuccess(
+        count > 0
+          ? `${count} fresh recommendation${count === 1 ? "" : "s"} generated${
+              plannedDate ? ` for ${formatDay(plannedDate)}` : ""
+            }.`
+          : "Generation finished, but nothing suitable was found for those conditions."
+      );
     } catch (err) {
-      console.error(
-        "Recommendation generation error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to generate recommendations."
-      );
+      console.error("Recommendation generation error:", err);
+      setError(err?.message || "Unable to generate recommendations.");
     } finally {
-      setLoading(false);
+      generatingRef.current = false;
+      setGenerating(false);
     }
   };
 
-  /*
-   * =========================================================
-   * ACTION
-   * =========================================================
-   */
-
-  const handleAction = async (
-    recommendation,
-    action
-  ) => {
-    const recommendationId =
-      recommendation?.recommendationId;
-
+  const handleAction = async (recommendation, action) => {
+    const recommendationId = recommendation?.recommendationId;
     if (!recommendationId) {
-      setError(
-        "Recommendation ID is missing."
-      );
+      setError("Recommendation ID is missing.");
       return;
     }
-
     try {
-      setActionLoading(
-        `${recommendationId}-${action}`
-      );
-
+      setActionLoading(`${recommendationId}-${action}`);
       setError("");
       setSuccess("");
-
-      await recordRecommendationAction(
-        recommendationId,
-        tripId,
-        action
-      );
-
+      await recordRecommendationAction(recommendationId, tripId, action);
       await loadHistory();
-
-      setSuccess(
-        `Recommendation marked as ${action.toLowerCase()}.`
-      );
+      const done = { Accepted: "accepted", Rejected: "rejected", "Used in Itinerary": "added to your itinerary" }[action];
+      setSuccess(`${destinationName(recommendation)} ${done || action.toLowerCase()}.`);
     } catch (err) {
-      console.error(
-        "Recommendation action error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Unable to record recommendation action."
-      );
+      console.error("Recommendation action error:", err);
+      setError(err?.message || "Unable to record recommendation action.");
     } finally {
       setActionLoading(null);
     }
   };
 
-  /*
-   * =========================================================
-   * DISPLAY HELPERS
-   * =========================================================
-   */
-
-  const getTypeInfo = (type) => {
-    const normalized =
-      String(type || "").toUpperCase();
-
-    return (
-      RECOMMENDATION_TYPES.find(
-        (item) =>
-          item.value === normalized
-      ) || {
-        value: normalized,
-        label:
-          normalized ||
-          "Recommendation",
-        icon: "✨",
-      }
-    );
-  };
-
-  const getRecommendationIcon = (
-    type
-  ) => {
-    return getTypeInfo(type).icon;
-  };
-
-  const formatType = (type) => {
-    return getTypeInfo(type).label;
-  };
-
-  const formatTime = (value) => {
-    if (!value) {
-      return "Flexible";
-    }
-
-    const text = String(value);
-
-    if (
-      text.length >= 5 &&
-      /^\d{2}:\d{2}/.test(text)
-    ) {
-      return text.slice(0, 5);
-    }
-
-    return text;
-  };
-
-  const formatDateTime = (value) => {
-    if (!value) {
-      return "Recently";
-    }
-
-    try {
-      const date = new Date(value);
-
-      if (
-        Number.isNaN(date.getTime())
-      ) {
-        return String(value);
-      }
-
-      return date.toLocaleString();
-    } catch {
-      return String(value);
+  /* Opening details counts as "viewed", unless a decision was already made. */
+  const openDetails = (recommendation) => {
+    setActiveRecommendation(recommendation);
+    const id = recommendation?.recommendationId;
+    if (id && !statusById[id]) {
+      recordRecommendationAction(id, tripId, "Viewed")
+        .then(loadHistory)
+        .catch(() => {});
     }
   };
 
-  const formatScore = (score) => {
-    if (
-      score === null ||
-      score === undefined ||
-      score === ""
-    ) {
-      return "—";
-    }
-
-    const number = Number(score);
-
-    if (!Number.isFinite(number)) {
-      return String(score);
-    }
-
-    return `${number.toFixed(0)}%`;
+  const toggleIncludePrevious = () => {
+    const next = !includePrevious;
+    setIncludePrevious(next);
+    loadRecommendations(next);
   };
 
-  const getScoreClass = (score) => {
-    const number = Number(score);
-
-    if (!Number.isFinite(number)) {
-      return "recommendation-score-neutral";
-    }
-
-    if (number >= 75) {
-      return "recommendation-score-high";
-    }
-
-    if (number >= 50) {
-      return "recommendation-score-medium";
-    }
-
-    return "recommendation-score-low";
-  };
-
-  const getCrowdClass = (level) => {
-    const normalized =
-      String(level || "").toLowerCase();
-
-    if (normalized === "low") {
-      return "crowd-low";
-    }
-
-    if (normalized === "high") {
-      return "crowd-high";
-    }
-
-    if (
-      normalized === "very_high" ||
-      normalized === "very high"
-    ) {
-      return "crowd-very-high";
-    }
-
-    return "crowd-moderate";
-  };
-
-  /*
-   * =========================================================
-   * SUMMARY
-   * =========================================================
-   */
-
-  const summary = useMemo(() => {
-    const items =
-      Array.isArray(recommendations)
-        ? recommendations
-        : [];
-
-    const typeCounts = {
-      WEATHER: 0,
-      NEARBY: 0,
-      CROWD: 0,
-      SEASONAL: 0,
-      TIME: 0,
-    };
-
-    items.forEach((item) => {
-      const type =
-        String(
-          item?.recommendationType || ""
-        ).toUpperCase();
-
-      if (
-        Object.prototype.hasOwnProperty.call(
-          typeCounts,
-          type
-        )
-      ) {
-        typeCounts[type] += 1;
-      }
-    });
-
-    return {
-      total: items.length,
-      weather: typeCounts.WEATHER,
-      nearby: typeCounts.NEARBY,
-      crowd: typeCounts.CROWD,
-      seasonal: typeCounts.SEASONAL,
-      time: typeCounts.TIME,
-    };
-  }, [recommendations]);
-
-  /*
-   * =========================================================
-   * NO TRIP
-   * =========================================================
-   */
+  /* ---------------- no trip ---------------- */
 
   if (!tripId) {
     return (
-      <section className="recommendation-page">
-        <div className="recommendation-shell">
+      <section className="rx-page">
+        <div className="rx-shell">
           {onBack && (
-            <button
-              type="button"
-              className="recommendation-back-button"
-              onClick={onBack}
-            >
-              ← Back to Profile
+            <button type="button" className="rx-back" onClick={onBack}>
+              ← Back
             </button>
           )}
-
-          <div className="recommendation-empty-page">
-            <div className="recommendation-empty-icon">
-              ✨
-            </div>
-
-            <h2>
-              Select a trip first
-            </h2>
-
+          <div className="rx-empty">
+            <div className="rx-empty-icon" aria-hidden="true">✨</div>
+            <h2>Select a trip first</h2>
             <p>
-              Open a trip to generate
-              personalized recommendations
-              based on weather, nearby
-              attractions, crowd levels,
-              season, and available time.
+              Pick a trip to get ideas based on weather, nearby places, crowd levels, season and time of day.
             </p>
           </div>
         </div>
@@ -719,927 +457,496 @@ function RecommendationEngine({ tripId, onBack }) {
     );
   }
 
-  /*
-   * =========================================================
-   * MAIN UI
-   * =========================================================
-   */
+  const busy = loading || generating || tripLoading;
+  const basis = generationInfo?.weatherBasis;
+  const noteTone =
+    basis === "UNAVAILABLE" || (generationInfo?.weatherUnavailableFor || []).length > 0
+      ? "warn"
+      : basis === "CURRENT_FALLBACK"
+      ? "warn"
+      : "info";
 
   return (
-    <section className="recommendation-page">
-      <div className="recommendation-shell">
-
+    <section className="rx-page">
+      <div className="rx-shell">
         {onBack && (
-          <button
-            type="button"
-            className="recommendation-back-button"
-            onClick={onBack}
-          >
-            ← Go Back
+          <button type="button" className="rx-back" onClick={onBack}>
+            ← Go back
           </button>
         )}
 
-        {/* HEADER */}
-
-        <header className="recommendation-header">
-          <div>
-            <h1>
-              Dynamic Recommendations
-            </h1>
-
+        {/* ---------- HERO ---------- */}
+        <header className="rx-hero">
+          <div className="rx-hero-text">
+            <span className="rx-eyebrow">Dynamic Recommendations</span>
+            <h1>{trip?.tripName ? `Ideas for ${trip.tripName}` : "Ideas for your trip"}</h1>
             <p>
-              Personalized activities and
-              destinations based on weather,
-              distance, crowd conditions,
-              season, and available time.
+              Suggestions that react to the weather on your travel day, how far each place is, how busy it is
+              likely to be, the season and the time you plan to go.
             </p>
           </div>
-
-          <div className="recommendation-header-icon">
-            ✨
-          </div>
+          <dl className="rx-hero-facts">
+            <div>
+              <dt>Trip dates</dt>
+              <dd>
+                {tripStartDate && tripEndDate
+                  ? `${formatDay(tripStartDate)} – ${formatDay(tripEndDate)}`
+                  : "Not set"}
+              </dd>
+            </div>
+            <div>
+              <dt>Travelers</dt>
+              <dd>{trip?.noOfTravelers ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>Showing</dt>
+              <dd>{includePrevious ? "All generations" : "Latest generation"}</dd>
+            </div>
+          </dl>
         </header>
 
-        {/* CONTROL CARD */}
-
-        <div className="recommendation-control-card">
-
-          <div className="recommendation-control-heading">
+        {/* ---------- GENERATE ---------- */}
+        <section className="rx-card rx-controls" aria-labelledby="rx-gen-title">
+          <div className="rx-card-head">
             <div>
-              <span className="recommendation-section-label">
-                RECOMMENDATION ENGINE
-              </span>
-
-              <h2>
-                Generate recommendations
-              </h2>
+              <span className="rx-label">Step 1</span>
+              <h2 id="rx-gen-title">Choose when you will go</h2>
             </div>
-
-            <span className="recommendation-trip-badge">
-              Trip #{tripId}
-            </span>
           </div>
 
-          {tripLoading ? (
-            <p className="recommendation-control-note">
-              Loading trip dates...
-            </p>
-          ) : (
-            <>
-              <div className="recommendation-control-grid">
+          <div className="rx-control-grid">
+            <label className="rx-field">
+              <span>Planned date</span>
+              <input
+                type="date"
+                value={plannedDate}
+                min={tripStartDate || undefined}
+                max={tripEndDate || undefined}
+                disabled={tripLoading}
+                onChange={(event) => {
+                  setPlannedDate(event.target.value);
+                  setError("");
+                }}
+                aria-invalid={dateProblem ? "true" : "false"}
+              />
+            </label>
 
-                <label className="recommendation-field">
-                  <span>
-                    Planned Date
-                  </span>
-
-                  <input
-                    type="date"
-                    value={plannedDate}
-                    min={tripStartDate || undefined}
-                    max={tripEndDate || undefined}
-                    onChange={(event) => {
-                      const value =
-                        event.target.value;
-
-                      setPlannedDate(value);
-
-                      /*
-                       * Immediate frontend validation.
-                       */
-                      if (
-                        tripStartDate &&
-                        tripEndDate &&
-                        value &&
-                        (
-                          value <
-                            tripStartDate ||
-                          value >
-                            tripEndDate
-                        )
-                      ) {
-                        setError(
-                          `Please select a date between ${tripStartDate} and ${tripEndDate}.`
-                        );
-                      } else {
-                        setError("");
-                      }
-                    }}
-                  />
-                </label>
-
-                <label className="recommendation-field">
-                  <span>
-                    Planned Time
-                  </span>
-
-                  <input
-                    type="time"
-                    value={plannedTime}
-                    onChange={(event) =>
-                      setPlannedTime(
-                        event.target.value
-                      )
-                    }
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  className="recommendation-generate-button"
-                  onClick={handleGenerate}
-                  disabled={
-                    loading ||
-                    tripLoading
-                  }
-                >
-                  {loading
-                    ? "Generating..."
-                    : "✨ Generate Recommendations"}
-                </button>
-              </div>
-
-              <p className="recommendation-control-note">
-                {tripStartDate &&
-                tripEndDate
-                  ? `Trip dates: ${tripStartDate} to ${tripEndDate}. Planned date must be within this range.`
-                  : "Leave date or time empty to let the recommendation engine use the trip defaults."}
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* MESSAGES */}
-
-        {error && (
-          <div className="recommendation-message recommendation-error">
-            <span>⚠️</span>
-
-            <span>{error}</span>
+            <label className="rx-field">
+              <span>Planned time</span>
+              <input
+                type="time"
+                value={plannedTime}
+                disabled={tripLoading}
+                onChange={(event) => setPlannedTime(event.target.value)}
+              />
+            </label>
 
             <button
               type="button"
-              onClick={() =>
-                setError("")
-              }
+              className="rx-primary"
+              onClick={handleGenerate}
+              disabled={busy || Boolean(dateProblem)}
             >
+              {generating ? "Generating…" : "✨ Generate recommendations"}
+            </button>
+          </div>
+
+          <p className={`rx-hint ${dateProblem ? "rx-hint-bad" : ""}`}>
+            {dateProblem ||
+              "Leave the time empty to let the engine pick the best time of day. Generating again replaces the previous suggestions you have not acted on."}
+          </p>
+        </section>
+
+        {/* ---------- MESSAGES ---------- */}
+        {error && (
+          <div className="rx-banner rx-banner-bad" role="alert">
+            <span aria-hidden="true">⚠️</span>
+            <span>{error}</span>
+            <button type="button" onClick={() => setError("")} aria-label="Dismiss error">
               ×
             </button>
           </div>
         )}
 
         {success && (
-          <div className="recommendation-message recommendation-success">
-            <span>✓</span>
-
+          <div className="rx-banner rx-banner-good" role="status">
+            <span aria-hidden="true">✓</span>
             <span>{success}</span>
-
-            <button
-              type="button"
-              onClick={() =>
-                setSuccess("")
-              }
-            >
+            <button type="button" onClick={() => setSuccess("")} aria-label="Dismiss message">
               ×
             </button>
           </div>
         )}
 
-        {/* SUMMARY */}
-
-        <div className="recommendation-summary-grid">
-
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              ✨
-            </span>
-
-            <div>
-              <span>
-                Total
-              </span>
-
-              <strong>
-                {summary.total}
-              </strong>
-            </div>
+        {generationInfo?.weatherNote && (
+          <div className={`rx-banner rx-banner-${noteTone}`} role="note" data-testid="rx-weather-note">
+            <span aria-hidden="true">{noteTone === "warn" ? "🌦️" : "☀️"}</span>
+            <span>{generationInfo.weatherNote}</span>
           </div>
+        )}
 
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              🌦️
-            </span>
-
-            <div>
-              <span>
-                Weather
-              </span>
-
-              <strong>
-                {summary.weather}
-              </strong>
-            </div>
+        {/* ---------- SUMMARY ---------- */}
+        <div className="rx-stats" aria-label="Summary">
+          <div className="rx-stat">
+            <strong>{counts.ALL}</strong>
+            <span>Suggestions</span>
           </div>
-
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              📍
-            </span>
-
-            <div>
-              <span>
-                Nearby
-              </span>
-
-              <strong>
-                {summary.nearby}
-              </strong>
-            </div>
+          <div className="rx-stat">
+            <strong>{decisionCounts.accepted}</strong>
+            <span>Accepted</span>
           </div>
-
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              👥
-            </span>
-
-            <div>
-              <span>
-                Crowd
-              </span>
-
-              <strong>
-                {summary.crowd}
-              </strong>
-            </div>
+          <div className="rx-stat">
+            <strong>{decisionCounts["used in itinerary"]}</strong>
+            <span>In itinerary</span>
           </div>
-
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              🌤️
-            </span>
-
-            <div>
-              <span>
-                Seasonal
-              </span>
-
-              <strong>
-                {summary.seasonal}
-              </strong>
-            </div>
+          <div className="rx-stat">
+            <strong>{decisionCounts.rejected}</strong>
+            <span>Rejected</span>
           </div>
-
-          <div className="recommendation-summary-card">
-            <span className="summary-icon">
-              🕐
-            </span>
-
-            <div>
-              <span>
-                Time
-              </span>
-
-              <strong>
-                {summary.time}
-              </strong>
-            </div>
-          </div>
-
         </div>
 
-        {/* FILTERS */}
-
-        <div className="recommendation-filter-card">
-
-          <div className="recommendation-filter-header">
+        {/* ---------- RESULTS ---------- */}
+        <section className="rx-card" aria-labelledby="rx-results-title">
+          <div className="rx-card-head">
             <div>
-              <span className="recommendation-section-label">
-                SMART FILTERS
-              </span>
-
-              <h2>
-                Recommendation types
-              </h2>
+              <span className="rx-label">Step 2</span>
+              <h2 id="rx-results-title">Recommended for your trip</h2>
             </div>
-
             <button
               type="button"
-              className="recommendation-refresh-button"
+              className="rx-ghost"
               onClick={() => {
                 loadRecommendations();
                 loadHistory();
               }}
-              disabled={loading}
+              disabled={busy}
             >
               ↻ Refresh
             </button>
           </div>
 
-          <div className="recommendation-type-tabs">
-            {RECOMMENDATION_TYPES.map(
-              (type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  className={`recommendation-type-tab ${
-                    selectedType ===
-                    type.value
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedType(
-                      type.value
-                    )
-                  }
-                >
-                  <span>
-                    {type.icon}
-                  </span>
-
-                  {type.label}
-                </button>
-              )
-            )}
+          <div className="rx-tabs" role="tablist" aria-label="Recommendation type">
+            {RECOMMENDATION_TYPES.map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                role="tab"
+                aria-selected={selectedType === type.value}
+                className={`rx-tab ${selectedType === type.value ? "is-active" : ""}`}
+                onClick={() => setSelectedType(type.value)}
+              >
+                <span aria-hidden="true">{type.icon}</span>
+                {type.value === "ALL" ? "All" : type.label}
+                <em>{counts[type.value] ?? 0}</em>
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* RECOMMENDATIONS */}
+          <div className="rx-toolbar">
+            <label className="rx-sort">
+              <span>Sort by</span>
+              <select value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <div className="recommendation-section-card">
+            <label className="rx-check">
+              <input type="checkbox" checked={includePrevious} onChange={toggleIncludePrevious} />
+              <span>Include older suggestions I acted on</span>
+            </label>
 
-          <div className="recommendation-section-heading">
-            <div>
-              <span className="recommendation-section-label">
-                PERSONALIZED RESULTS
-              </span>
-
-              <h2>
-                Recommended for your trip
-              </h2>
-            </div>
-
-            <span className="recommendation-count">
-              {recommendations.length} results
+            <span className="rx-count" aria-live="polite">
+              {visible.length} result{visible.length === 1 ? "" : "s"}
             </span>
           </div>
 
-          {loading &&
-          recommendations.length === 0 ? (
-            <div className="recommendation-loading">
-              <div className="recommendation-spinner" />
-
-              <h3>
-                Analyzing trip conditions...
-              </h3>
-
-              <p>
-                Checking weather, distance,
-                crowd conditions, season and
-                available time.
-              </p>
+          {loading && recommendations.length === 0 ? (
+            <div className="rx-state" role="status">
+              <div className="rx-spinner" aria-hidden="true" />
+              <h3>Analysing trip conditions…</h3>
+              <p>Checking weather, distance, crowds, season and time.</p>
             </div>
-          ) : recommendations.length ===
-            0 ? (
-            <div className="recommendation-empty">
-              <div className="recommendation-empty-icon">
-                🔎
-              </div>
-
+          ) : visible.length === 0 ? (
+            <div className="rx-state">
+              <div className="rx-empty-icon" aria-hidden="true">🔎</div>
               <h3>
-                No recommendations found
+                {recommendations.length === 0
+                  ? "No recommendations yet"
+                  : `No ${typeInfo(selectedType).label.toLowerCase()} suggestions`}
               </h3>
-
               <p>
-                No recommendations match the
-                current conditions. Try
-                generating recommendations
-                again or select another filter.
+                {recommendations.length === 0
+                  ? "Pick a date above and generate suggestions for this trip."
+                  : "Try another type, or generate again."}
               </p>
-
-              <button
-                type="button"
-                className="recommendation-secondary-button"
-                onClick={handleGenerate}
-                disabled={
-                  loading ||
-                  tripLoading
-                }
-              >
-                Generate Recommendations
-              </button>
-            </div>
-          ) : (
-            <div className="recommendation-list">
-              {recommendations.map(
-                (
-                  recommendation,
-                  index
-                ) => {
-                  const type =
-                    recommendation?.recommendationType;
-
-                  const typeInfo =
-                    getTypeInfo(type);
-
-                  const id =
-                    recommendation?.recommendationId ||
-                    `${type}-${index}`;
-
-                  return (
-                    <article
-                      key={id}
-                      className="recommendation-card"
-                    >
-
-                      <div className="recommendation-card-top">
-
-                        <div className="recommendation-card-type">
-                          <span className="recommendation-card-icon">
-                            {getRecommendationIcon(
-                              type
-                            )}
-                          </span>
-
-                          <div>
-                            <span className="recommendation-card-type-label">
-                              {typeInfo.label}
-                            </span>
-
-                            <h3>
-                              {recommendation?.destinationName ||
-                                recommendation?.destination?.destinationName ||
-                                recommendation?.destination?.name ||
-                                "Recommended destination"}
-                            </h3>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`recommendation-score ${getScoreClass(
-                            recommendation?.score
-                          )}`}
-                        >
-                          <span>
-                            Relevance
-                          </span>
-
-                          <strong>
-                            {formatScore(
-                              recommendation?.score
-                            )}
-                          </strong>
-                        </div>
-
-                      </div>
-
-                      <div className="recommendation-reason">
-                        <span className="reason-icon">
-                          💡
-                        </span>
-
-                        <p>
-                          {recommendation?.reason ||
-                            "This recommendation matches the current trip conditions."}
-                        </p>
-                      </div>
-
-                      <div className="recommendation-details">
-
-                        <div className="recommendation-detail">
-                          <span>
-                            📍 Distance
-                          </span>
-
-                          <strong>
-                            {recommendation?.distance !==
-                              null &&
-                            recommendation?.distance !==
-                              undefined
-                              ? `${recommendation.distance} km`
-                              : "—"}
-                          </strong>
-                        </div>
-
-                        <div className="recommendation-detail">
-                          <span>
-                            🌦️ Weather
-                          </span>
-
-                          <strong>
-                            {recommendation?.weatherCondition ||
-                              "—"}
-                          </strong>
-                        </div>
-
-                        <div className="recommendation-detail">
-                          <span>
-                            👥 Crowd
-                          </span>
-
-                          <strong
-                            className={getCrowdClass(
-                              recommendation?.crowdLevel
-                            )}
-                          >
-                            {recommendation?.crowdLevel ||
-                              "—"}
-                          </strong>
-                        </div>
-
-                        <div className="recommendation-detail">
-                          <span>
-                            🕐 Suggested Time
-                          </span>
-
-                          <strong>
-                            {formatTime(
-                              recommendation?.recommendedTime
-                            )}
-                          </strong>
-                        </div>
-
-                        <div className="recommendation-detail">
-                          <span>
-                            🌤️ Season
-                          </span>
-
-                          <strong>
-                            {recommendation?.season ||
-                              "—"}
-                          </strong>
-                        </div>
-
-                      </div>
-
-                      <div className="recommendation-card-footer">
-
-                        <button
-                          type="button"
-                          className="recommendation-view-button"
-                          onClick={() =>
-                            setActiveRecommendation(
-                              recommendation
-                            )
-                          }
-                        >
-                          View Details
-                        </button>
-
-                        <div className="recommendation-action-buttons">
-
-                          <button
-                            type="button"
-                            className="recommendation-action-button recommendation-accept"
-                            disabled={
-                              actionLoading ===
-                              `${recommendation?.recommendationId}-Accepted`
-                            }
-                            onClick={() =>
-                              handleAction(
-                                recommendation,
-                                "Accepted"
-                              )
-                            }
-                          >
-                            ✓ Accept
-                          </button>
-
-                          <button
-                            type="button"
-                            className="recommendation-action-button recommendation-reject"
-                            disabled={
-                              actionLoading ===
-                              `${recommendation?.recommendationId}-Rejected`
-                            }
-                            onClick={() =>
-                              handleAction(
-                                recommendation,
-                                "Rejected"
-                              )
-                            }
-                          >
-                            × Reject
-                          </button>
-
-                          <button
-                            type="button"
-                            className="recommendation-action-button recommendation-use"
-                            disabled={
-                              actionLoading ===
-                              `${recommendation?.recommendationId}-Used in Itinerary`
-                            }
-                            onClick={() =>
-                              handleAction(
-                                recommendation,
-                                "Used in Itinerary"
-                              )
-                            }
-                          >
-                            + Itinerary
-                          </button>
-
-                        </div>
-                      </div>
-                    </article>
-                  );
-                }
+              {recommendations.length === 0 ? (
+                <button type="button" className="rx-primary" onClick={handleGenerate} disabled={busy || Boolean(dateProblem)}>
+                  ✨ Generate recommendations
+                </button>
+              ) : (
+                <button type="button" className="rx-ghost" onClick={() => setSelectedType("ALL")}>
+                  Show all types
+                </button>
               )}
             </div>
+          ) : (
+            <ul className="rx-list">
+              {visible.map((item, index) => {
+                const info = typeInfo(item?.recommendationType);
+                const id = item?.recommendationId;
+                const status = statusById[id];
+                const badge = status ? ACTION_BADGES[status] : null;
+                const tone = scoreTone(item?.score);
+                const score = scoreNumber(item?.score);
+                const busyKey = (action) => actionLoading === `${id}-${action}`;
+
+                return (
+                  <li key={id ?? `${info.value}-${index}`} className={`rx-item ${status ? `is-${status.replace(/ /g, "-")}` : ""}`}>
+                    <div className="rx-item-top">
+                      <span className="rx-type-icon" aria-hidden="true">{info.icon}</span>
+                      <div className="rx-item-title">
+                        <span className="rx-type-label">{info.label}</span>
+                        <h3>{destinationName(item)}</h3>
+                      </div>
+                      {badge && <span className={`rx-badge rx-badge-${badge.tone}`}>{badge.label}</span>}
+                      <div className={`rx-score rx-score-${tone}`} aria-label={`Relevance ${score === null ? "unknown" : Math.round(score) + " percent"}`}>
+                        <strong>{score === null ? "—" : `${Math.round(score)}%`}</strong>
+                        <span>match</span>
+                      </div>
+                    </div>
+
+                    <p className="rx-reason">{item?.reason || "This suggestion matches your trip conditions."}</p>
+
+                    <dl className="rx-facts">
+                      <div>
+                        <dt>Distance</dt>
+                        <dd>{distanceText(item)}</dd>
+                      </div>
+                      <div>
+                        <dt>Weather</dt>
+                        <dd>{item?.weatherCondition || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt>Crowd</dt>
+                        <dd className={`rx-crowd rx-crowd-${crowdTone(item?.crowdLevel)}`}>{prettyLevel(item?.crowdLevel)}</dd>
+                      </div>
+                      <div>
+                        <dt>Best time</dt>
+                        <dd>{formatTime(item?.recommendedTime)}</dd>
+                      </div>
+                      <div>
+                        <dt>Season</dt>
+                        <dd>{item?.season || "—"}</dd>
+                      </div>
+                    </dl>
+
+                    <div className="rx-item-actions">
+                      <button type="button" className="rx-ghost" onClick={() => openDetails(item)}>
+                        View details
+                      </button>
+                      <div className="rx-decisions">
+                        <button
+                          type="button"
+                          className="rx-act rx-act-good"
+                          disabled={busyKey("Accepted") || status === "accepted"}
+                          onClick={() => handleAction(item, "Accepted")}
+                        >
+                          ✓ Accept
+                        </button>
+                        <button
+                          type="button"
+                          className="rx-act rx-act-bad"
+                          disabled={busyKey("Rejected") || status === "rejected"}
+                          onClick={() => handleAction(item, "Rejected")}
+                        >
+                          × Reject
+                        </button>
+                        <button
+                          type="button"
+                          className="rx-act rx-act-info"
+                          disabled={busyKey("Used in Itinerary") || status === "used in itinerary"}
+                          onClick={() => handleAction(item, "Used in Itinerary")}
+                        >
+                          + Itinerary
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
+        </section>
 
-        {/* HISTORY */}
-
-        <div className="recommendation-history-card">
-
-          <div className="recommendation-history-header">
-
+        {/* ---------- HISTORY ---------- */}
+        <section className="rx-card" aria-labelledby="rx-history-title">
+          <div className="rx-card-head">
             <div>
-              <span className="recommendation-section-label">
-                ACTIVITY LOG
-              </span>
-
-              <h2>
-                Recommendation History
-              </h2>
+              <span className="rx-label">Activity</span>
+              <h2 id="rx-history-title">Your decisions</h2>
             </div>
-
             <button
               type="button"
-              className="recommendation-history-toggle"
+              className="rx-ghost"
+              aria-expanded={showHistory}
               onClick={() => {
-                setShowHistory(
-                  (previous) =>
-                    !previous
-                );
-
-                if (!showHistory) {
-                  loadHistory();
-                }
+                if (!showHistory) loadHistory();
+                setShowHistory((previous) => !previous);
               }}
             >
-              {showHistory
-                ? "Hide History"
-                : "View History"}
+              {showHistory ? "Hide history" : "View history"}
             </button>
           </div>
 
           {showHistory && (
-            <div className="recommendation-history-content">
+            <div className="rx-history">
+              <label className="rx-check">
+                <input type="checkbox" checked={hideGenerated} onChange={() => setHideGenerated((v) => !v)} />
+                <span>Hide automatic “generated” entries</span>
+              </label>
 
-              {historyLoading ? (
-                <div className="recommendation-history-loading">
-                  Loading history...
-                </div>
-              ) : history.length === 0 ? (
-                <div className="recommendation-history-empty">
-                  No recommendation history
-                  available for this trip yet.
-                </div>
+              {historyLoading && history.length === 0 ? (
+                <p className="rx-hint">Loading history…</p>
+              ) : historyRows.length === 0 ? (
+                <p className="rx-hint">
+                  {history.length === 0
+                    ? "No activity for this trip yet."
+                    : "No decisions yet. Accept, reject or add a suggestion to see it here."}
+                </p>
               ) : (
-                <div className="recommendation-history-list">
-                  {history.map(
-                    (
-                      item,
-                      index
-                    ) => (
-                      <div
-                        className="recommendation-history-item"
-                        key={
-                          item?.historyId ||
-                          index
-                        }
-                      >
-                        <div className="history-item-icon">
-                          {getRecommendationIcon(
-                            item?.recommendationType
-                          )}
-                        </div>
-
-                        <div className="history-item-main">
+                <ol className="rx-timeline">
+                  {historyRows.map((row, index) => {
+                    const key = statusKey(row?.action);
+                    const badge = key ? ACTION_BADGES[key] : null;
+                    return (
+                      <li key={row?.historyId ?? index}>
+                        <span className="rx-type-icon" aria-hidden="true">{typeInfo(row?.recommendationType).icon}</span>
+                        <div className="rx-tl-main">
                           <strong>
-                            {formatType(
-                              item?.recommendationType
-                            )}
+                            {nameById[row?.recommendationId] || typeInfo(row?.recommendationType).label}
                           </strong>
-
-                          <span>
-                            {item?.action ||
-                              "Recommendation activity"}
+                          <span className="rx-tl-action">
+                            {badge ? <span className={`rx-badge rx-badge-${badge.tone}`}>{badge.label}</span> : row?.action || "Activity"}
                           </span>
-
-                          {item?.reason && (
-                            <p>
-                              {item.reason}
-                            </p>
-                          )}
+                          {row?.reason && <p>{row.reason}</p>}
                         </div>
-
-                        <time>
-                          {formatDateTime(
-                            item?.createdAt
-                          )}
-                        </time>
-                      </div>
-                    )
-                  )}
-                </div>
+                        <time>{formatDateTime(row?.createdAt)}</time>
+                      </li>
+                    );
+                  })}
+                </ol>
               )}
-
             </div>
           )}
-
-        </div>
-
+        </section>
       </div>
 
-      {/* DETAILS MODAL */}
-
+      {/* ---------- DETAILS DIALOG ---------- */}
       {activeRecommendation && (
         <div
-          className="recommendation-modal-overlay"
+          className="rx-overlay"
           onMouseDown={(event) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setActiveRecommendation(
-                null
-              );
-            }
+            if (event.target === event.currentTarget) setActiveRecommendation(null);
           }}
         >
-          <div className="recommendation-modal">
-
-            <div className="recommendation-modal-header">
+          <div className="rx-dialog" role="dialog" aria-modal="true" aria-labelledby="rx-dialog-title">
+            <div className="rx-dialog-head">
               <div>
-                <span className="recommendation-section-label">
-                  RECOMMENDATION DETAILS
+                <span className="rx-label">
+                  {typeInfo(activeRecommendation?.recommendationType).icon}{" "}
+                  {typeInfo(activeRecommendation?.recommendationType).label}
                 </span>
-
-                <h2>
-                  {activeRecommendation?.destinationName ||
-                    activeRecommendation?.destination?.destinationName ||
-                    activeRecommendation?.destination?.name ||
-                    "Recommended Destination"}
-                </h2>
+                <h2 id="rx-dialog-title">{destinationName(activeRecommendation)}</h2>
               </div>
-
               <button
                 type="button"
-                className="recommendation-modal-close"
-                onClick={() =>
-                  setActiveRecommendation(
-                    null
-                  )
-                }
+                className="rx-close"
+                onClick={() => setActiveRecommendation(null)}
+                aria-label="Close details"
               >
                 ×
               </button>
             </div>
 
-            <div className="recommendation-modal-type">
-              <span>
-                {getRecommendationIcon(
-                  activeRecommendation?.recommendationType
-                )}
-              </span>
-
-              {formatType(
-                activeRecommendation?.recommendationType
-              )}
+            <div className="rx-why">
+              <span>Why this was recommended</span>
+              <p>{activeRecommendation?.reason || "No reason was provided."}</p>
             </div>
 
-            <div className="recommendation-modal-reason">
-              <span>
-                Why this was recommended
-              </span>
-
-              <p>
-                {activeRecommendation?.reason ||
-                  "No recommendation reason was provided."}
-              </p>
-            </div>
-
-            <div className="recommendation-modal-grid">
-
+            <dl className="rx-dialog-grid">
               <div>
-                <span>
-                  Relevance
-                </span>
-
-                <strong>
-                  {formatScore(
-                    activeRecommendation?.score
-                  )}
-                </strong>
+                <dt>Match</dt>
+                <dd>
+                  {scoreNumber(activeRecommendation?.score) === null
+                    ? "—"
+                    : `${Math.round(scoreNumber(activeRecommendation.score))}%`}
+                </dd>
               </div>
-
               <div>
-                <span>
-                  Distance
-                </span>
-
-                <strong>
-                  {activeRecommendation?.distance !==
-                    null &&
-                  activeRecommendation?.distance !==
-                    undefined
-                    ? `${activeRecommendation.distance} km`
-                    : "—"}
-                </strong>
+                <dt>Distance</dt>
+                <dd>{distanceText(activeRecommendation)}</dd>
               </div>
-
               <div>
-                <span>
-                  Weather
-                </span>
-
-                <strong>
-                  {activeRecommendation?.weatherCondition ||
-                    "—"}
-                </strong>
+                <dt>Weather</dt>
+                <dd>{activeRecommendation?.weatherCondition || "—"}</dd>
               </div>
-
               <div>
-                <span>
-                  Crowd
-                </span>
-
-                <strong>
-                  {activeRecommendation?.crowdLevel ||
-                    "—"}
-                </strong>
+                <dt>Crowd</dt>
+                <dd>{prettyLevel(activeRecommendation?.crowdLevel)}</dd>
               </div>
-
               <div>
-                <span>
-                  Recommended Time
-                </span>
-
-                <strong>
-                  {formatTime(
-                    activeRecommendation?.recommendedTime
-                  )}
-                </strong>
+                <dt>Best time</dt>
+                <dd>{formatTime(activeRecommendation?.recommendedTime)}</dd>
               </div>
-
               <div>
-                <span>
-                  Season
-                </span>
-
-                <strong>
-                  {activeRecommendation?.season ||
-                    "—"}
-                </strong>
+                <dt>Season</dt>
+                <dd>{activeRecommendation?.season || "—"}</dd>
               </div>
+              <div className="rx-dialog-wide">
+                <dt>Generated</dt>
+                <dd>{formatDateTime(activeRecommendation?.createdAt)}</dd>
+              </div>
+            </dl>
 
-            </div>
-
-            <div className="recommendation-modal-actions">
-
+            <div className="rx-dialog-actions">
               <button
                 type="button"
-                className="recommendation-action-button recommendation-accept"
+                className="rx-act rx-act-good"
                 onClick={() => {
-                  handleAction(
-                    activeRecommendation,
-                    "Accepted"
-                  );
-
-                  setActiveRecommendation(
-                    null
-                  );
+                  handleAction(activeRecommendation, "Accepted");
+                  setActiveRecommendation(null);
                 }}
               >
                 ✓ Accept
               </button>
-
               <button
                 type="button"
-                className="recommendation-action-button recommendation-use"
+                className="rx-act rx-act-bad"
                 onClick={() => {
-                  handleAction(
-                    activeRecommendation,
-                    "Used in Itinerary"
-                  );
-
-                  setActiveRecommendation(
-                    null
-                  );
+                  handleAction(activeRecommendation, "Rejected");
+                  setActiveRecommendation(null);
                 }}
               >
-                + Add to Itinerary
+                × Reject
               </button>
-
+              <button
+                type="button"
+                className="rx-act rx-act-info"
+                onClick={() => {
+                  handleAction(activeRecommendation, "Used in Itinerary");
+                  setActiveRecommendation(null);
+                }}
+              >
+                + Add to itinerary
+              </button>
             </div>
-
           </div>
         </div>
       )}
-
     </section>
   );
 }
