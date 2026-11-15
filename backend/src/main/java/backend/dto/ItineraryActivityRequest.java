@@ -8,6 +8,7 @@ public class ItineraryActivityRequest {
     private Integer destinationId;
     private LocalDate activityDate;
     private LocalTime startTime;
+    private LocalDate endDate;
     private LocalTime endTime;
     private String activityName;
     private String description;
@@ -88,5 +89,18 @@ public class ItineraryActivityRequest {
 
     public void setLocked(Boolean locked) {
         this.locked = locked;
+    }
+
+    /**
+     * Optional. The date the activity ends on. Leave it out for an activity
+     * that finishes on activityDate; set it to the next day for one that
+     * crosses midnight.
+     */
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 }

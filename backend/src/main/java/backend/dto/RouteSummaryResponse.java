@@ -18,6 +18,8 @@ public class RouteSummaryResponse {
     private Boolean approximate;
     private String notice;
     private List<RouteLegResponse> legs;
+    private Boolean roundTrip;
+    private String originName;
 
     public RouteSummaryResponse() {
     }
@@ -48,4 +50,11 @@ public class RouteSummaryResponse {
 
     public List<RouteLegResponse> getLegs() { return legs; }
     public void setLegs(List<RouteLegResponse> v) { this.legs = v; }
+
+    /** true when the route starts at the trip origin and returns to it. */
+    public Boolean getRoundTrip() { return roundTrip; }
+    public void setRoundTrip(Boolean v) { this.roundTrip = v; }
+
+    public String getOriginName() { return originName; }
+    public void setOriginName(String v) { this.originName = v; }
 }

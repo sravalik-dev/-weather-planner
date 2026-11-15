@@ -1,0 +1,120 @@
+
+== S1: one-day trip that genuinely cannot fit
+  ok   HTTP status 422, not 400 (was 422)
+   message: The selected trip dates cannot fit this round trip (Vijayawada ? Chennai ? Coimbatore ? Kochi ? Vijayawada). It needs about 52 h 11 min of road travel plus 5 h 30 min of visits (57 h 41 min in total, before meals and rest). Available time: 16 h 59 min between the 07:00 departure on 2026-12-20 and 23:59 on 2026-12-20. Extending the trip by 2 days would fit it.
+  ok   message gives a way forward
+  ok   nothing was saved or deleted on failure
+
+== S2: 8-day trip, OSRM unreachable -> flagged estimates
+   2026-12-20 07:00 -> 07:30 MEAL          Breakfast                                     30 min 
+   2026-12-20 07:30 -> 12:30 TRAVEL        Travel to Chennai                            300 min 227.21km [est]
+   2026-12-20 12:30 -> 13:15 MEAL          Lunch                                         45 min 
+   2026-12-20 13:15 -> 18:15 TRAVEL        Travel to Chennai (continued)                300 min 227.21km [est]
+   2026-12-20 18:15 -> 18:35 REST          Rest stop                                     20 min 
+   2026-12-20 18:35 -> 19:31 TRAVEL        Travel to Chennai (continued)                 56 min 42.41km [est]
+   2026-12-20 19:31 -> 20:16 MEAL          Dinner                                        45 min 
+   2026-12-20 20:16 -> 22:16 VISIT         Visit Chennai                                120 min 
+   2026-12-20 22:16 -> 22:31 FREE_TIME     Free time in Chennai                          15 min 
+   2026-12-20 22:31 -> 2026-12-21 06:31 ACCOMMODATION Overnight stay at Chennai                    480 min 
+   2026-12-21 06:31 -> 07:00 FREE_TIME     Free time in Chennai                          29 min 
+   2026-12-21 07:00 -> 07:30 MEAL          Breakfast                                     30 min 
+   2026-12-21 07:30 -> 12:00 FREE_TIME     Free time in Chennai                         270 min 
+   2026-12-21 12:00 -> 12:45 MEAL          Lunch                                         45 min 
+   2026-12-21 12:45 -> 19:00 FREE_TIME     Free time in Chennai                         375 min 
+   2026-12-21 19:00 -> 19:45 MEAL          Dinner                                        45 min 
+   2026-12-21 19:45 -> 22:02 FREE_TIME     Free time in Chennai                         137 min 
+   2026-12-21 22:02 -> 2026-12-22 06:02 ACCOMMODATION Overnight stay at Chennai                    480 min 
+   2026-12-22 06:02 -> 07:00 FREE_TIME     Free time in Chennai                          58 min 
+   2026-12-22 07:00 -> 07:30 MEAL          Breakfast                                     30 min 
+   2026-12-22 07:30 -> 12:30 TRAVEL        Travel to Coimbatore                         300 min 227.2km [est]
+   2026-12-22 12:30 -> 13:15 MEAL          Lunch                                         45 min 
+   2026-12-22 13:15 -> 18:15 TRAVEL        Travel to Coimbatore (continued)             300 min 227.2km [est]
+   2026-12-22 18:15 -> 18:35 REST          Rest stop                                     20 min 
+   2026-12-22 18:35 -> 20:50 TRAVEL        Travel to Coimbatore (continued)             135 min 102.24km [est]
+   2026-12-22 20:50 -> 21:35 MEAL          Dinner                                        45 min 
+   2026-12-22 21:35 -> 2026-12-23 05:35 ACCOMMODATION Overnight stay at Coimbatore                 480 min 
+   2026-12-23 05:35 -> 07:00 REST          Wait until the usual sightseeing start time (07:00)    85 min 
+   2026-12-23 07:00 -> 09:00 VISIT         Visit Coimbatore                             120 min 
+   2026-12-23 09:00 -> 09:30 MEAL          Breakfast                                     30 min 
+   2026-12-23 09:30 -> 12:00 FREE_TIME     Free time in Coimbatore                      150 min 
+   2026-12-23 12:00 -> 12:45 MEAL          Lunch                                         45 min 
+   2026-12-23 12:45 -> 19:00 FREE_TIME     Free time in Coimbatore                      375 min 
+   2026-12-23 19:00 -> 19:45 MEAL          Dinner                                        45 min 
+   2026-12-23 19:45 -> 21:06 FREE_TIME     Free time in Coimbatore                       81 min 
+   2026-12-23 21:06 -> 2026-12-24 05:06 ACCOMMODATION Overnight stay at Coimbatore                 480 min 
+   2026-12-24 05:06 -> 07:00 FREE_TIME     Free time in Coimbatore                      114 min 
+   2026-12-24 07:00 -> 07:30 MEAL          Breakfast                                     30 min 
+   2026-12-24 07:30 -> 11:34 TRAVEL        Travel to Kochi                              244 min 184.35km [est]
+   2026-12-24 11:34 -> 13:04 VISIT         Visit Kochi                                   90 min  [est]
+   2026-12-24 13:04 -> 13:49 MEAL          Lunch                                         45 min 
+   2026-12-24 13:49 -> 19:00 FREE_TIME     Free time in Kochi                           311 min 
+   2026-12-24 19:00 -> 19:45 MEAL          Dinner                                        45 min 
+   2026-12-24 19:45 -> 20:37 FREE_TIME     Free time in Kochi                            52 min 
+   2026-12-24 20:37 -> 2026-12-25 04:37 ACCOMMODATION Overnight stay at Kochi                      480 min 
+   2026-12-25 04:37 -> 07:00 FREE_TIME     Free time in Kochi                           143 min 
+   2026-12-25 07:00 -> 07:30 MEAL          Breakfast                                     30 min 
+   2026-12-25 07:30 -> 12:00 FREE_TIME     Free time in Kochi                           270 min 
+   2026-12-25 12:00 -> 12:45 MEAL          Lunch                                         45 min 
+   2026-12-25 12:45 -> 19:00 FREE_TIME     Free time in Kochi                           375 min 
+   2026-12-25 19:00 -> 19:45 MEAL          Dinner                                        45 min 
+   2026-12-25 19:45 -> 20:08 FREE_TIME     Free time in Kochi                            23 min 
+   2026-12-25 20:08 -> 2026-12-26 04:08 ACCOMMODATION Overnight stay at Kochi                      480 min 
+   2026-12-26 04:08 -> 06:49 FREE_TIME     Free time in Kochi                           161 min 
+   2026-12-26 06:49 -> 07:19 MEAL          Breakfast                                     30 min 
+   2026-12-26 07:19 -> 12:19 RETURN        Return to Vijayawada                         300 min 227.13km [est]
+   2026-12-26 12:19 -> 13:04 MEAL          Lunch                                         45 min 
+   2026-12-26 13:04 -> 18:04 RETURN        Return to Vijayawada (continued)             300 min 227.13km [est]
+   2026-12-26 18:04 -> 18:49 MEAL          Dinner                                        45 min 
+   2026-12-26 18:49 -> 20:08 RETURN        Return to Vijayawada (continued)              79 min 59.81km [est]
+   2026-12-26 20:08 -> 2026-12-27 04:08 ACCOMMODATION Overnight rest en route                      480 min 
+   2026-12-27 04:08 -> 09:08 RETURN        Return to Vijayawada (continued)             300 min 227.13km [est]
+   2026-12-27 09:08 -> 09:38 MEAL          Breakfast                                     30 min 
+   2026-12-27 09:38 -> 14:38 RETURN        Return to Vijayawada (continued)             300 min 227.13km [est]
+   2026-12-27 14:38 -> 15:23 MEAL          Lunch                                         45 min 
+   2026-12-27 15:23 -> 19:00 RETURN        Return to Vijayawada (continued)             217 min 164.29km [est]
+  ok   return journey present as its own activity
+  ok   all 3 destinations visited
+  ok   visit activities carry destinationId
+  ok   every fallback travel is flagged estimated and > 0 min
+   activities crossing midnight: 7
+  ok   no activity ends before it starts
+  ok   no overlapping activities
+  ok   everything inside the trip dates
+  ok   all marked generated
+   summary: 66 activities, travel 3131 min, visits 330 min, 2370.4 km, return 1132.6 km / 1496 min, estimated=true
+  ok   summary: return included, estimates flagged
+  ok   summary carries the routing-fallback warning
+  ok   per-day durations present
+  ok   per-day travel adds up to total travel (midnight split loses nothing): 3131
+
+== S3: locked + manual activities survive regeneration
+  ok   manual activity is marked manual (destinationId null is intentional)
+   2026-12-21 08:00 -> 12:00 CUSTOM        Family wedding                               240 min 
+   2026-12-23 09:00 -> 10:00 CUSTOM        beach                                         60 min 
+  ok   manual 'beach' still exists (old code deleted it)
+  ok   locked wedding still exists and locked
+  ok   old generated rows were replaced
+  ok   no generated activity overlaps a locked/manual one
+  ok   orderIndex unique per day
+
+== S4: duplicate Generate request while one is running
+  ok   second concurrent call -> 409: An itinerary is already being generated for this trip. Please wait for it to finish.
+  ok   lock released: a later call works
+
+== S5: manual activity crossing midnight / validation
+  ok   23:00 -> 01:30 next day is stored and flagged as crossing midnight
+  ok   wrapped time without endDate rejected: End time must be after start time. To finish after midnight, set the end date to the next day.
+  ok   activity ending after trip end rejected: An activity must finish within the trip dates (by 23:59 on 2026-12-27). Choose an earlier time or extend the trip.
+
+== S6: legacy rows (no new columns) are handled
+  ok   legacy Custom row (generated=NULL) preserved
+  ok   legacy TRAVEL row (generated=NULL) replaced
+
+== S7: one-way + route optimisation options
+  ok   round trip off -> no return journey
+  ok   optimised order is announced
+
+== S8: wrong user cannot generate
+  ok   other user's trip rejected: Trip not found or you do not have access to this trip.
+
+ALL SERVICE CHECKS PASSED

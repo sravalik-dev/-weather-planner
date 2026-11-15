@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.dto.DestinationRequest;
@@ -356,14 +357,18 @@ public class TripController {
     public ResponseEntity<RouteSummaryResponse>
     getRouteSummary(
             Authentication authentication,
-            @PathVariable Integer tripId) {
+            @PathVariable Integer tripId,
+            @RequestParam(name = "roundTrip", defaultValue = "false")
+            boolean roundTrip) {
 
         Integer userId = getUserId(authentication);
 
+        // roundTrip=true: origin -> every destination in order -> back to origin
         return ResponseEntity.ok(
                 routeService.getRouteSummary(
                         userId,
-                        tripId
+                        tripId,
+                        roundTrip
                 )
         );
     }
@@ -377,4 +382,4 @@ public class TripController {
 
         return (Integer) authentication.getPrincipal();
     }
-}
+}
