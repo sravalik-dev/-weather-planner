@@ -18,6 +18,7 @@ import {
   toggleItineraryActivityLock,
   updateItineraryActivity,
 } from "../services/itineraryService";
+import { searchLocations } from "../utils/apiUtils";
 
 
 
@@ -897,33 +898,44 @@ function RoutePlanner({ trip, onBack }) {
 
   // =====================================================
   // GEOCODING
+  // Search through the backend so landmark searches use
+  // Nominatim first, with Open-Meteo as a city-search fallback.
   // =====================================================
 
-  const geocodeLocation = async (
-    location
-  ) => {
-    const response = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-        location
-      )}&count=1&language=en&format=json`
-    );
+  const geocodeLocation = async (location) => {
+    const results = await searchLocations(location);
 
-    if (!response.ok) {
+    if (!Array.isArray(results) || results.length === 0) {
       throw new Error(
-        "Location search failed."
+        `Could not find "${location}". Try another spelling or a nearby city.`
       );
     }
 
-    const data =
-      await response.json();
+    const result = results[0];
+    const latitude = Number(result?.latitude);
+    const longitude = Number(result?.longitude);
 
-    if (!data?.results?.length) {
-      throw new Error(
-        `Could not find "${location}".`
-      );
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw new Error("The location search returned invalid coordinates.");
     }
 
-    return data.results[0];
+    return {
+      ...result,
+      name:
+        result?.name ||
+        result?.city ||
+        result?.displayName ||
+        location,
+      latitude,
+      longitude,
+    };
   };
 
   // =====================================================
@@ -963,9 +975,9 @@ function RoutePlanner({ trip, onBack }) {
       await addDestination(
         tripId,
         {
-          destinationName: result.name,
-          latitude: Number(result.latitude),
-          longitude: Number(result.longitude),
+          destinationName: result.name || result.displayName || location,
+          latitude: result.latitude,
+          longitude: result.longitude,
         }
       );
 

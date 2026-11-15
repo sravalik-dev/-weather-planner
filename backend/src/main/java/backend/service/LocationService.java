@@ -1,4 +1,3 @@
-
 package backend.service;
 
 import java.net.URI;
@@ -30,6 +29,9 @@ public class LocationService {
     private static final String NOMINATIM_REVERSE =
             "https://nominatim.openstreetmap.org/reverse";
 
+    private static final String NOMINATIM_SEARCH =
+            "https://nominatim.openstreetmap.org/search";
+
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
@@ -43,7 +45,8 @@ public class LocationService {
 
     // --------------------------------------------------
     // SEARCH LOCATION BY NAME
-    // Example: Chennai, Mumbai, London, Singapore
+    // Nominatim supports landmarks and points of interest.
+    // Open-Meteo is retained as a fallback for city searches.
     // --------------------------------------------------
 
     public List<Map<String, Object>> searchLocations(String name) {
@@ -54,11 +57,96 @@ public class LocationService {
             );
         }
 
-        List<Map<String, Object>> locations = new ArrayList<>();
+        String searchName = name.trim();
 
+        // First try Nominatim because it can find temples, museums,
+        // landmarks, parks and other points of interest.
         try {
             String encodedName = URLEncoder.encode(
-                    name.trim(),
+                    searchName,
+                    StandardCharsets.UTF_8
+            );
+
+            String url = NOMINATIM_SEARCH
+                    + "?q=" + encodedName
+                    + "&format=jsonv2"
+                    + "&limit=8"
+                    + "&addressdetails=1";
+
+            JsonNode results = getJson(
+                    url,
+                    "WeatherAdaptiveItineraryPlanner/1.0 (capstone)"
+            );
+
+            List<Map<String, Object>> locations = new ArrayList<>();
+
+            if (results.isArray()) {
+                for (JsonNode result : results) {
+                    Double latitude = parseNumber(result, "lat");
+                    Double longitude = parseNumber(result, "lon");
+
+                    if (latitude == null || longitude == null) {
+                        continue;
+                    }
+
+                    JsonNode address = result.path("address");
+
+                    String city = firstNonBlank(
+                            text(address, "city"),
+                            text(address, "town"),
+                            text(address, "village"),
+                            text(address, "municipality"),
+                            text(address, "county")
+                    );
+
+                    String admin1 = firstNonBlank(
+                            text(address, "state"),
+                            text(address, "region")
+                    );
+
+                    String country = text(address, "country");
+                    String displayName = text(result, "display_name");
+                    String placeName = firstNonBlank(
+                            text(result, "name"),
+                            city,
+                            displayName != null
+                                    ? displayName.split(",")[0].trim()
+                                    : null,
+                            searchName
+                    );
+
+                    Map<String, Object> location = new LinkedHashMap<>();
+                    location.put("name", placeName);
+                    location.put("city", city);
+                    location.put("admin1", admin1);
+                    location.put("country", country);
+                    location.put("latitude", latitude);
+                    location.put("longitude", longitude);
+                    location.put(
+                            "displayName",
+                            firstNonBlank(
+                                    displayName,
+                                    formatDisplayName(placeName, admin1, country)
+                            )
+                    );
+
+                    locations.add(location);
+                }
+            }
+
+            if (!locations.isEmpty()) {
+                return locations;
+            }
+
+        } catch (Exception ignored) {
+            // Try Open-Meteo below if Nominatim is unavailable.
+        }
+
+        // Fallback: Open-Meteo is useful for cities and populated places,
+        // although it does not index every landmark or point of interest.
+        try {
+            String encodedName = URLEncoder.encode(
+                    searchName,
                     StandardCharsets.UTF_8
             );
 
@@ -74,16 +162,13 @@ public class LocationService {
             );
 
             JsonNode results = root.path("results");
+            List<Map<String, Object>> locations = new ArrayList<>();
 
             if (!results.isArray()) {
                 return locations;
             }
 
             for (JsonNode result : results) {
-
-                Map<String, Object> location =
-                        new LinkedHashMap<>();
-
                 String city = text(result, "name");
                 String state = text(result, "admin1");
                 String country = text(result, "country");
@@ -95,14 +180,13 @@ public class LocationService {
                     continue;
                 }
 
+                Map<String, Object> location = new LinkedHashMap<>();
                 location.put("name", city);
                 location.put("city", city);
                 location.put("admin1", state);
                 location.put("country", country);
-
                 location.put("latitude", latitude);
                 location.put("longitude", longitude);
-
                 location.put(
                         "displayName",
                         formatDisplayName(city, state, country)
@@ -111,14 +195,15 @@ public class LocationService {
                 locations.add(location);
             }
 
+            return locations;
+
         } catch (Exception e) {
             throw new IllegalStateException(
-                    "Unable to search locations: " + e.getMessage(),
+                    "Unable to search locations using Nominatim or Open-Meteo: "
+                            + e.getMessage(),
                     e
             );
         }
-
-        return locations;
     }
 
     // --------------------------------------------------
@@ -390,6 +475,24 @@ public class LocationService {
         return result == null || result.isBlank()
                 ? null
                 : result.trim();
+    }
+
+    private Double parseNumber(
+            JsonNode node,
+            String field) {
+
+        JsonNode value = node.path(field);
+
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+
+        try {
+            double parsed = Double.parseDouble(value.asText());
+            return Double.isFinite(parsed) ? parsed : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private Double number(

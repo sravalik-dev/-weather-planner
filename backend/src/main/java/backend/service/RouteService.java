@@ -15,6 +15,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import backend.dto.DestinationRequest;
 import backend.dto.DestinationResponse;
 import backend.dto.ReorderDestinationRequest;
@@ -357,6 +367,178 @@ public class RouteService {
         response.setLegs(legs);
 
         return response;
+    }
+
+    
+    // =========================================================
+    // PAIRWISE TRAVEL-TIME MATRIX FOR ML
+    // =========================================================
+
+    public Map<String, Map<String, Double>> calculateTravelTimeMatrix(
+            List<TripDestination> destinations) {
+
+        if (destinations == null || destinations.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "At least one destination is required."
+            );
+        }
+
+        StringBuilder coordinates = new StringBuilder();
+
+        for (TripDestination destination : destinations) {
+
+            if (destination.getDestinationId() == null
+                    || destination.getLatitude() == null
+                    || destination.getLongitude() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Every destination must have an ID and valid coordinates."
+                );
+            }
+
+            if (coordinates.length() > 0) {
+                coordinates.append(";");
+            }
+
+            // OSRM coordinate order: longitude,latitude
+            coordinates.append(destination.getLongitude())
+                    .append(",")
+                    .append(destination.getLatitude());
+        }
+
+        try {
+            String baseUrl = osrmBaseUrl.replaceAll("/+$", "");
+
+            String url = baseUrl
+                    + "/table/v1/driving/"
+                    + coordinates
+                    + "?annotations=duration";
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(osrmTimeoutSeconds))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            if (response.statusCode() != 200) {
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "OSRM travel-time service returned HTTP "
+                                + response.statusCode()
+                );
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response.body());
+
+            if (!"Ok".equals(root.path("code").asText())) {
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Unable to calculate travel-time matrix: "
+                                + root.path("message").asText()
+                );
+            }
+
+            JsonNode durations = root.path("durations");
+            int size = destinations.size();
+
+            if (!durations.isArray() || durations.size() != size) {
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "OSRM returned an incomplete travel-time matrix."
+                );
+            }
+
+            Map<String, Map<String, Double>> matrix =
+                    new LinkedHashMap<>();
+
+            for (int i = 0; i < size; i++) {
+
+                JsonNode row = durations.get(i);
+
+                if (!row.isArray() || row.size() != size) {
+                    throw new ResponseStatusException(
+                            HttpStatus.SERVICE_UNAVAILABLE,
+                            "Invalid travel-time matrix row."
+                    );
+                }
+
+                String sourceId = String.valueOf(
+                        destinations.get(i).getDestinationId()
+                );
+
+                Map<String, Double> travelTimes =
+                        new LinkedHashMap<>();
+
+                for (int j = 0; j < size; j++) {
+
+                    JsonNode value = row.get(j);
+
+                    if (value == null || value.isNull()
+                            || !value.isNumber()) {
+                        throw new ResponseStatusException(
+                                HttpStatus.BAD_REQUEST,
+                                "No driving route is available between destinations "
+                                        + sourceId + " and "
+                                        + destinations.get(j).getDestinationId()
+                        );
+                    }
+
+                    double seconds = value.asDouble();
+
+                    if (seconds < 0) {
+                        throw new ResponseStatusException(
+                                HttpStatus.SERVICE_UNAVAILABLE,
+                                "OSRM returned an invalid travel time."
+                        );
+                    }
+
+                    // ML optimizer expects travel time in minutes.
+                    double minutes = Math.ceil(seconds / 60.0);
+
+                    travelTimes.put(
+                            String.valueOf(
+                                    destinations.get(j).getDestinationId()
+                            ),
+                            minutes
+                    );
+                }
+
+                matrix.put(sourceId, travelTimes);
+            }
+
+            return matrix;
+
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Travel-time matrix calculation was interrupted.",
+                    exception
+            );
+
+        } catch (ResponseStatusException exception) {
+            throw exception;
+
+        } catch (Exception exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Unable to calculate pairwise travel times: "
+                            + exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     // ==========================================

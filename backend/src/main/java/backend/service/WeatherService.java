@@ -12,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,6 +87,144 @@ public class WeatherService {
                 getForecastData(latitude, longitude);
 
         return buildDailyForecast(forecast);
+    }
+
+    // =========================================================
+    // ML WEATHER DATA FOR A SPECIFIC ITINERARY DATE
+    // =========================================================
+
+    public Map<String, Object> getMlWeatherForDate(
+            Double latitude,
+            Double longitude,
+            LocalDate date) {
+
+        validateCoordinates(latitude, longitude);
+
+        if (date == null) {
+            throw new IllegalArgumentException(
+                    "Date is required for ML weather prediction."
+            );
+        }
+
+        JsonNode forecast =
+                getForecastData(latitude, longitude);
+
+        JsonNode hourly =
+                forecast.path("hourly");
+
+        JsonNode times =
+                hourly.path("time");
+
+        JsonNode temperatures =
+                hourly.path("temperature_2m");
+
+        JsonNode humidities =
+                hourly.path("relative_humidity_2m");
+
+        JsonNode rainfalls =
+                hourly.path("precipitation");
+
+        JsonNode windSpeeds =
+                hourly.path("wind_speed_10m");
+
+        JsonNode cloudCovers =
+                hourly.path("cloud_cover");
+
+        if (!times.isArray()
+                || !temperatures.isArray()
+                || !humidities.isArray()
+                || !rainfalls.isArray()
+                || !windSpeeds.isArray()
+                || !cloudCovers.isArray()) {
+
+            throw new RuntimeException(
+                    "Required hourly weather data is unavailable."
+            );
+        }
+
+        double temperatureTotal = 0;
+        double humidityTotal = 0;
+        double rainfallTotal = 0;
+        double windSpeedTotal = 0;
+        double cloudCoverTotal = 0;
+
+        int count = 0;
+
+        for (int i = 0; i < times.size(); i++) {
+
+            String timestamp =
+                    times.get(i).asText();
+
+            if (!timestamp.startsWith(date.toString())) {
+                continue;
+            }
+
+            LocalTime forecastTime =
+                    LocalTime.parse(timestamp.substring(11, 16));
+
+            // Use the itinerary's 9 AM to 5 PM window.
+            if (forecastTime.isBefore(LocalTime.of(9, 0))
+                    || forecastTime.isAfter(LocalTime.of(17, 0))) {
+                continue;
+            }
+
+            if (!temperatures.get(i).isNumber()
+                    || !humidities.get(i).isNumber()
+                    || !rainfalls.get(i).isNumber()
+                    || !windSpeeds.get(i).isNumber()
+                    || !cloudCovers.get(i).isNumber()) {
+
+                continue;
+            }
+
+            temperatureTotal += temperatures.get(i).asDouble();
+            humidityTotal += humidities.get(i).asDouble();
+
+            // Hourly precipitation is accumulated in millimetres.
+            rainfallTotal += rainfalls.get(i).asDouble();
+
+            windSpeedTotal += windSpeeds.get(i).asDouble();
+            cloudCoverTotal += cloudCovers.get(i).asDouble();
+
+            count++;
+        }
+
+        if (count == 0) {
+            throw new RuntimeException(
+                    "No usable hourly weather forecast is available for "
+                            + date
+            );
+        }
+
+        Map<String, Object> weather =
+                new LinkedHashMap<>();
+
+        weather.put(
+                "temperature",
+                temperatureTotal / count
+        );
+
+        weather.put(
+                "humidity",
+                humidityTotal / count
+        );
+
+        weather.put(
+                "rainfall",
+                rainfallTotal
+        );
+
+        weather.put(
+                "wind_speed",
+                windSpeedTotal / count
+        );
+
+        weather.put(
+                "cloud_cover",
+                cloudCoverTotal / count
+        );
+
+        return weather;
     }
 
     // =========================================================
@@ -750,6 +889,7 @@ public class WeatherService {
                         + "temperature_2m,"
                         + "relative_humidity_2m,"
                         + "apparent_temperature,"
+                        + "cloud_cover,"
                         + "precipitation,"
                         + "rain,"
                         + "weather_code,"
@@ -1049,6 +1189,7 @@ public class WeatherService {
                         + "temperature_2m,"
                         + "relative_humidity_2m,"
                         + "apparent_temperature,"
+                        + "cloud_cover,"
                         + "precipitation,"
                         + "rain,"
                         + "weather_code,"
@@ -1059,6 +1200,7 @@ public class WeatherService {
                         + "&hourly="
                         + "temperature_2m,"
                         + "relative_humidity_2m,"
+                        + "cloud_cover,"
                         + "apparent_temperature,"
                         + "precipitation,"
                         + "rain,"
@@ -1067,6 +1209,7 @@ public class WeatherService {
                         + "wind_speed_10m,"
                         + "wind_direction_10m,"
                         + "wind_gusts_10m,"
+                        + "uv_index"
                         + "&daily="
                         + "weather_code,"
                         + "temperature_2m_max,"
@@ -1117,6 +1260,14 @@ public class WeatherService {
                 getValue(
                         current,
                         "relative_humidity_2m"
+                )
+        );
+
+        result.put(
+                "cloudCover",
+                getValue(
+                        current,
+                        "cloud_cover"
                 )
         );
 
@@ -1234,6 +1385,15 @@ public class WeatherService {
                 readFirstN(
                         hourly,
                         "relative_humidity_2m",
+                        48
+                )
+        );
+
+        result.put(
+                "cloudCover",
+                readFirstN(
+                        hourly,
+                        "cloud_cover",
                         48
                 )
         );
