@@ -20,3 +20,5 @@ backend/target/
 
 # Temporary backup files
 *.java.backup
+
+/dist/
