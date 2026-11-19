@@ -23,3 +23,5 @@ __pycache__/
 
 # Temporary backup files
 *.java.backup
+
+/dist/
