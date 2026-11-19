@@ -1,0 +1,20 @@
+  ok   getTripDays uses the date range (8), not stale noOfDays (3)
+  ok   one-day trip = 1 day
+  ok   falls back to noOfDays when dates are missing
+  ok   end before start falls back safely
+  ok   empty trip = 1 day
+  ok   midnight-crossing activity: 16:50 -> 00:20 (+1 day)
+  ok   type, distance, estimate flag, id mapped
+  ok   legacy row (no new columns) still normalises
+  ok   legacy MEAL category -> MEAL
+  ok   legacy BREAK category -> REST
+  ok   legacy destination row -> VISIT
+  ok   RETURN type kept
+  ok   activities grouped under their start date
+  ok   formatMinutesLong 450 -> 7 h 30 min
+  ok   formatMinutesLong edge cases
+  ok   formatShortDate
+  ok   toInputTime strips seconds, keeps 00:20
+  ok   daysBetweenDates across a year boundary
+
+ALL FRONTEND HELPER CHECKS PASSED

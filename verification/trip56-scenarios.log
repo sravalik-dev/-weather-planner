@@ -1,0 +1,6 @@
+1 day(s): HTTP 422  It needs about 52 h 11 min of road travel plus 5 h 30 min of visits (57 h 41 min in total, before meals and rest). Available time: 16 h 59 min between the 07:00 departure on 2026-12-20 and 23:59 on 2026-12-20. Extending the trip by 2 days would fit it.
+2 day(s): HTTP 422  It needs about 52 h 11 min of road travel plus 5 h 30 min of visits (57 h 41 min in total, before meals and rest). Available time: 40 h 59 min between the 07:00 departure on 2026-12-20 and 23:59 on 2026-12-21. Extending the trip by 1 day would fit it.
+3 day(s): FITS  23 activities, travel 52h11m, ends 2026-12-22T21:56, midnight-crossers=2  [Rest stops and overnight rest were removed because the schedule did no...]
+4 day(s): FITS  23 activities, travel 52h11m, ends 2026-12-22T21:56, midnight-crossers=2  [Rest stops and overnight rest were removed because the schedule did no...]
+5 day(s): FITS  41 activities, travel 52h11m, ends 2026-12-24T19:37, midnight-crossers=4  [comfortable plan]
+6 day(s): FITS  49 activities, travel 52h11m, ends 2026-12-25T19:20, midnight-crossers=5  [comfortable plan]

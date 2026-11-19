@@ -26,8 +26,18 @@ const requireActivityId = (activityId, action = "update") => {
 
 export const getItinerary = (tripId) => itineraryRequest(tripId, "");
 
-export const generateItinerary = (tripId) =>
-  itineraryRequest(tripId, "/generate", { method: "POST" });
+// options (all optional): { roundTrip, optimizeRoute, departureTime, earliestVisitTime,
+// overnightRest, spreadAcrossTripDays }. With no options the backend plans a
+// round trip in the saved destination order.
+export const generateItinerary = (tripId, options) =>
+  itineraryRequest(tripId, "/generate", {
+    method: "POST",
+    ...(options ? { body: JSON.stringify(options) } : {}),
+  });
+
+// Totals (distance, travel time, per-day durations, warnings) for the saved itinerary.
+export const getItinerarySummary = (tripId) =>
+  itineraryRequest(tripId, "/summary");
 
 export const addItineraryActivity = (tripId, activity) =>
   itineraryRequest(tripId, "/activities", {

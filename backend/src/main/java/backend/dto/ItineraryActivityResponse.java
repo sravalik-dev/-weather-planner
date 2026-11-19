@@ -1,6 +1,7 @@
 package backend.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class ItineraryActivityResponse {
@@ -17,6 +18,15 @@ public class ItineraryActivityResponse {
     private Integer duration;
     private Integer orderIndex;
     private Boolean locked;
+    private LocalDate endDate;
+    private LocalDateTime startDateTime;
+    private LocalDateTime endDateTime;
+    private Boolean crossesMidnight;
+    private String activityType;
+    private Double distanceKm;
+    private String routeSource;
+    private Boolean estimated;
+    private Boolean generated;
 
     public ItineraryActivityResponse() {
     }
@@ -115,5 +125,77 @@ public class ItineraryActivityResponse {
 
     public void setLocked(Boolean locked) {
         this.locked = locked;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalDateTime getStartDateTime() {
+        return startDateTime;
+    }
+
+    public void setStartDateTime(LocalDateTime startDateTime) {
+        this.startDateTime = startDateTime;
+    }
+
+    public LocalDateTime getEndDateTime() {
+        return endDateTime;
+    }
+
+    public void setEndDateTime(LocalDateTime endDateTime) {
+        this.endDateTime = endDateTime;
+    }
+
+    public Boolean getCrossesMidnight() {
+        return crossesMidnight;
+    }
+
+    public void setCrossesMidnight(Boolean crossesMidnight) {
+        this.crossesMidnight = crossesMidnight;
+    }
+
+    public String getActivityType() {
+        return activityType;
+    }
+
+    public void setActivityType(String activityType) {
+        this.activityType = activityType;
+    }
+
+    public Double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public void setDistanceKm(Double distanceKm) {
+        this.distanceKm = distanceKm;
+    }
+
+    public String getRouteSource() {
+        return routeSource;
+    }
+
+    public void setRouteSource(String routeSource) {
+        this.routeSource = routeSource;
+    }
+
+    public Boolean getEstimated() {
+        return estimated;
+    }
+
+    public void setEstimated(Boolean estimated) {
+        this.estimated = estimated;
+    }
+
+    public Boolean getGenerated() {
+        return generated;
+    }
+
+    public void setGenerated(Boolean generated) {
+        this.generated = generated;
     }
 }

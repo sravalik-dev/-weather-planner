@@ -36,6 +36,7 @@ import backend.entity.Trip;
 import backend.entity.TripDestination;
 import backend.repository.TripDestinationRepository;
 import backend.repository.TripRepository;
+import backend.service.ItineraryScheduler.Point;
 
 @Service
 public class RouteService {
@@ -73,6 +74,10 @@ public class RouteService {
 
     @Autowired
     private TripDestinationRepository tripDestinationRepository;
+
+    // Resolves the trip's starting point for round-trip route summaries
+    @Autowired
+    private OriginLocationResolver originResolver;
 
     // Used to check dependent itinerary activities
     @Autowired
@@ -338,9 +343,22 @@ public class RouteService {
             Integer userId,
             Integer tripId) {
 
-        getUserTrip(tripId, userId);
+        return getRouteSummary(userId, tripId, false);
+    }
 
-        RouteCalculator.Result route = computeRoute(tripId);
+    /**
+     * @param roundTrip true: start at the trip origin, visit every saved
+     *                  destination in order, then return to the origin
+     *                  (so there is one extra leg at each end).
+     */
+    public RouteSummaryResponse getRouteSummary(
+            Integer userId,
+            Integer tripId,
+            boolean roundTrip) {
+
+        Trip trip = getUserTrip(tripId, userId);
+
+        RouteCalculator.Result route = computeRoute(tripId, roundTrip ? trip : null);
 
         List<RouteLegResponse> legs = new ArrayList<>();
 
@@ -365,6 +383,8 @@ public class RouteService {
         response.setApproximate(route.isApproximate());
         response.setNotice(route.notice);
         response.setLegs(legs);
+        response.setRoundTrip(roundTrip);
+        response.setOriginName(roundTrip ? trip.getOrigin() : null);
 
         return response;
     }
@@ -589,6 +609,14 @@ public class RouteService {
     // ==========================================
 
     private RouteCalculator.Result computeRoute(Integer tripId) {
+        return computeRoute(tripId, null);
+    }
+
+    /**
+     * @param roundTripOf when not null, the route starts and ends at this
+     *                    trip's origin (one destination is then enough).
+     */
+    private RouteCalculator.Result computeRoute(Integer tripId, Trip roundTripOf) {
 
         List<TripDestination> destinations =
                 tripDestinationRepository
@@ -596,13 +624,30 @@ public class RouteService {
                                 tripId
                         );
 
-        if (destinations.size() < 2) {
+        int minimum = roundTripOf == null ? 2 : 1;
+
+        if (destinations.size() < minimum) {
             throw new RuntimeException(
-                    "At least two destinations are required"
+                    roundTripOf == null
+                            ? "At least two destinations are required"
+                            : "At least one destination is required"
             );
         }
 
         List<RouteCalculator.Stop> stops = new ArrayList<>();
+
+        RouteCalculator.Stop originStop = null;
+
+        if (roundTripOf != null) {
+            Point origin = originResolver.resolve(roundTripOf.getOrigin());
+            originStop = new RouteCalculator.Stop(
+                    null,
+                    origin.name(),
+                    origin.latitude(),
+                    origin.longitude()
+            );
+            stops.add(originStop);
+        }
 
         for (TripDestination destination : destinations) {
 
@@ -620,6 +665,10 @@ public class RouteService {
                     destination.getLatitude(),
                     destination.getLongitude()
             ));
+        }
+
+        if (originStop != null) {
+            stops.add(originStop);
         }
 
         return calculator().calculate(stops);

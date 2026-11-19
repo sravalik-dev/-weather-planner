@@ -1,4 +1,4 @@
-﻿
+
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || "/api"
 ).replace(/\/$/, "");
@@ -90,13 +90,32 @@ export const apiRequest = async (endpoint, options = {}) => {
     delete headers.Authorization;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...(options.headers || {}),
-    },
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers || {}),
+      },
+    });
+  } catch (networkError) {
+    // fetch() only rejects when no HTTP response arrived at all (server down,
+    // proxy cannot reach port 8080, offline). Say so instead of "Failed to fetch".
+    console.error("API REQUEST FAILED", {
+      endpoint,
+      status: 0,
+      message: networkError?.message,
+    });
+
+    const error = new Error(
+      "Cannot reach the server. Check that the backend is running on port 8080 and try again."
+    );
+    error.status = 0;
+    error.endpoint = endpoint;
+    throw error;
+  }
 
   const responseText = await response.text();
 

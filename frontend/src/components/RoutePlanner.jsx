@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getDestinations,
   addDestination,
@@ -14,6 +14,7 @@ import {
   deleteItineraryActivity,
   generateItinerary as backendGenerateItinerary,
   getItinerary,
+  getItinerarySummary,
   reorderItineraryActivities,
   toggleItineraryActivityLock,
   updateItineraryActivity,
@@ -294,6 +295,38 @@ const routePlannerStyles = `
     .route-sequence { align-items: flex-start; flex-direction: column; }
     .route-sequence-item { width: 100%; justify-content: flex-start; }
   }
+  /* ---- 24-hour itinerary: activity types, summary, options ---- */
+  .module6-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 12px 0 0; padding: 10px 13px; border: 1px dashed var(--rp-line); border-radius: 12px; background: #fbfdfc; font-size: 11px; color: var(--rp-ink); }
+  .module6-options label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-weight: 650; }
+  .module6-options input { accent-color: var(--rp-teal); }
+  .module6-mode-pill { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--rp-teal-soft); color: var(--rp-teal-dark); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+  .module6-summary { margin: 12px 0; padding: 14px; border: 1px solid #cfe3df; border-radius: 14px; background: linear-gradient(180deg, #f4faf8, #ffffff); }
+  .module6-summary-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 11px; font-weight: 850; letter-spacing: .08em; color: #3f6670; }
+  .module6-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .module6-summary-grid > div { padding: 9px 11px; border: 1px solid var(--rp-line); border-radius: 11px; background: #fff; }
+  .module6-summary-grid span { display: block; color: #68818a; font-size: 9px; font-weight: 850; letter-spacing: .09em; }
+  .module6-summary-grid strong { display: block; margin-top: 4px; font-size: 15px; color: var(--rp-ink); }
+  .module6-summary-days { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .module6-summary-days span { padding: 4px 9px; border-radius: 999px; background: #eef5f4; color: #3a5560; font-size: 10px; font-variant-numeric: tabular-nums; }
+  .module6-summary-warnings { margin: 10px 0 0; padding: 9px 12px 9px 28px; border-radius: 10px; background: #fff8e8; border: 1px solid #f0dfb2; color: #7a5a13; font-size: 10px; line-height: 1.55; }
+  .module6-type-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .03em; background: #eef2f3; color: #46606b; white-space: nowrap; }
+  .module6-type-TRAVEL { background: #e6f0fb; color: #1f5a99; }
+  .module6-type-RETURN { background: #efe8fb; color: #5a3a99; }
+  .module6-type-VISIT { background: #e5f6ee; color: #136b47; }
+  .module6-type-MEAL { background: #fff1e0; color: #9a5a0b; }
+  .module6-type-REST { background: #f3efe6; color: #6e5a2e; }
+  .module6-type-FREE_TIME { background: #eef6e6; color: #4d6e1d; }
+  .module6-type-ACCOMMODATION { background: #e8eafb; color: #3b45a0; }
+  .module6-activity[data-type="TRAVEL"] { border-left: 3px solid #5b9bd5; }
+  .module6-activity[data-type="RETURN"] { border-left: 3px solid #8c6bd1; }
+  .module6-activity[data-type="VISIT"] { border-left: 3px solid #2fa36b; }
+  .module6-activity[data-type="MEAL"] { border-left: 3px solid #e8a04a; }
+  .module6-activity[data-type="ACCOMMODATION"] { border-left: 3px solid #6671d6; }
+  .module6-meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .module6-meta-chip { padding: 2px 8px; border-radius: 8px; background: #f2f6f6; color: #4a636d; font-size: 10px; font-variant-numeric: tabular-nums; }
+  .module6-meta-chip.module6-estimate { background: #fff4d6; color: #8a5f00; font-weight: 700; }
+  .module6-time-column .module6-time-end { color: var(--rp-ink); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .module6-time-column .module6-next-day { color: #b0541a; font-size: 9px; font-weight: 800; }
   @media (prefers-reduced-motion: reduce) {
     .rp-page *, .rp-page *::before, .rp-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
@@ -317,7 +350,29 @@ const toInputTime = (value, fallback = "09:00") => {
 const getTripId = (trip) =>
   trip?.tripId ?? trip?.id ?? trip?.tripID ?? null;
 
+const dateStringToUtcDay = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ""));
+  if (!match) return null;
+  return Math.floor(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000
+  );
+};
+
+// Whole calendar days between two YYYY-MM-DD strings (b - a).
+const daysBetweenDates = (a, b) => {
+  const first = dateStringToUtcDay(a);
+  const second = dateStringToUtcDay(b);
+  if (first === null || second === null) return null;
+  return second - first;
+};
+
+// The itinerary is scheduled by the backend over startDate..endDate, so the
+// number of day cards must come from those dates first. noOfDays is only a
+// fallback; if the two ever disagree, activities on later days would be hidden.
 const getTripDays = (trip) => {
+  const span = daysBetweenDates(trip?.startDate, trip?.endDate);
+  if (span !== null && span >= 0 && span < 366) return span + 1;
+
   const values = [
     trip?.numberOfDays,
     trip?.noOfDays,
@@ -346,20 +401,86 @@ const createActivityId = () =>
     .toString(36)
     .slice(2, 9)}`;
 
-const normalizeActivity = (activity, day) => ({
-  id: activity?.activityId ?? activity?.id ?? null,
-  day,
-  activityDate: activity?.activityDate || "",
-  time: activity?.startTime || "09:00",
-  endTime: activity?.endTime || "",
-  title: activity?.activityName || "Untitled Activity",
-  location: activity?.destinationName || "",
-  duration: activity?.duration || "60",
-  notes: activity?.description || "",
-  category: activity?.category || "",
-  destinationId: activity?.destinationId ?? null,
-  locked: Boolean(activity?.locked),
-});
+// Activity types the backend can produce. Older rows have no type, so it is
+// inferred from the category.
+const ACTIVITY_TYPE_META = {
+  TRAVEL: { label: "Travel", icon: "🚗" },
+  RETURN: { label: "Return journey", icon: "🏠" },
+  VISIT: { label: "Destination visit", icon: "📍" },
+  MEAL: { label: "Meal break", icon: "🍽️" },
+  REST: { label: "Rest break", icon: "☕" },
+  FREE_TIME: { label: "Free time", icon: "🌴" },
+  ACCOMMODATION: { label: "Overnight stay", icon: "🛏️" },
+  CUSTOM: { label: "Custom", icon: "✏️" },
+};
+
+const resolveActivityType = (activity) => {
+  const explicit = String(activity?.activityType || "").trim().toUpperCase();
+  if (ACTIVITY_TYPE_META[explicit]) return explicit;
+
+  const category = String(activity?.category || "").trim().toUpperCase();
+  if (category === "TRAVEL") return "TRAVEL";
+  if (category === "MEAL") return "MEAL";
+  if (category === "BREAK") return "REST";
+  if (category === "ACCOMMODATION") return "ACCOMMODATION";
+  if (activity?.destinationId) return "VISIT";
+  return "CUSTOM";
+};
+
+const formatMinutesLong = (value) => {
+  // Number(null) is 0, which would show a missing value as "0 min".
+  if (value === null || value === undefined || value === "") return "--";
+  const minutes = Math.round(Number(value));
+  if (!Number.isFinite(minutes) || minutes < 0) return "--";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+};
+
+const formatShortDate = (dateString) => {
+  const day = dateStringToUtcDay(dateString);
+  if (day === null) return String(dateString || "");
+  return new Date(day * 86400000).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
+};
+
+const normalizeActivity = (activity, day) => {
+  const activityDate = String(activity?.activityDate || "").slice(0, 10);
+  const endDate = String(
+    activity?.endDate || activity?.activityDate || ""
+  ).slice(0, 10);
+  const dayOffset = Math.max(0, daysBetweenDates(activityDate, endDate) || 0);
+
+  return {
+    id: activity?.activityId ?? activity?.id ?? null,
+    day,
+    activityDate: activity?.activityDate || "",
+    endDate: activity?.endDate || activity?.activityDate || "",
+    time: toInputTime(activity?.startTime, "09:00"),
+    endTime: toInputTime(activity?.endTime, ""),
+    endDayOffset: dayOffset,
+    crossesMidnight: dayOffset > 0,
+    title: activity?.activityName || "Untitled Activity",
+    location: activity?.destinationName || "",
+    duration: activity?.duration || "60",
+    notes: activity?.description || "",
+    category: activity?.category || "",
+    activityType: resolveActivityType(activity),
+    distanceKm:
+      activity?.distanceKm === null || activity?.distanceKm === undefined
+        ? null
+        : Number(activity.distanceKm),
+    estimated: Boolean(activity?.estimated),
+    routeSource: activity?.routeSource || "",
+    generated: Boolean(activity?.generated),
+    destinationId: activity?.destinationId ?? null,
+    locked: Boolean(activity?.locked),
+  };
+};
 
 // Keep trip dates as calendar strings. Avoid toISOString() on local-midnight
 // dates because it can move the date backwards in UTC+05:30.
@@ -671,6 +792,21 @@ function RoutePlanner({ trip, onBack }) {
   const [itineraryError, setItineraryError] =
     useState("");
 
+  // Round trip is the default. One-way ends at the last destination.
+  const [roundTrip, setRoundTrip] =
+    useState(true);
+
+  const [optimizeRoute, setOptimizeRoute] =
+    useState(false);
+
+  // Totals and warnings for the saved itinerary (GET .../itinerary/summary).
+  const [itinerarySummary, setItinerarySummary] =
+    useState(null);
+
+  // Synchronous guard: React state updates are asynchronous, so two quick
+  // clicks could both pass a state-based "is generating" check.
+  const generateInFlight = useRef(false);
+
   const [activityModalOpen, setActivityModalOpen] =
     useState(false);
 
@@ -895,6 +1031,25 @@ function RoutePlanner({ trip, onBack }) {
       cancelled = true;
     };
   }, [tripId, tripDays]);
+
+  // Keep the totals in step with whatever is saved (generate, add, move, delete...).
+  useEffect(() => {
+    if (!tripId || itineraryLoading) return undefined;
+
+    let cancelled = false;
+
+    getItinerarySummary(tripId)
+      .then((summary) => {
+        if (!cancelled) setItinerarySummary(summary);
+      })
+      .catch(() => {
+        if (!cancelled) setItinerarySummary(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId, itinerary, itineraryLoading]);
 
   // =====================================================
   // GEOCODING
@@ -1305,12 +1460,19 @@ function RoutePlanner({ trip, onBack }) {
       return;
     }
 
+    // Ignore a second click/request while one is already running.
+    if (generateInFlight.current) return;
+    generateInFlight.current = true;
+
     setItineraryGenerating(true);
     setItineraryError("");
     setItineraryMessage("");
 
     try {
-      const activities = await backendGenerateItinerary(tripId);
+      const activities = await backendGenerateItinerary(tripId, {
+        roundTrip,
+        optimizeRoute,
+      });
       setItinerary(
         normalizeItinerary(
           activities,
@@ -1319,13 +1481,18 @@ function RoutePlanner({ trip, onBack }) {
         )
       );
       setItineraryMessage(
-        "Round-trip itinerary generated with road ETAs, meal breaks, and a return journey."
+        roundTrip
+          ? "Round-trip itinerary generated: road travel times, meal and rest breaks, and a return journey to the starting point."
+          : "One-way itinerary generated: road travel times and meal and rest breaks, ending at the last destination."
       );
     } catch (error) {
+      // Backend messages are specific (for example "cannot fit ... extend the
+      // trip by 2 days"), so show them as they are.
       setItineraryError(
         error?.message || "Unable to generate itinerary."
       );
     } finally {
+      generateInFlight.current = false;
       setItineraryGenerating(false);
     }
   };
@@ -1473,15 +1640,14 @@ function RoutePlanner({ trip, onBack }) {
     }
 
     // Calculate end time using integer minutes. This avoids Invalid Date and NaN:NaN.
+    // An activity may cross midnight: the end time wraps and endDate moves forward.
     const [startHours, startMinutesPart] = startTime.split(":").map(Number);
     const totalStartMinutes = startHours * 60 + startMinutesPart;
     const totalEndMinutes = totalStartMinutes + duration;
-    if (totalEndMinutes >= 24 * 60) {
-      setItineraryError("An activity must finish before midnight. Choose an earlier start time or shorter duration.");
-      return;
-    }
-    const endHours = Math.floor(totalEndMinutes / 60);
-    const endMinutes = totalEndMinutes % 60;
+    const endDayOffset = Math.floor(totalEndMinutes / (24 * 60));
+    const endOfDayMinutes = totalEndMinutes % (24 * 60);
+    const endHours = Math.floor(endOfDayMinutes / 60);
+    const endMinutes = endOfDayMinutes % 60;
     const endTimeValue =
       `${String(endHours).padStart(2, "0")}:` +
       `${String(endMinutes).padStart(2, "0")}`;
@@ -1494,10 +1660,24 @@ function RoutePlanner({ trip, onBack }) {
       return;
     }
 
+    const endDate = addDaysToDateString(activityDate, endDayOffset);
+    const lastTripDate = getActivityDate(trip, tripDays);
+    if (
+      endDayOffset > 0 &&
+      lastTripDate &&
+      daysBetweenDates(lastTripDate, endDate) > 0
+    ) {
+      setItineraryError(
+        `This activity would end on ${endDate}, after the last trip day (${lastTripDate}). Choose an earlier start time or a shorter duration.`
+      );
+      return;
+    }
+
     const request = {
       destinationId: null,
       activityDate,
       startTime,
+      endDate,
       endTime: endTimeValue,
       activityName: activityForm.title.trim(),
       description: activityForm.notes.trim(),
@@ -1545,17 +1725,7 @@ function RoutePlanner({ trip, onBack }) {
                   ...day,
                   activities: [
                     ...day.activities,
-                    {
-                      ...saved,
-                      id: savedId,
-                      day: selectedDay,
-                      time: saved.startTime,
-                      title: saved.activityName,
-                      location: saved.destinationName || "",
-                      duration: saved.duration,
-                      notes: saved.description,
-                      locked: Boolean(saved.locked),
-                    },
+                    normalizeActivity(saved, selectedDay),
                   ],
                 }
               : day
@@ -1791,23 +1961,45 @@ function RoutePlanner({ trip, onBack }) {
       const target = itinerary.find((day) => day.day === targetDay);
       const targetDate = getActivityDate(trip, targetDay);
       const duration = Math.max(1, Number(sourceActivity.duration) || 60);
+
+      // Minutes counted from 00:00 of the target day. An activity that started the
+      // night before can run past midnight into this day, so its end is measured
+      // with its real end date instead of being ignored.
+      const minutesFromTargetStart = (dateString, timeString) => {
+        const [h, m] = timeString.split(":").map(Number);
+        const offset = daysBetweenDates(targetDate, dateString) || 0;
+        return offset * 24 * 60 + h * 60 + m;
+      };
       const latestEnd = (target?.activities || []).reduce((latest, item) => {
         const end = toInputTime(item.endTime, "");
-        return end && end > latest ? end : latest;
-      }, "08:00");
-      const [hh, mm] = latestEnd.split(":").map(Number);
-      const startTotal = Math.max(9 * 60, hh * 60 + mm + 15);
+        if (!end) return latest;
+        return Math.max(
+          latest,
+          minutesFromTargetStart(item.endDate || item.activityDate || targetDate, end)
+        );
+      }, 8 * 60);
+      const startTotal = Math.max(9 * 60, latestEnd + 15);
       const endTotal = startTotal + duration;
-      if (!targetDate || endTotal > 22 * 60) {
-        setItineraryError("There is not enough free time on that day. Choose another day or edit the activity time.");
+
+      // The only hard limits are the trip dates: it must start on the target day and
+      // end by 23:59 on the last trip day.
+      const lastTripDate = getActivityDate(trip, tripDays);
+      const lastAllowedMinute =
+        ((daysBetweenDates(targetDate, lastTripDate) || 0) + 1) * 24 * 60 - 1;
+      if (!targetDate || startTotal >= 24 * 60 || endTotal > lastAllowedMinute) {
+        setItineraryError("There is not enough free time on that day within the trip dates. Choose another day or edit the activity time.");
         handleDragEnd();
         return;
       }
-      const formatMinutes = (value) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+      const formatMinutes = (value) => {
+        const inDay = value % (24 * 60);
+        return `${String(Math.floor(inDay / 60)).padStart(2, "0")}:${String(inDay % 60).padStart(2, "0")}`;
+      };
       const moveRequest = {
         destinationId: sourceActivity.destinationId ?? null,
         activityDate: targetDate,
         startTime: formatMinutes(startTotal),
+        endDate: addDaysToDateString(targetDate, Math.floor(endTotal / (24 * 60))),
         endTime: formatMinutes(endTotal),
         activityName: sourceActivity.title,
         description: sourceActivity.notes || "",
@@ -2726,7 +2918,7 @@ function RoutePlanner({ trip, onBack }) {
                   generateItinerary
                 }
                 disabled={
-                  itineraryGenerating
+                  itineraryGenerating || itineraryLoading
                 }
               >
                 {itineraryGenerating
@@ -2748,6 +2940,37 @@ function RoutePlanner({ trip, onBack }) {
                   : "💾 Save"}
               </button>
             </div>
+          </div>
+
+          <div className="module6-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={roundTrip}
+                disabled={itineraryGenerating}
+                onChange={(event) =>
+                  setRoundTrip(event.target.checked)
+                }
+              />
+              Round trip (return to {trip?.origin || "the starting point"})
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                checked={optimizeRoute}
+                disabled={itineraryGenerating}
+                onChange={(event) =>
+                  setOptimizeRoute(event.target.checked)
+                }
+              />
+              Optimise visiting order
+            </label>
+
+            <span className="module6-mode-pill">
+              {roundTrip ? "ROUND TRIP" : "ONE-WAY"}
+              {optimizeRoute ? " · OPTIMISED ORDER" : " · YOUR ORDER"}
+            </span>
           </div>
 
           <div className="module6-info-strip">
@@ -2793,6 +3016,85 @@ function RoutePlanner({ trip, onBack }) {
               </p>
             </div>
           </div>
+
+          {itinerarySummary && itinerarySummary.activityCount > 0 && (
+            <div className="module6-summary">
+              <div className="module6-summary-title">
+                <span>
+                  {itinerarySummary.returnIncluded
+                    ? "ROUND-TRIP SUMMARY"
+                    : "ROUTE SUMMARY (ONE-WAY)"}
+                </span>
+                <span>
+                  {itinerarySummary.hasEstimatedTravel
+                    ? "≈ includes estimated travel times"
+                    : "road travel times from OSRM"}
+                </span>
+              </div>
+
+              <div className="module6-summary-grid">
+                <div>
+                  <span>TOTAL DISTANCE</span>
+                  <strong>
+                    {Number(itinerarySummary.totalDistanceKm || 0).toFixed(1)} km
+                  </strong>
+                </div>
+                <div>
+                  <span>TRAVEL TIME</span>
+                  <strong>
+                    {formatMinutesLong(itinerarySummary.totalTravelMinutes)}
+                  </strong>
+                </div>
+                <div>
+                  <span>VISIT TIME</span>
+                  <strong>
+                    {formatMinutesLong(itinerarySummary.totalVisitMinutes)}
+                  </strong>
+                </div>
+                <div>
+                  <span>BREAKS &amp; FREE TIME</span>
+                  <strong>
+                    {formatMinutesLong(itinerarySummary.totalBreakMinutes)}
+                  </strong>
+                </div>
+                <div>
+                  <span>OVERNIGHT</span>
+                  <strong>
+                    {formatMinutesLong(itinerarySummary.totalOvernightMinutes)}
+                  </strong>
+                </div>
+                <div>
+                  <span>RETURN JOURNEY</span>
+                  <strong>
+                    {itinerarySummary.returnIncluded
+                      ? `${Number(itinerarySummary.returnDistanceKm || 0).toFixed(1)} km · ${formatMinutesLong(itinerarySummary.returnTravelMinutes)}`
+                      : "not included"}
+                  </strong>
+                </div>
+              </div>
+
+              {Array.isArray(itinerarySummary.days) &&
+                itinerarySummary.days.length > 0 && (
+                  <div className="module6-summary-days">
+                    {itinerarySummary.days.map((summaryDay) => (
+                      <span key={summaryDay.date}>
+                        {formatShortDate(summaryDay.date)}:{" "}
+                        {formatMinutesLong(summaryDay.scheduledMinutes)} scheduled
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+              {Array.isArray(itinerarySummary.warnings) &&
+                itinerarySummary.warnings.length > 0 && (
+                  <ul className="module6-summary-warnings">
+                    {itinerarySummary.warnings.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+            </div>
+          )}
 
           {itineraryMessage && (
             <div className="module6-alert module6-success">
@@ -2916,6 +3218,7 @@ function RoutePlanner({ trip, onBack }) {
                               key={
                                 activity.id ?? `activity-${day.day}-${activityIndex}`
                               }
+                              data-type={activity.activityType}
                               className={`module6-activity ${
                                 activity.locked
                                   ? "module6-activity-locked"
@@ -2957,6 +3260,18 @@ function RoutePlanner({ trip, onBack }) {
                                   }
                                 </strong>
 
+                                {activity.endTime && (
+                                  <span className="module6-time-end">
+                                    → {activity.endTime}
+                                  </span>
+                                )}
+
+                                {activity.crossesMidnight && (
+                                  <span className="module6-next-day">
+                                    +{activity.endDayOffset} day
+                                  </span>
+                                )}
+
                                 <span>
                                   {formatDuration(
                                     activity.duration
@@ -2979,7 +3294,45 @@ function RoutePlanner({ trip, onBack }) {
                                           🔒
                                         </span>
                                       )}
+
+                                      <span
+                                        className={`module6-type-badge module6-type-${activity.activityType}`}
+                                      >
+                                        {ACTIVITY_TYPE_META[activity.activityType]?.icon}{" "}
+                                        {ACTIVITY_TYPE_META[activity.activityType]?.label}
+                                      </span>
                                     </div>
+
+                                    {(activity.activityType === "TRAVEL" ||
+                                      activity.activityType === "RETURN" ||
+                                      activity.estimated) && (
+                                      <div className="module6-meta-row">
+                                        {(activity.activityType === "TRAVEL" ||
+                                          activity.activityType === "RETURN") && (
+                                          <span className="module6-meta-chip">
+                                            Travel time {formatMinutesLong(activity.duration)}
+                                          </span>
+                                        )}
+                                        {activity.distanceKm !== null && (
+                                          <span className="module6-meta-chip">
+                                            {activity.distanceKm.toFixed(1)} km
+                                          </span>
+                                        )}
+                                        {activity.activityType === "VISIT" && (
+                                          <span className="module6-meta-chip">
+                                            Visit time {formatMinutesLong(activity.duration)}
+                                          </span>
+                                        )}
+                                        {activity.estimated && (
+                                          <span className="module6-meta-chip module6-estimate">
+                                            ≈ estimated
+                                            {activity.routeSource === "ESTIMATE"
+                                              ? " (routing unavailable)"
+                                              : ""}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
 
                                     {activity.location && (
                                       <span className="module6-location">

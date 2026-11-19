@@ -2,6 +2,7 @@ package backend.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,11 +14,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+import backend.dto.GenerateItineraryRequest;
 import backend.dto.ItineraryActivityRequest;
 import backend.dto.ItineraryActivityResponse;
 import backend.dto.LockActivityRequest;
 import backend.dto.ReorderActivityRequest;
 import backend.entity.ItineraryHistory;
+import backend.exception.ErrorResponse;
+import backend.exception.ItineraryException;
 import backend.service.ItineraryService;
 
 @RestController
@@ -32,10 +38,21 @@ public class ItineraryController {
         this.itineraryService = itineraryService;
     }
 
+    /**
+     * Generates the itinerary. The JSON body is OPTIONAL: sending no body
+     * (as before) means round trip, saved destination order, defaults from
+     * application.properties.
+     *
+     * Errors are JSON ErrorResponse objects with an honest status code:
+     *   400 invalid request or trip data, 409 already generating,
+     *   422 the trip dates genuinely cannot fit the itinerary.
+     */
     @PostMapping("/generate")
     public ResponseEntity<?> generateItinerary(
             @PathVariable Integer tripId,
-            Authentication authentication) {
+            @RequestBody(required = false) GenerateItineraryRequest request,
+            Authentication authentication,
+            HttpServletRequest http) {
 
         try {
             Integer userId = getUserId(authentication);
@@ -43,17 +60,79 @@ public class ItineraryController {
             List<ItineraryActivityResponse> activities =
                     itineraryService.generateItinerary(
                             userId,
-                            tripId
+                            tripId,
+                            request
                     );
 
             return ResponseEntity.ok(activities);
 
+        } catch (ItineraryException e) {
+
+            return error(e.getStatus(), e.getMessage(), http);
+
         } catch (RuntimeException e) {
 
-            return ResponseEntity
-                    .badRequest()
-                    .body(e.getMessage());
+            // Plain business-rule errors ("Trip not found...") keep their old
+            // 400 status. Real bugs (NullPointerException, database errors...)
+            // are re-thrown so they are logged with a stack trace.
+            if (e.getClass() == RuntimeException.class) {
+                return error(400, e.getMessage(), http);
+            }
+            throw e;
         }
+    }
+
+    /** Totals computed from the saved itinerary (distance, travel time, per-day durations, warnings). */
+    @GetMapping("/summary")
+    public ResponseEntity<?> getSummary(
+            @PathVariable Integer tripId,
+            Authentication authentication,
+            HttpServletRequest http) {
+
+        try {
+            Integer userId = getUserId(authentication);
+
+            return ResponseEntity.ok(
+                    itineraryService.getSummary(
+                            userId,
+                            tripId
+                    )
+            );
+
+        } catch (ItineraryException e) {
+
+            return error(e.getStatus(), e.getMessage(), http);
+
+        } catch (RuntimeException e) {
+
+            if (e.getClass() == RuntimeException.class) {
+                return error(400, e.getMessage(), http);
+            }
+            throw e;
+        }
+    }
+
+    private ResponseEntity<ErrorResponse> error(
+            int status,
+            String message,
+            HttpServletRequest http) {
+
+        HttpStatus resolved = HttpStatus.resolve(status);
+
+        if (resolved == null) {
+            resolved = HttpStatus.BAD_REQUEST;
+        }
+
+        return ResponseEntity
+                .status(resolved)
+                .body(new ErrorResponse(
+                        resolved.value(),
+                        resolved.getReasonPhrase(),
+                        message == null || message.isBlank()
+                                ? "Unable to generate the itinerary."
+                                : message,
+                        http.getRequestURI()
+                ));
     }
 
     @GetMapping
@@ -247,4 +326,4 @@ public class ItineraryController {
 
         return (Integer) authentication.getPrincipal();
     }
-}
+}
